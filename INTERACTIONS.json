@@ -1,0 +1,44 @@
+{
+  "_readme": "Every drag and gesture this app has, declared beside the non-drag control that satisfies it (Doctrine §4, WCAG 2.2 SC 2.5.7 and SC 2.5.1). tools/interactions-check.mjs holds the structure: a declared drag with no alternative fails the build, and so does a declaration naming a surface that does not exist. The live half — that each selector actually matches in a booted app — is asserted by tools/a11y.mjs, which is the only thing that can press them.",
+
+  "multiPointGestures": [],
+  "pathGestures": [],
+  "timedGestures": [],
+
+  "interactions": [
+    {
+      "id": "card-drag",
+      "kind": "drag",
+      "what": "Dragging a job card from its grip into another column, and to a position within that column.",
+      "selector": ".card-grip",
+      "commitsOn": "pointerup",
+      "cancelledBy": ["pointer released outside any column", "Escape", "pointercancel"],
+      "timed": false,
+      "note": "Started by movement past an 8px threshold, never by a press-and-hold. touch-action: none is set on the grip only, so the board still scrolls everywhere else.",
+      "alternative": {
+        "what": "The Move button on every card opens a list of every other column. This is the path keyboard and assistive technology use, and it is what makes the drag an enhancement rather than a requirement.",
+        "selector": ".card-actions button",
+        "surface": "dlg-move",
+        "singlePointer": true,
+        "keyboard": true
+      }
+    },
+    {
+      "id": "board-scroll",
+      "kind": "scroll",
+      "what": "Scrolling the board sideways to reach a column that is off screen.",
+      "selector": ".board",
+      "commitsOn": "n/a",
+      "cancelledBy": [],
+      "timed": false,
+      "note": "Native scrolling in one direction, with no custom handler. Reachable from a keyboard because every control inside the board is focusable and focusing one scrolls it into view.",
+      "alternative": {
+        "what": "A card can be moved to any column without the target column ever being on screen, using the Move list.",
+        "selector": ".card-actions button",
+        "surface": "dlg-move",
+        "singlePointer": true,
+        "keyboard": true
+      }
+    }
+  ]
+}

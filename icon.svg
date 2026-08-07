@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="A filament spool">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="28%" r="86%">
+      <stop offset="0%" stop-color="#2e2e2e"/>
+      <stop offset="62%" stop-color="#232323"/>
+      <stop offset="100%" stop-color="#1a1a1a"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="512" height="512" fill="url(#bg)"/>
+
+  <!-- The wound filament: the body of the spool. -->
+  <rect x="150" y="150" width="212" height="212" rx="18" fill="#8fd6a4"/>
+  <g stroke="#1a1a1a" stroke-width="9" stroke-linecap="round" opacity="0.55">
+    <line x1="176" y1="150" x2="176" y2="362"/>
+    <line x1="212" y1="150" x2="212" y2="362"/>
+    <line x1="248" y1="150" x2="248" y2="362"/>
+    <line x1="284" y1="150" x2="284" y2="362"/>
+    <line x1="320" y1="150" x2="320" y2="362"/>
+  </g>
+
+  <!-- The two flanges. -->
+  <rect x="96" y="116" width="56" height="280" rx="22" fill="#9fc2f5"/>
+  <rect x="360" y="116" width="56" height="280" rx="22" fill="#9fc2f5"/>
+
+  <!-- The hub. -->
+  <circle cx="256" cy="256" r="34" fill="#1a1a1a"/>
+  <circle cx="256" cy="256" r="16" fill="#9fc2f5"/>
+
+  <!-- A strand feeding out, so it reads as filament rather than a battery. -->
+  <path d="M362 344 C 404 352, 424 378, 424 414" fill="none" stroke="#f0c674" stroke-width="16" stroke-linecap="round"/>
+</svg>

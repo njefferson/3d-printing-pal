@@ -1,0 +1,37 @@
+{
+  "_readme": "print-tracker's palette, in the ROLES palette-check.mjs measures. Base is the hub's Instrument family verbatim (PALETTES.md) because it is the recommended default and the only family whose worst text pairing clears comfortably across all four of its palettes. The three job-type accents are additions and are held to the same text floor as everything else. Colour never carries a job type on its own: every badge and chip also carries its word, so meaning survives a grayscale render.",
+
+  "night": {
+    "kind": "app",
+    "page": "#1a1a1a",
+    "pageAlt": "#232323",
+    "surfaces": ["#3a3a3a", "#414141", "#484848"],
+    "rail": "rgba(255,255,255,.62)",
+    "hairline": "rgba(255,255,255,.17)",
+    "text": ["#eaeaea", "#d2d2d2", "#c1c1c1"],
+    "accents": {
+      "primary": "#9fc2f5",
+      "wanted": "#f0c674",
+      "fun": "#8fd6a4",
+      "danger": "#f2aecd"
+    },
+    "accentSoftAlpha": 0.15
+  },
+
+  "day": {
+    "kind": "app",
+    "page": "#c4bcab",
+    "pageAlt": "#ccc4b3",
+    "surfaces": ["#eee6d6", "#f4ecdd", "#faf3e5"],
+    "rail": "rgba(39,33,25,.68)",
+    "hairline": "rgba(39,33,25,.22)",
+    "text": ["#272119", "#363026", "#4a4436"],
+    "accents": {
+      "primary": "#17458f",
+      "wanted": "#63400a",
+      "fun": "#14532d",
+      "danger": "#7a1548"
+    },
+    "accentSoftAlpha": 0.12
+  }
+}

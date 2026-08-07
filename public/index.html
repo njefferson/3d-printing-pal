@@ -1,0 +1,540 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<!-- No user-scalable=no and no maximum-scale: page zoom is never locked. -->
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>print-tracker — 3D print jobs, filament and models</title>
+
+<meta name="description" content="Track 3D print jobs, filament spools and models on your own device. Works offline, installs to a home screen, no account, nothing leaves your browser.">
+<meta name="theme-color" content="#1a1a1a" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#c4bcab" media="(prefers-color-scheme: light)">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" type="image/svg+xml" href="./icon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="./favicon-32.png">
+<link rel="apple-touch-icon" href="./apple-touch-icon.png">
+<link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+
+<!--
+  The standing update indicator (§7h). Not a modal and not a timed toast: it sits
+  in the flow at the top of the app, it has two ways out, and it never appears
+  over something being used. A first-time visitor never sees it.
+-->
+<div id="update-strip" class="strip" role="region" aria-label="App update" hidden>
+  <p class="strip-text" id="update-text">A new version is ready. Your data stays exactly as it is — nothing is lost by updating.</p>
+  <div class="strip-actions">
+    <button type="button" id="update-apply" class="btn btn-primary">Update now</button>
+    <button type="button" id="update-later" class="btn">Not now</button>
+  </div>
+</div>
+
+<header class="topbar">
+  <div class="topbar-row">
+    <h1 class="wordmark">print-tracker</h1>
+    <button type="button" id="info-open" class="iconbtn" data-surface-opener="dlg-info">
+      <span class="iconbtn-glyph" aria-hidden="true">i</span>
+      <span class="sr-only">Information — what this app is, how to install it, what changed, and how to report a problem</span>
+    </button>
+  </div>
+  <nav class="tabs" aria-label="Views">
+    <button type="button" class="tab" id="tab-board" data-view="board" aria-current="page">Board</button>
+    <button type="button" class="tab" id="tab-inventory" data-view="inventory">Inventory</button>
+    <button type="button" class="tab" id="tab-models" data-view="models">Models</button>
+  </nav>
+</header>
+
+<main id="main">
+
+  <!-- ------------------------------------------------------------- board -->
+  <section id="view-board" class="view" aria-labelledby="board-heading">
+    <div class="view-head">
+      <h2 id="board-heading">Board</h2>
+      <button type="button" id="job-new" class="btn btn-primary">Add job</button>
+    </div>
+
+    <div class="chips" role="group" aria-label="Filter by job type">
+      <button type="button" class="chip" data-type="request" aria-pressed="true">
+        <span class="chip-tick" aria-hidden="true">✓</span><span class="chip-label">Request</span>
+      </button>
+      <button type="button" class="chip" data-type="wanted" aria-pressed="true">
+        <span class="chip-tick" aria-hidden="true">✓</span><span class="chip-label">Wanted</span>
+      </button>
+      <button type="button" class="chip" data-type="fun" aria-pressed="true">
+        <span class="chip-tick" aria-hidden="true">✓</span><span class="chip-label">Fun</span>
+      </button>
+    </div>
+
+    <p class="empty" id="board-empty" hidden>No jobs yet. Add one and it will start in Research.</p>
+    <p class="empty" id="board-filtered" hidden>Every job is hidden by the filters above.</p>
+
+    <div class="board" id="board"></div>
+  </section>
+
+  <!-- --------------------------------------------------------- inventory -->
+  <section id="view-inventory" class="view" aria-labelledby="inventory-heading" hidden>
+    <div class="view-head">
+      <h2 id="inventory-heading">Inventory</h2>
+      <button type="button" id="spool-new" class="btn btn-primary">Add spool</button>
+    </div>
+
+    <div class="controls">
+      <div class="field field-inline">
+        <label for="inv-sort">Sort by</label>
+        <select id="inv-sort">
+          <option value="material">Material</option>
+          <option value="brand">Brand</option>
+          <option value="remaining">Remaining</option>
+        </select>
+      </div>
+      <div class="field field-check">
+        <input type="checkbox" id="inv-hide-finished">
+        <label for="inv-hide-finished">Hide finished spools</label>
+      </div>
+    </div>
+
+    <p class="note">Filament counts as used the moment it is logged against a job, whichever column that job is in.</p>
+
+    <p class="empty" id="inventory-empty" hidden>No spools yet. Add one to start tracking what is left.</p>
+    <ul class="cards" id="inventory-list"></ul>
+  </section>
+
+  <!-- ------------------------------------------------------------ models -->
+  <section id="view-models" class="view" aria-labelledby="models-heading" hidden>
+    <div class="view-head">
+      <h2 id="models-heading">Models</h2>
+      <button type="button" id="model-new" class="btn btn-primary">Add model</button>
+    </div>
+
+    <p class="empty" id="models-empty" hidden>No models yet. Add one to keep its links and what it has earned.</p>
+    <ul class="cards" id="models-list"></ul>
+  </section>
+
+</main>
+
+<footer class="footer">
+  <div class="footer-data">
+    <button type="button" id="export-run" class="btn">Export everything</button>
+    <button type="button" id="import-open" class="btn" data-surface-opener="dlg-import">Import</button>
+  </div>
+  <p class="lastexport" id="last-export">No copy has been exported from this device yet.</p>
+  <p class="stamp">
+    <button type="button" id="diag-open" class="linkbtn" data-surface-opener="dlg-diagnostic">
+      <span class="sr-only">Open the diagnostic report. Running version </span><span id="version-stamp">—</span>
+    </button>
+  </p>
+</footer>
+
+<!-- Status messages (SC 4.1.3): announced without stealing focus. -->
+<p id="live" class="sr-only" role="status" aria-live="polite"></p>
+
+<!-- ===================================================== first run ===== -->
+<!--
+  The orientation text is NOT authored here. It is authored once inside the
+  information panel below, and moved into this dialog at first run, then moved
+  back when the reader presses the button that begins. Moved, never copied: the
+  gate a new reader dismisses must never be the thing that destroys the
+  instructions, and two copies of the same prose drift apart.
+-->
+<dialog id="dlg-firstrun" class="panel" aria-labelledby="firstrun-title">
+  <div class="panel-head">
+    <h2 id="firstrun-title">Welcome to print-tracker</h2>
+    <button type="button" class="iconbtn" data-close="dlg-firstrun">
+      <span class="iconbtn-glyph" aria-hidden="true">✕</span>
+      <span class="sr-only">Close this welcome and start using the app</span>
+    </button>
+  </div>
+  <div class="panel-body" id="firstrun-slot" tabindex="0"></div>
+  <div class="panel-foot">
+    <button type="button" class="btn btn-primary" data-close="dlg-firstrun">Start using it</button>
+    <p class="panel-foot-note">This is always here again under the <strong>i</strong> button at the top.</p>
+  </div>
+</dialog>
+
+<!-- ================================================== information ====== -->
+<dialog id="dlg-info" class="panel" aria-labelledby="info-title">
+  <div class="panel-head">
+    <h2 id="info-title">About print-tracker</h2>
+    <button type="button" class="iconbtn" data-close="dlg-info">
+      <span class="iconbtn-glyph" aria-hidden="true">✕</span>
+      <span class="sr-only">Close the information panel</span>
+    </button>
+  </div>
+
+  <div class="panel-body">
+    <div id="info-orientation">
+      <h3>What this is</h3>
+      <p>A place to keep your 3D printing straight: what you are printing and who for, how much filament is left, and which models have earned their keep. It runs entirely on this device.</p>
+
+      <h3>What it is not</h3>
+      <ul>
+        <li>It is not a slicer and it does not talk to your printer. The printer field is just a note to yourself.</li>
+        <li>It is not tied to any brand, so nothing here breaks when you change machines.</li>
+        <li>There is no account, no sync and no server. Nothing you type is sent anywhere, and nobody else can see it — including whoever made this.</li>
+        <li>It is not a backup. The data lives in this browser's storage, and clearing site data for this site removes it. Export a copy somewhere safe.</li>
+      </ul>
+
+      <h3>How the filament number works</h3>
+      <p>A spool's remaining weight is never typed in. It is the spool's total minus every gram you have logged against a job, worked out fresh each time you look. Log the grams on the job, and the inventory follows.</p>
+
+      <h3>Put it on your home screen</h3>
+      <ul>
+        <li><strong>iPhone and iPad, in Safari:</strong> press Share, then <em>Add to Home Screen</em>.</li>
+        <li><strong>Android, in Chrome:</strong> press the three-dot menu, then <em>Add to Home screen</em> or <em>Install app</em>.</li>
+        <li><strong>Windows or macOS, in Chrome or Edge:</strong> open the three-dot menu, then <em>Cast, save and share</em> or <em>Apps</em>, then <em>Install this page as an app</em>.</li>
+        <li><strong>macOS, in Safari:</strong> open the File menu, then <em>Add to Dock</em>.</li>
+      </ul>
+      <p>Once it is there it opens like any other app and works with no signal.</p>
+    </div>
+
+    <h3>What changed</h3>
+    <div id="info-releases"></div>
+
+    <h3>Where the numbers come from</h3>
+    <p>All of them come from you. This app fetches nothing, ships with no dataset, and contacts no service — so there is no feed to credit and nothing to go out of date behind your back. Every figure on screen is either something you typed or arithmetic on it.</p>
+
+    <h3>Your safety copies</h3>
+    <p>Before any import replaces your data, the app saves a copy of what is already here — both as a download and inside the app. The most recent are below.</p>
+    <div id="info-snapshots"></div>
+
+    <h3>How to report a problem</h3>
+    <p>Open the diagnostic report from the version number at the bottom of the screen, copy it, and send it with a note about what happened. It is plain text, it says what the app can see about this device and this build, and it contains nothing you have typed into the app.</p>
+    <p><button type="button" class="btn" data-close="dlg-info" data-then-open="dlg-diagnostic">Open the diagnostic report</button></p>
+
+    <h3>Accessibility and licence</h3>
+    <ul>
+      <li><a href="https://noahjefferson.pages.dev/accessibility">The accessibility statement</a> covering this and the other free apps here.</li>
+      <li><a href="https://github.com/njefferson/3d-printing-pal/blob/main/LICENSE.md">PolyForm Noncommercial 1.0.0</a> — use it, change it, share it; do not sell it. Your data is yours and is not covered by it.</li>
+      <li>The rest of the free apps and the photography are <a href="https://noahjefferson.pages.dev/">on Noah Jefferson's site</a>.</li>
+    </ul>
+  </div>
+
+  <div class="panel-foot">
+    <button type="button" class="btn" data-close="dlg-info">Close</button>
+  </div>
+</dialog>
+
+<!-- ==================================================== diagnostic ===== -->
+<dialog id="dlg-diagnostic" class="panel" aria-labelledby="diag-title">
+  <div class="panel-head">
+    <h2 id="diag-title">Diagnostic report</h2>
+    <button type="button" class="iconbtn" data-close="dlg-diagnostic">
+      <span class="iconbtn-glyph" aria-hidden="true">✕</span>
+      <span class="sr-only">Close the diagnostic report</span>
+    </button>
+  </div>
+  <div class="panel-body">
+    <p>This is what the app can see about this device and this build. It contains nothing you have typed into the app — no job titles, no names, no notes.</p>
+    <div class="diag-actions">
+      <button type="button" id="diag-copy" class="btn btn-primary">Copy the report</button>
+      <button type="button" id="diag-save" class="btn">Save it as a file</button>
+    </div>
+    <textarea id="diag-text" class="diag-text" readonly rows="18" aria-label="The diagnostic report as text"></textarea>
+  </div>
+  <div class="panel-foot">
+    <button type="button" class="btn" data-close="dlg-diagnostic">Close</button>
+  </div>
+</dialog>
+
+<!-- ========================================================== job ====== -->
+<dialog id="dlg-job" class="panel" aria-labelledby="job-title">
+  <form method="dialog" id="job-form">
+    <div class="panel-head">
+      <h2 id="job-title">Add job</h2>
+      <button type="button" class="iconbtn" data-close="dlg-job">
+        <span class="iconbtn-glyph" aria-hidden="true">✕</span>
+        <span class="sr-only">Close without saving this job</span>
+      </button>
+    </div>
+
+    <div class="panel-body">
+      <div class="field">
+        <label for="job-f-title">Title</label>
+        <input type="text" id="job-f-title" required autocomplete="off">
+      </div>
+
+      <div class="field">
+        <label for="job-f-type">Type</label>
+        <select id="job-f-type">
+          <option value="request">Request — somebody asked for it</option>
+          <option value="wanted">Wanted — you want one</option>
+          <option value="fun">Fun — just printing it</option>
+        </select>
+      </div>
+
+      <div class="field" id="job-f-requester-field">
+        <label for="job-f-requester">Who asked for it</label>
+        <input type="text" id="job-f-requester" autocomplete="off">
+      </div>
+
+      <div class="field">
+        <label for="job-f-model">Model</label>
+        <select id="job-f-model"><option value="">Not from a saved model</option></select>
+      </div>
+
+      <div class="field">
+        <label for="job-f-printer">Printer</label>
+        <input type="text" id="job-f-printer" autocomplete="off" placeholder="Whatever you call it">
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label for="job-f-quantity">Quantity</label>
+          <input type="number" id="job-f-quantity" min="1" step="1" value="1" inputmode="numeric">
+        </div>
+        <div class="field">
+          <label for="job-f-price">Price charged</label>
+          <input type="number" id="job-f-price" min="0" step="0.01" inputmode="decimal">
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="job-f-column">Column</label>
+        <select id="job-f-column"></select>
+      </div>
+
+      <fieldset class="fieldset">
+        <legend>Filament used</legend>
+        <p class="note" id="job-f-nospools" hidden>There are no spools yet. Add one in Inventory and it can be logged here.</p>
+        <div id="job-f-links"></div>
+        <button type="button" class="btn" id="job-f-addlink">Add a spool</button>
+      </fieldset>
+
+      <div class="field">
+        <label for="job-f-notes">Notes</label>
+        <textarea id="job-f-notes" rows="3"></textarea>
+      </div>
+    </div>
+
+    <div class="panel-foot panel-foot-split">
+      <div class="foot-main">
+        <button type="submit" class="btn btn-primary" id="job-save">Save job</button>
+        <button type="button" class="btn" data-close="dlg-job">Cancel</button>
+      </div>
+      <div class="foot-danger">
+        <button type="button" class="btn btn-danger" id="job-delete" hidden>Delete this job</button>
+      </div>
+    </div>
+  </form>
+</dialog>
+
+<!-- ======================================================== spool ====== -->
+<dialog id="dlg-spool" class="panel" aria-labelledby="spool-title">
+  <form method="dialog" id="spool-form">
+    <div class="panel-head">
+      <h2 id="spool-title">Add spool</h2>
+      <button type="button" class="iconbtn" data-close="dlg-spool">
+        <span class="iconbtn-glyph" aria-hidden="true">✕</span>
+        <span class="sr-only">Close without saving this spool</span>
+      </button>
+    </div>
+
+    <div class="panel-body">
+      <div class="field">
+        <label for="spool-f-brand">Brand</label>
+        <input type="text" id="spool-f-brand" autocomplete="off">
+      </div>
+
+      <div class="field">
+        <label for="spool-f-material">Material</label>
+        <input type="text" id="spool-f-material" list="materials" autocomplete="off" required>
+        <datalist id="materials"></datalist>
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label for="spool-f-color">Colour</label>
+          <input type="text" id="spool-f-color" autocomplete="off">
+        </div>
+        <div class="field">
+          <label for="spool-f-hex">Swatch</label>
+          <input type="color" id="spool-f-hex" value="#8fd6a4">
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label for="spool-f-weight">Total weight, grams</label>
+          <input type="number" id="spool-f-weight" min="0" step="1" value="1000" inputmode="numeric" required>
+        </div>
+        <div class="field">
+          <label for="spool-f-cost">Cost</label>
+          <input type="number" id="spool-f-cost" min="0" step="0.01" inputmode="decimal">
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label for="spool-f-opened">Date opened</label>
+          <input type="date" id="spool-f-opened">
+        </div>
+        <div class="field">
+          <label for="spool-f-status">Status</label>
+          <select id="spool-f-status">
+            <option value="sealed">Sealed</option>
+            <option value="open">Open</option>
+            <option value="finished">Finished</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="spool-f-notes">Notes</label>
+        <textarea id="spool-f-notes" rows="3"></textarea>
+      </div>
+
+      <p class="note" id="spool-f-remaining"></p>
+    </div>
+
+    <div class="panel-foot panel-foot-split">
+      <div class="foot-main">
+        <button type="submit" class="btn btn-primary" id="spool-save">Save spool</button>
+        <button type="button" class="btn" data-close="dlg-spool">Cancel</button>
+      </div>
+      <div class="foot-danger">
+        <button type="button" class="btn btn-danger" id="spool-delete" hidden>Delete this spool</button>
+      </div>
+    </div>
+  </form>
+</dialog>
+
+<!-- ======================================================== model ====== -->
+<dialog id="dlg-model" class="panel" aria-labelledby="model-title">
+  <form method="dialog" id="model-form">
+    <div class="panel-head">
+      <h2 id="model-title">Add model</h2>
+      <button type="button" class="iconbtn" data-close="dlg-model">
+        <span class="iconbtn-glyph" aria-hidden="true">✕</span>
+        <span class="sr-only">Close without saving this model</span>
+      </button>
+    </div>
+
+    <div class="panel-body">
+      <div class="field">
+        <label for="model-f-name">Name</label>
+        <input type="text" id="model-f-name" required autocomplete="off">
+      </div>
+
+      <div class="field">
+        <label for="model-f-designer">Designer</label>
+        <input type="text" id="model-f-designer" autocomplete="off">
+      </div>
+
+      <div class="field">
+        <label for="model-f-tags">Tags</label>
+        <input type="text" id="model-f-tags" autocomplete="off" placeholder="Separated by commas">
+      </div>
+
+      <fieldset class="fieldset">
+        <legend>Where the file came from</legend>
+        <div id="model-f-sources"></div>
+        <button type="button" class="btn" id="model-f-addsource">Add a source</button>
+      </fieldset>
+
+      <fieldset class="fieldset">
+        <legend>Where you have it listed</legend>
+        <div id="model-f-listings"></div>
+        <button type="button" class="btn" id="model-f-addlisting">Add a listing</button>
+      </fieldset>
+
+      <div class="field">
+        <label for="model-f-notes">Notes</label>
+        <textarea id="model-f-notes" rows="3"></textarea>
+      </div>
+    </div>
+
+    <div class="panel-foot panel-foot-split">
+      <div class="foot-main">
+        <button type="submit" class="btn btn-primary" id="model-save">Save model</button>
+        <button type="button" class="btn" data-close="dlg-model">Cancel</button>
+      </div>
+      <div class="foot-danger">
+        <button type="button" class="btn btn-danger" id="model-delete" hidden>Delete this model</button>
+      </div>
+    </div>
+  </form>
+</dialog>
+
+<!-- ========================================================== move ===== -->
+<!--
+  The non-drag path (SC 2.5.7). Every card has a Move button that opens this, and
+  it is the path keyboard and assistive technology use. Drag is the enhancement;
+  this is the contract.
+-->
+<dialog id="dlg-move" class="panel panel-narrow" aria-labelledby="move-title">
+  <div class="panel-head">
+    <h2 id="move-title">Move this job</h2>
+    <button type="button" class="iconbtn" data-close="dlg-move">
+      <span class="iconbtn-glyph" aria-hidden="true">✕</span>
+      <span class="sr-only">Close without moving this job</span>
+    </button>
+  </div>
+  <div class="panel-body">
+    <p id="move-what"></p>
+    <div class="movelist" id="move-list"></div>
+  </div>
+  <div class="panel-foot">
+    <button type="button" class="btn" data-close="dlg-move">Cancel</button>
+  </div>
+</dialog>
+
+<!-- ======================================================= confirm ===== -->
+<dialog id="dlg-confirm" class="panel panel-narrow" aria-labelledby="confirm-title">
+  <div class="panel-head">
+    <h2 id="confirm-title">Are you sure?</h2>
+    <button type="button" class="iconbtn" data-close="dlg-confirm">
+      <span class="iconbtn-glyph" aria-hidden="true">✕</span>
+      <span class="sr-only">Close without doing anything</span>
+    </button>
+  </div>
+  <div class="panel-body">
+    <p id="confirm-body"></p>
+  </div>
+  <div class="panel-foot panel-foot-split">
+    <div class="foot-main">
+      <button type="button" class="btn" data-close="dlg-confirm">Keep it</button>
+    </div>
+    <div class="foot-danger">
+      <button type="button" class="btn btn-danger" id="confirm-go">Delete</button>
+    </div>
+  </div>
+</dialog>
+
+<!-- ======================================================== import ===== -->
+<dialog id="dlg-import" class="panel" aria-labelledby="import-title">
+  <div class="panel-head">
+    <h2 id="import-title">Import a backup</h2>
+    <button type="button" class="iconbtn" data-close="dlg-import">
+      <span class="iconbtn-glyph" aria-hidden="true">✕</span>
+      <span class="sr-only">Close without importing anything</span>
+    </button>
+  </div>
+
+  <div class="panel-body">
+    <p><strong>Importing replaces everything in this app</strong> with what is in the file. Before it does, it saves a copy of what you have now — both as a download and inside the app.</p>
+
+    <div class="field">
+      <label for="import-file">Choose a backup file</label>
+      <input type="file" id="import-file" accept="application/json,.json">
+    </div>
+
+    <div id="import-report" class="report" hidden></div>
+  </div>
+
+  <div class="panel-foot panel-foot-split">
+    <div class="foot-main">
+      <button type="button" class="btn" data-close="dlg-import">Cancel</button>
+    </div>
+    <div class="foot-danger">
+      <button type="button" class="btn btn-danger" id="import-go" disabled>Replace everything</button>
+    </div>
+  </div>
+</dialog>
+
+<script type="module" src="./app/main.js"></script>
+<noscript>
+  <p class="noscript">print-tracker needs JavaScript to run, because everything it does happens in your own browser rather than on a server.</p>
+</noscript>
+</body>
+</html>

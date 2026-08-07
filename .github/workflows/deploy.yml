@@ -1,0 +1,91 @@
+name: Deploy
+
+# main -> production. Deploys the static app in public/ to Cloudflare Pages.
+# Needs two repo secrets: CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID.
+#
+# THIS WORKFLOW EXITS 0 WHEN THE SECRETS ARE ABSENT, so it never fails red while
+# the repo is still being set up. That is deliberate and it is also a trap: a
+# green run is NOT evidence that anything deployed. Read the log and check
+# whether the deploy steps RAN or were SKIPPED.
+#
+# Actions are pinned by SHA rather than tag: a tag is a mutable pointer somebody
+# else controls, and these steps execute holding a live Pages:Edit token.
+# Dependabot keeps the pins current.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-${{ github.ref_name }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          # Nothing in this job pushes. Leaving the token in .git/config makes it
+          # available to every later step, including whatever action gets added
+          # next year. zizmor: artipacked.
+          persist-credentials: false
+
+      - name: Prepare Cloudflare credentials
+        id: cf
+        env:
+          RAW_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          RAW_ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          # Strip any whitespace that came along when the secret was pasted. A
+          # trailing newline corrupts the Authorization header (Cloudflare 6111).
+          TOKEN=$(printf '%s' "$RAW_TOKEN" | tr -d '[:space:]')
+          ACCOUNT=$(printf '%s' "$RAW_ACCOUNT" | tr -d '[:space:]')
+          echo "::add-mask::$TOKEN"
+          echo "::add-mask::$ACCOUNT"
+          if [ -n "$TOKEN" ] && [ -n "$ACCOUNT" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "Cloudflare secrets are not configured yet - skipping the deploy."
+            echo "Add CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID under"
+            echo "Settings -> Secrets and variables -> Actions."
+          fi
+          # The cleaned values go to the job environment, never to step outputs:
+          # outputs persist in the run's stored output and are readable through
+          # the API, while env is scoped to this job's steps. Only the non-secret
+          # `ready` flag is an output.
+          echo "CF_TOKEN=$TOKEN" >> "$GITHUB_ENV"
+          echo "CF_ACCOUNT=$ACCOUNT" >> "$GITHUB_ENV"
+
+      - name: Ensure the Pages project exists
+        if: steps.cf.outputs.ready == 'true'
+        continue-on-error: true
+        uses: cloudflare/wrangler-action@9acf94ace14e7dc412b076f2c5c20b8ce93c79cd # v3
+        with:
+          apiToken: ${{ env.CF_TOKEN }}
+          accountId: ${{ env.CF_ACCOUNT }}
+          command: pages project create 3d-printing-pal --production-branch=main
+
+      - name: Deploy to Cloudflare Pages
+        if: steps.cf.outputs.ready == 'true'
+        uses: cloudflare/wrangler-action@9acf94ace14e7dc412b076f2c5c20b8ce93c79cd # v3
+        with:
+          apiToken: ${{ env.CF_TOKEN }}
+          accountId: ${{ env.CF_ACCOUNT }}
+          command: pages deploy public --project-name=3d-printing-pal --branch=${{ github.ref_name }} --commit-dirty=true
+
+      - name: How to roll this back
+        if: always() && steps.cf.outputs.ready == 'true'
+        run: |
+          # The rollback path is printed on every deploy so it is known BEFORE it
+          # is needed rather than looked up during an outage.
+          echo "If this deploy is bad:"
+          echo "  Cloudflare dashboard -> Workers & Pages -> 3d-printing-pal -> Deployments"
+          echo "  -> pick the last good one -> Manage deployment -> Rollback."
+          echo "That is instant. A git revert is also fine but waits for a fresh build,"
+          echo "and note that concurrency cancel-in-progress can cancel an in-flight deploy."

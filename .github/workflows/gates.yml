@@ -1,0 +1,129 @@
+name: Gates
+
+# Every gate this repo is held to, in one place both a developer and CI invoke.
+#
+# IT RUNS ON `claude/**` AS WELL AS `main`. A workflow written `branches: [main]`
+# in a repo whose work happens on working branches never executes at all — the
+# hub's own doctrine gate was written that way and had not run once. An unrun
+# workflow and a missing workflow are the same artefact.
+#
+# THE SHARED GATES ARE THE HUB'S OWN COPIES, not forks of them. The hub is
+# checked out SHA-pinned, with credentials not persisted, into an untracked path
+# so a widened pattern binds this repo on its next push with nothing to drift.
+
+on:
+  push:
+    branches: [main, "claude/**"]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: gates-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  gates:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+
+      # The doctrine's canonical gates. Pinned to a commit that exists on the
+      # hub's default branch: a cross-repo gate depends on the OTHER repo's
+      # published history, not on anybody's working copy.
+      - name: Check out the hub (canonical gates)
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          repository: njefferson/noahjefferson
+          ref: 78f88256cac93db6b0f5050302cad1928bfb5da4
+          path: .hub
+          persist-credentials: false
+
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v6
+        with:
+          node-version: 22
+
+      # `npm ci`, never `npm install`: ci installs exactly the lockfile.
+      - name: Install
+        run: npm ci
+
+      # ---------------------------------------------------------------- hub gates
+      - name: Privacy — nothing personal about the owner lands in any repo
+        run: node .hub/privacy-check.mjs --repo .
+
+      - name: Docs — no tables or grids anywhere he reads
+        run: node .hub/docs-check.mjs .
+
+      - name: npm hygiene
+        run: node .hub/pin-check.mjs --repo .
+
+      - name: PWA — a new version waits and the reader is told
+        run: node .hub/pwa-check.mjs --repo .
+
+      - name: Palette — the colour floors
+        run: node .hub/palette-check.mjs palettes/3d-printing-pal.json
+
+      - name: Text size — type follows the reader's setting
+        run: node .hub/scripts/check-textsize.mjs public/styles.css public/index.html
+
+      # ------------------------------------------------------------ this repo's
+      - name: Patch notes — one source, no drift
+        run: npm run --silent notes:check
+
+      - name: Patch notes — product copy, not correspondence
+        run: npm run --silent voice
+
+      - name: Interactions — every drag has a non-drag path
+        run: npm run --silent interactions
+
+      - name: Install the browser for the accessibility gate
+        run: npx --no-install playwright-core install --with-deps chromium
+
+      - name: Accessibility
+        run: npm run --silent a11y
+
+      # The data-safety walk: export, wipe, import, compare — plus five broken
+      # files that must each be refused before anything is touched.
+      - name: Data safety — export restores identically, bad files are refused
+        run: npm run --silent backup
+
+      # Driven against genuinely different second and third service workers. A
+      # mocked registration proves the mock works and nothing else.
+      - name: Stale app and offline
+        run: npm run --silent update
+
+  # Workflow security is a maintained tool's job, not a bespoke gate's. zizmor is
+  # installed from the HUB's canonical requirements file rather than a pin of our
+  # own, so every app is audited by the same build and one Dependabot bump moves
+  # all of them.
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+
+      - name: Check out the hub (canonical zizmor pin)
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          repository: njefferson/noahjefferson
+          ref: 78f88256cac93db6b0f5050302cad1928bfb5da4
+          path: .hub
+          persist-credentials: false
+
+      - name: Install zizmor, pinned by version and hash
+        run: |
+          python3 -m venv "$RUNNER_TEMP/zizmor"
+          "$RUNNER_TEMP/zizmor/bin/pip" install --quiet --only-binary=:all: \
+            --require-hashes -r .hub/.github/requirements-ci.txt
+
+      # --strict-collection is not the default and is load-bearing: without it a
+      # workflow with a YAML error is logged at WARN, SKIPPED, and the run still
+      # exits 0 printing "No findings to report. Good job!" — so the file most
+      # likely to be wrong is the one excused.
+      - name: Audit the workflows
+        run: "$RUNNER_TEMP/zizmor/bin/zizmor --offline --strict-collection .github/workflows/"

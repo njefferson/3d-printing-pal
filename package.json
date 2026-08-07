@@ -1,0 +1,37 @@
+{
+  "name": "print-tracker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Tooling for print-tracker. The deployed app is public/ and has no build step; these scripts render icons, generate the in-app patch notes from CHANGELOG.md, and run the accessibility gate.",
+  "license": "SEE LICENSE IN LICENSE.md",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "a11y": "node tools/a11y.mjs",
+    "a11y:verbose": "node tools/a11y.mjs --verbose",
+    "notes": "node tools/changelog.mjs",
+    "notes:check": "node tools/changelog.mjs --check",
+    "voice": "node tools/notes-voice.mjs",
+    "interactions": "node tools/interactions-check.mjs",
+    "textsize": "node ../noahjefferson/scripts/check-textsize.mjs public/styles.css public/index.html",
+    "docs": "node ../noahjefferson/docs-check.mjs .",
+    "privacy": "node ../noahjefferson/privacy-check.mjs --repo .",
+    "pins": "node ../noahjefferson/pin-check.mjs --repo .",
+    "pwa": "node ../noahjefferson/pwa-check.mjs --repo .",
+    "palette": "node ../noahjefferson/palette-check.mjs palettes/3d-printing-pal.json",
+    "handoff": "node ../noahjefferson/handoff-check.mjs --repo .",
+    "sync": "node ../noahjefferson/doctrine-sync.mjs --repo .",
+    "render:icons": "node tools/render-icons.mjs",
+    "serve": "node tools/serve.mjs",
+    "check": "npm run --silent docs && npm run --silent privacy && npm run --silent pins && npm run --silent pwa && npm run --silent palette && npm run --silent textsize && npm run --silent notes:check && npm run --silent voice && npm run --silent interactions && npm run --silent a11y && npm run --silent backup && npm run --silent update",
+    "backup": "node tools/backup-walk.mjs",
+    "update": "node tools/update-walk.mjs"
+  },
+  "devDependencies": {
+    "axe-core": "4.10.2",
+    "playwright-core": "1.56.0"
+  },
+  "//browser": "playwright-core 1.56.0 ships chromium revision 1194, which matches /opt/pw-browsers/chromium-1194 in the session sandbox. These are a MATCHED PAIR: the a11y gate launches that hardcoded executablePath when it exists, and a playwright-core expecting a different revision connects and then hangs on a protocol mismatch with no error. If the sandbox browser changes, re-pin here and re-verify. CI has no such path and downloads its own matching build."
+}

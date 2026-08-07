@@ -1,0 +1,33 @@
+# Dependabot keeps the SHA pins from rotting. Actions are pinned by commit rather
+# than tag, which is safe and also frozen — this is what unfreezes it on purpose.
+
+#
+# There is deliberately no `pip` ecosystem here. zizmor's version-and-hash pin
+# lives in the hub's .github/requirements-ci.txt, which this repo checks out and
+# installs from rather than carrying a copy of — so the hub's own Dependabot
+# moves every app at once, and a pip entry pointed at a file this repo does not
+# have would simply error.
+
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: "Keep a build tool up to date"
+    labels:
+      - dependencies
+
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: "Keep a build tool up to date"
+    labels:
+      - dependencies
+    groups:
+      tooling:
+        patterns:
+          - "*"

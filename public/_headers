@@ -1,0 +1,41 @@
+# Security headers for print-tracker — Doctrine §16.6
+#
+# THIS FILE IS EXERCISED BY THE GATE, NOT JUST SHIPPED. tools/serve.mjs parses
+# the /* block below and sends the same headers, and tools/a11y.mjs boots the app
+# through it and fails on any page error — so a Content-Security-Policy that
+# breaks the app goes red here rather than on the owner's device. A CSP written
+# and never run is a guess with a header's authority.
+#
+# THIS APP CAN HAVE A REAL CSP, and that is worth stating plainly because the hub
+# deliberately cannot: its content model lives in an inline <script>, so
+# script-src 'self' would reduce it to its <noscript> fallback. Everything here
+# is in module files and an external stylesheet, so the strict policy costs
+# nothing.
+#
+# style-src is 'self' with NO 'unsafe-inline'. That blocks parsed style=""
+# attributes, which is why public/app/dom.js applies styles through the CSSOM
+# instead — assigning element.style.width is not blocked, and a style string
+# passed to setAttribute would be silently dropped.
+#
+# connect-src IS 'self', NOT 'none', AND THAT IS LOAD-BEARING. The app itself
+# makes no network requests — nothing is fetched and nothing is sent. But these
+# headers are served for every path under /*, INCLUDING sw.js, and a service
+# worker inherits the policy delivered with its own script. Under 'none' the
+# worker's cache.add() and fetch() are both blocked, so it installs, reports
+# itself active, caches nothing, and the app never works offline — with no error
+# anywhere a reader or a deploy log would see it. Found by tools/serve.mjs sending
+# these real headers to the gate rather than letting it run without a policy.
+#
+# So: the only network requests this app ever makes are the service worker
+# collecting this app's own files, from this origin, so it works offline.
+#
+# No Strict-Transport-Security: pages.dev is HTTPS-only and Cloudflare handles
+# TLS for it. A header with lock-in semantics that cannot be tested from here is
+# worse than leaving it to the platform.
+
+/*
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; object-src 'none'
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  X-Frame-Options: DENY
+  Permissions-Policy: accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=(), interest-cohort=()
