@@ -30,8 +30,8 @@
     "update": "node tools/update-walk.mjs"
   },
   "devDependencies": {
-    "axe-core": "4.10.2",
-    "playwright-core": "1.56.0"
+    "axe-core": "4.12.1",
+    "playwright-core": "1.62.1"
   },
   "//browser": "playwright-core 1.56.0 ships chromium revision 1194, which matches /opt/pw-browsers/chromium-1194 in the session sandbox. These are a MATCHED PAIR: the a11y gate launches that hardcoded executablePath when it exists, and a playwright-core expecting a different revision connects and then hangs on a protocol mismatch with no error. If the sandbox browser changes, re-pin here and re-verify. CI has no such path and downloads its own matching build."
 }
