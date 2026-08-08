@@ -172,6 +172,24 @@ the app says nothing about the app.
 **The Cloudflare secrets already existed on this repo.** The first push to
 `staging` deployed with no setup step and created the Pages project as it went.
 
+### A red gate does not stop a deploy — known, and not yet fixed
+
+`Gates` and `Deploy` are separate workflows with no dependency between them, so a
+push whose gates FAIL still deploys. That happened on 0.1.1: the social-card check
+was ordered before the step that installs the browser it needs, so it failed on
+the runner, every gate after it was SKIPPED, and the candidate deployed anyway
+having been measured by almost none of them.
+
+The ordering is fixed. **The structural gap is not**, and it is worth stating
+plainly rather than leaving to be rediscovered: nothing currently stops a build
+that failed its own gates from reaching production.
+
+The fix is to move the deploy job into `gates.yml` with `needs: [gates, security]`
+so the dependency is structural rather than remembered. It is deliberately not
+done here, because coupling a deploy to a gate is exactly how a release silently
+stops arriving, and that trade is the owner's to make rather than a session's to
+slip in at the end of an unrelated change.
+
 ### Shipped to production
 
 **0.1.0 reached production on 2026-08-08**, at https://3d-printing-pal.pages.dev

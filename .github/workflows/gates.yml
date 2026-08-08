@@ -53,6 +53,16 @@ jobs:
       - name: Install
         run: npm ci
 
+      # BEFORE ANY GATE THAT LAUNCHES A BROWSER, and four of them do: the
+      # accessibility gate, the social card's contrast check, the data-safety walk
+      # and the update walk. This sat further down once, after the social check
+      # that needs it — which passed locally, where the sandbox already has a
+      # browser at a fixed path, and failed on the runner, where it does not.
+      # The failure then SKIPPED every gate after it, so the release went out
+      # having been measured by almost none of them.
+      - name: Install the browser the browser-driven gates need
+        run: npx --no-install playwright-core install --with-deps chromium
+
       # ---------------------------------------------------------------- hub gates
       - name: Privacy — nothing personal about the owner lands in any repo
         run: node .hub/privacy-check.mjs --repo .
@@ -69,11 +79,6 @@ jobs:
       - name: Palette — the colour floors
         run: node .hub/palette-check.mjs palettes/3d-printing-pal.json
 
-      # The card is read at a third of its size over artwork, which is exactly
-      # where "it looks fine" stops being evidence.
-      - name: Social card — contrast measured, not eyeballed
-        run: npm run --silent social
-
       - name: Text size — type follows the reader's setting
         run: node .hub/scripts/check-textsize.mjs public/styles.css public/index.html
 
@@ -87,8 +92,10 @@ jobs:
       - name: Interactions — every drag has a non-drag path
         run: npm run --silent interactions
 
-      - name: Install the browser for the accessibility gate
-        run: npx --no-install playwright-core install --with-deps chromium
+      # The card is read at a third of its size over artwork, which is exactly
+      # where "it looks fine" stops being evidence.
+      - name: Social card — contrast measured, not eyeballed
+        run: npm run --silent social
 
       - name: Accessibility
         run: npm run --silent a11y
