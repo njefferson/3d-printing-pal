@@ -25,9 +25,11 @@
     "sync": "node ../noahjefferson/doctrine-sync.mjs --repo .",
     "render:icons": "node tools/render-icons.mjs",
     "serve": "node tools/serve.mjs",
-    "check": "npm run --silent docs && npm run --silent privacy && npm run --silent pins && npm run --silent pwa && npm run --silent palette && npm run --silent textsize && npm run --silent notes:check && npm run --silent voice && npm run --silent interactions && npm run --silent a11y && npm run --silent backup && npm run --silent update",
+    "check": "npm run --silent docs && npm run --silent privacy && npm run --silent pins && npm run --silent pwa && npm run --silent palette && npm run --silent social && npm run --silent textsize && npm run --silent notes:check && npm run --silent voice && npm run --silent interactions && npm run --silent a11y && npm run --silent backup && npm run --silent update",
     "backup": "node tools/backup-walk.mjs",
-    "update": "node tools/update-walk.mjs"
+    "update": "node tools/update-walk.mjs",
+    "social": "node tools/social-check.mjs",
+    "render:social": "node tools/render-social.mjs"
   },
   "devDependencies": {
     "axe-core": "4.10.2",

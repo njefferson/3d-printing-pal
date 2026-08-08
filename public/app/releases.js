@@ -7,6 +7,22 @@
 
 export const RELEASES = [
   {
+    "version": "0.1.1",
+    "kind": "ITERATION",
+    "date": "2026-08-08",
+    "summary": "Sharing a link to the app now shows a proper card instead of a bare address.",
+    "added": [
+      "A link preview card, so sending someone the address shows the app's name and what it does rather than just a domain. The same card is what shows on the repository page."
+    ],
+    "fixed": [],
+    "broken": [
+      "Filament counts as used the moment it is logged against a job, whichever column that job is sitting in. That is the honest answer to how much is left on a spool, but it means a job parked in research with grams already logged has spent that filament as far as the inventory is concerned.",
+      "There is no undo yet. Deletions ask first and say what they will unlink, but once a thing is gone the way back is an export taken beforehand.",
+      "Costs and prices are plain numbers with a currency symbol you choose. There is no per-currency formatting and no conversion.",
+      "An installed app on iPadOS will not always let a waiting update take over while the app is open. If the version at the bottom of the screen is not the one you expect, close the app fully and open it again."
+    ]
+  },
+  {
     "version": "0.1.0",
     "kind": "CAPABILITY",
     "date": "2026-08-07",

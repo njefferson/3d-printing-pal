@@ -43,10 +43,21 @@ const passes = [];
 const fail = (m) => failures.push(m);
 const pass = (m) => passes.push(m);
 
-/** A genuinely different worker: different bytes, different cache name. */
-function swAtVersion(version) {
-  const next = BASE_SW.replace(/const CACHE = '[^']+';/, `const CACHE = 'print-tracker-${version}';`);
-  if (next === BASE_SW) throw new Error('could not rewrite the cache constant — the walk would be testing an identical worker');
+/**
+ * A genuinely different worker: different bytes, different cache name.
+ *
+ * The tags are deliberately NOT version numbers. An earlier version of this walk
+ * used '0.1.1', '0.2.0', '0.3.0' — and the moment the app itself reached 0.1.1
+ * the first synthetic worker became byte-identical to the real one, so the walk
+ * would have been driving the browser's update machinery against a file it had no
+ * reason to replace. The guard below caught it; the tags are now ones no release
+ * can ever collide with.
+ */
+const WALK_TAGS = ['walk-a', 'walk-b', 'walk-c'];
+
+function swAtTag(tag) {
+  const next = BASE_SW.replace(/const CACHE = '[^']+';/, `const CACHE = 'print-tracker-${tag}';`);
+  if (next === BASE_SW) throw new Error(`could not rewrite the cache constant for "${tag}" — the walk would be testing an identical worker, which proves nothing`);
   return next;
 }
 
@@ -162,7 +173,7 @@ async function main() {
   }
 
   // A genuinely newer worker arrives DURING that first visit. Nothing may be said.
-  overrides['/sw.js'] = { body: swAtVersion('0.1.1'), type: 'text/javascript; charset=utf-8' };
+  overrides['/sw.js'] = { body: swAtTag(WALK_TAGS[0]), type: 'text/javascript; charset=utf-8' };
   await page.evaluate(async () => { (await navigator.serviceWorker.getRegistration())?.update(); });
   await page.waitForTimeout(1500);
 
@@ -191,7 +202,7 @@ async function main() {
   else pass('nothing is shown while the running copy is the current one');
 
   // ---- 3. a real second worker -------------------------------------------
-  overrides['/sw.js'] = { body: swAtVersion('0.2.0'), type: 'text/javascript; charset=utf-8' };
+  overrides['/sw.js'] = { body: swAtTag(WALK_TAGS[1]), type: 'text/javascript; charset=utf-8' };
   await page.evaluate(async () => { (await navigator.serviceWorker.getRegistration())?.update(); });
   await page.waitForTimeout(2000);
 
@@ -238,7 +249,7 @@ async function main() {
   await page.evaluate(() => { for (const d of document.querySelectorAll('dialog[open]')) d.close(); });
   await page.waitForTimeout(600);
 
-  overrides['/sw.js'] = { body: swAtVersion('0.3.0'), type: 'text/javascript; charset=utf-8' };
+  overrides['/sw.js'] = { body: swAtTag(WALK_TAGS[2]), type: 'text/javascript; charset=utf-8' };
   await page.evaluate(async () => { (await navigator.serviceWorker.getRegistration())?.update(); });
   await page.waitForTimeout(2000);
 
@@ -252,8 +263,9 @@ async function main() {
     await page.waitForTimeout(1200);
 
     const after = await swState(page);
-    if (!after.caches.includes('print-tracker-0.3.0')) {
-      fail(`after pressing Update now the device holds ${after.caches.join(', ')} — the swap did not happen`);
+    const expected = `print-tracker-${WALK_TAGS[2]}`;
+    if (!after.caches.includes(expected)) {
+      fail(`after pressing Update now the device holds ${after.caches.join(', ')} rather than ${expected} — the swap did not happen`);
     } else if (after.caches.length !== 1) {
       fail(`after the swap the device holds ${after.caches.length} caches (${after.caches.join(', ')}) — the old ones were not cleaned up`);
     } else {

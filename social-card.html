@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>print-tracker — social card</title>
+<!--
+  ONE TEMPLATE, TWO SIZES. tools/render-social.mjs renders this at 1200x630 for
+  the site's og:image and at 1280x640 for GitHub's social preview, so the two can
+  never drift apart. The body scales to whatever viewport it is given.
+
+  THE LETTERING IS REAL TYPE, OVERLAID DELIBERATELY. The spool artwork is the
+  app's own wordless icon; every word on this card is set here, in the app's own
+  palette, positioned on purpose. That is the half of the rule that gets skipped.
+
+  IT CARRIES THREE THINGS AND NOTHING ELSE — name, tagline, one plain line of what
+  it is. A preview card renders at roughly a third of its size beside nothing but
+  a bare domain, so anything more is unreadable decoration.
+
+  THE CONTRAST IS MEASURED, NOT LOOKED AT. tools/social-check.mjs renders this
+  with .measured hidden to get the real backdrop, takes each LINE's tight rect,
+  samples the lightest pixel under it, and fails below the floor. If a line fails,
+  move or narrow the words before deepening any scrim — a scrim heavy enough to
+  rescue any placement erases the picture.
+-->
+<style>
+  /* The app's own Instrument night palette, from palettes/3d-printing-pal.json. */
+  :root {
+    --page: #1a1a1a;
+    --page-alt: #232323;
+    --text: #eaeaea;
+    --text-2: #d2d2d2;
+    --primary: #9fc2f5;
+    --wanted: #f0c674;
+    --fun: #8fd6a4;
+  }
+
+  * { box-sizing: border-box; margin: 0; }
+
+  html, body { width: 100%; height: 100%; }
+
+  body {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 4%;
+    padding: 7% 6%;
+    background:
+      radial-gradient(70% 120% at 78% 30%, #2b2b2b 0%, rgba(43,43,43,0) 62%),
+      linear-gradient(160deg, var(--page-alt), var(--page) 70%);
+    color: var(--text);
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .words { min-width: 0; }
+
+  /* A spectral rule, echoing the three job types. Decoration, and it never
+     carries meaning on its own. */
+  .rule { display: flex; gap: 0.6vw; margin-bottom: 4.5vh; }
+  .rule span { width: 1.5vw; height: 1.5vw; border-radius: 4px; display: block; }
+  .rule span:nth-child(1) { background: var(--primary); }
+  .rule span:nth-child(2) { background: var(--wanted); }
+  .rule span:nth-child(3) { background: var(--fun); }
+
+  .name {
+    font-size: 13vh;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    line-height: 1.02;
+    color: var(--text);
+  }
+
+  .tagline {
+    /* Sized to sit on ONE line at both aspects. It wrapped at 6.2vh and left
+       "models" orphaned on a line of its own, which on a card read at a third of
+       its size looks like a mistake rather than a line break. */
+    white-space: nowrap;
+    margin-top: 3.4vh;
+    font-size: 5.5vh;
+    font-weight: 560;
+    line-height: 1.24;
+    letter-spacing: -0.012em;
+    color: var(--text);
+  }
+
+  .what {
+    margin-top: 4.4vh;
+    font-size: 4.2vh;
+    font-weight: 500;
+    line-height: 1.35;
+    color: var(--text-2);
+  }
+
+  .art { width: 47vh; height: 47vh; flex: 0 0 auto; }
+  .art svg { display: block; width: 100%; height: 100%; }
+
+  /* The gate hides everything in this class to photograph the real backdrop. */
+  .hide-measured .measured { visibility: hidden; }
+</style>
+</head>
+<body>
+
+  <div class="words">
+    <div class="rule" aria-hidden="true"><span></span><span></span><span></span></div>
+    <p class="name measured">print-tracker</p>
+    <p class="tagline measured">3D print jobs, filament and models</p>
+    <p class="what measured">On your device. Works offline. No account.</p>
+  </div>
+
+  <div class="art" aria-hidden="true">
+    <!-- The app's icon, inlined so the render needs no second file. Wordless. -->
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+      <rect x="150" y="150" width="212" height="212" rx="18" fill="#8fd6a4"/>
+      <g stroke="#1a1a1a" stroke-width="9" stroke-linecap="round" opacity="0.55">
+        <line x1="176" y1="150" x2="176" y2="362"/>
+        <line x1="212" y1="150" x2="212" y2="362"/>
+        <line x1="248" y1="150" x2="248" y2="362"/>
+        <line x1="284" y1="150" x2="284" y2="362"/>
+        <line x1="320" y1="150" x2="320" y2="362"/>
+      </g>
+      <rect x="96" y="116" width="56" height="280" rx="22" fill="#9fc2f5"/>
+      <rect x="360" y="116" width="56" height="280" rx="22" fill="#9fc2f5"/>
+      <circle cx="256" cy="256" r="34" fill="#1a1a1a"/>
+      <circle cx="256" cy="256" r="16" fill="#9fc2f5"/>
+      <path d="M362 344 C 404 352, 424 378, 424 414" fill="none" stroke="#f0c674" stroke-width="16" stroke-linecap="round"/>
+    </svg>
+  </div>
+
+</body>
+</html>

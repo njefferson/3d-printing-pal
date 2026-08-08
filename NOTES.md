@@ -151,7 +151,8 @@ the log and check whether the steps ran or were skipped.
 
 ### The staged candidate
 
-**Version 0.1.0**, at https://staging.3d-printing-pal.pages.dev
+**Version 0.1.1**, at https://staging.3d-printing-pal.pages.dev — the link
+preview card and its Open Graph tags, waiting on a pass before promotion.
 
 That alias is the candidate's standing address and is the only one worth writing
 down here. **Every deploy also gets its own immutable `<hash>.3d-printing-pal.pages.dev`
@@ -159,35 +160,39 @@ address, and that one is printed in that deploy's own log** — so it is never
 recorded in this file, which would make it one release stale the moment the next
 push landed. Read it from the run when a specific build needs pinning.
 
-The first staging deploy, for commit `935173f`, uploaded 27 files including
-`_headers` and printed both:
+**If the alias does not resolve, the per-deployment address will.**
 
-    ✨ Deployment complete! Take a peek over at https://6e75a3ec.3d-printing-pal.pages.dev
-    ✨ Deployment alias URL: https://staging.3d-printing-pal.pages.dev
+**What is confirmed and what is not.** Every deploy's steps are read from the run
+rather than inferred from the workflow exiting 0, which a fully-skipped deploy also
+does. Whether any of these addresses actually renders in a browser has **not** been
+confirmed from a session: this sandbox reaches no external site at all — a
+known-good address returns the same failure as a new one — so a session not loading
+the app says nothing about the app.
 
-**If the alias does not resolve, the per-deployment address will**, and the
-likely cause is that this project has no production deployment yet.
+**The Cloudflare secrets already existed on this repo.** The first push to
+`staging` deployed with no setup step and created the Pages project as it went.
 
-**What is confirmed and what is not.** The deploy workflow's steps RAN rather than
-skipped, and the wrangler step concluded successfully — that is read from the run,
-not inferred from the workflow exiting 0, which a fully-skipped deploy also does.
-Whether either address actually renders in a browser has **not** been confirmed:
-`pages.dev` is not reachable from the sandbox this was built in. Loading it is the
-first thing to do on a real device.
+### Shipped to production
 
-**The Cloudflare secrets already existed on this repo** — the deploy ran on the
-first push to `staging` with no setup step, and created the Pages project as it
-went. Nothing needs adding.
+**0.1.0 reached production on 2026-08-08**, at https://3d-printing-pal.pages.dev
 
-**Production is still empty.** `main` does not exist, so nothing has been
-promoted and `https://3d-printing-pal.pages.dev` has no production deployment
-behind it. That is the staging gate working as intended: the candidate is up, and
-promotion waits on a pass from a real device.
+Promoted with `git push origin staging:main` on the owner's explicit say-so, which
+is what the staging gate waits for. The production deploy's steps RAN rather than
+skipped, and its log printed the deployment:
+
+    npx wrangler pages deploy public --project-name=3d-printing-pal --branch=main
+    ✨ Deployment complete! Take a peek over at https://9a6e32b1.3d-printing-pal.pages.dev
+
+**Ordering worth keeping.** The deploy concurrency group is per-ref, so a second
+push to `main` cancels the first's in-flight deploy — and a cancelled run concludes
+`cancelled` rather than `failure`, which reads like nothing happened. Promote, read
+the deploy, and only then push anything else to `main`.
 
 ---
 
 ## Roadmap
 
+- Promote 0.1.1 once the card and its tags have passed on a device.
 - Undo for destructive actions.
 - Reordering within a column from the Move control, not only by drag.
 - A low-filament warning threshold that can be set per material.

@@ -69,6 +69,11 @@ jobs:
       - name: Palette — the colour floors
         run: node .hub/palette-check.mjs palettes/3d-printing-pal.json
 
+      # The card is read at a third of its size over artwork, which is exactly
+      # where "it looks fine" stops being evidence.
+      - name: Social card — contrast measured, not eyeballed
+        run: npm run --silent social
+
       - name: Text size — type follows the reader's setting
         run: node .hub/scripts/check-textsize.mjs public/styles.css public/index.html
 
