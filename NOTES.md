@@ -174,6 +174,27 @@ on a push.
 **Not verified from here, and needing his hands:** the real feel on a device, the
 share sheet, home-screen install, and the iPadOS behaviour below.
 
+## The status page (Doctrine §7i)
+
+This work has run across several releases, so it carries a live status artifact:
+
+    https://claude.ai/code/artifact/825e4c39-f855-4ff1-b515-fd65f8544b4e
+
+**Redeploy that SAME URL at each stage — never publish a new one.** A fresh link
+per update is a new thing to lose, which is the problem the page solves. From a
+conversation that did not publish it, pass the URL back as `url`; from one that
+did, republishing the same file path keeps it.
+
+**Hand the link over in every reply that reports progress.** Not once at
+creation — every time. Being asked for it is the signal this was skipped.
+
+It has to carry the version on staging, the version in production, and the last
+SHA verified green; what is waiting on HIM marked apart from what is waiting on
+the work; and what was found and NOT fixed alongside what was checked and found
+not to be a defect. A page that only lists wins is an advertisement.
+
+---
+
 ## Deployment
 
 Cloudflare Pages, project `3d-printing-pal`, from `.github/workflows/deploy.yml`.
