@@ -153,23 +153,36 @@ the log and check whether the steps ran or were skipped.
 
 **Version 0.1.0**, at https://staging.3d-printing-pal.pages.dev
 
-**That address has never served anything, and this entry is not a claim that it
-has.** It is where the candidate appears once the Cloudflare secrets exist and a
-deploy for `staging` actually runs. It is written down now because the handoff
-gate reads the candidate and its version from this section, and a candidate
-nobody can find is the failure that rule exists for.
+That alias is the candidate's standing address and is the only one worth writing
+down here. **Every deploy also gets its own immutable `<hash>.3d-printing-pal.pages.dev`
+address, and that one is printed in that deploy's own log** — so it is never
+recorded in this file, which would make it one release stale the moment the next
+push landed. Read it from the run when a specific build needs pinning.
 
-**The URL to trust is the one the deploy log prints, not this one.** Every
-Cloudflare Pages deployment also gets a unique `<hash>.3d-printing-pal.pages.dev`
-address that always resolves, and the log is where it appears. A branch alias
-like the one above **may not resolve at all until the project has a production
-deployment** — that has happened before on these apps, and the fix is creating
-`main`, not a hunt.
+The first staging deploy, for commit `935173f`, uploaded 27 files including
+`_headers` and printed both:
 
-**Nothing has been deployed yet.** The repo was created empty, so there is no
-Pages project, no production deployment and no preview. Two things are needed
-before any of that changes, and neither can be done from a session: the two
-Cloudflare secrets, and `main` existing.
+    ✨ Deployment complete! Take a peek over at https://6e75a3ec.3d-printing-pal.pages.dev
+    ✨ Deployment alias URL: https://staging.3d-printing-pal.pages.dev
+
+**If the alias does not resolve, the per-deployment address will**, and the
+likely cause is that this project has no production deployment yet.
+
+**What is confirmed and what is not.** The deploy workflow's steps RAN rather than
+skipped, and the wrangler step concluded successfully — that is read from the run,
+not inferred from the workflow exiting 0, which a fully-skipped deploy also does.
+Whether either address actually renders in a browser has **not** been confirmed:
+`pages.dev` is not reachable from the sandbox this was built in. Loading it is the
+first thing to do on a real device.
+
+**The Cloudflare secrets already existed on this repo** — the deploy ran on the
+first push to `staging` with no setup step, and created the Pages project as it
+went. Nothing needs adding.
+
+**Production is still empty.** `main` does not exist, so nothing has been
+promoted and `https://3d-printing-pal.pages.dev` has no production deployment
+behind it. That is the staging gate working as intended: the candidate is up, and
+promotion waits on a pass from a real device.
 
 ---
 
