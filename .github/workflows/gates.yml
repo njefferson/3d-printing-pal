@@ -92,6 +92,14 @@ jobs:
       - name: Interactions — every drag has a non-drag path
         run: npm run --silent interactions
 
+      # icon.svg at the root is the one source; public/icon.svg is generated from
+      # it. This compares them and needs no browser, so unlike the render itself
+      # it can run here. It does NOT prove the PNGs were re-rendered — but one
+      # command writes both, so a stale served copy is the signature of a render
+      # that never ran.
+      - name: Icon — the served copy has not drifted from the source
+        run: npm run --silent icons
+
       # The card is read at a third of its size over artwork, which is exactly
       # where "it looks fine" stops being evidence.
       - name: Social card — contrast measured, not eyeballed

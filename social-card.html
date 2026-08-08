@@ -8,9 +8,22 @@
   the site's og:image and at 1280x640 for GitHub's social preview, so the two can
   never drift apart. The body scales to whatever viewport it is given.
 
-  THE LETTERING IS REAL TYPE, OVERLAID DELIBERATELY. The spool artwork is the
-  app's own wordless icon; every word on this card is set here, in the app's own
-  palette, positioned on purpose. That is the half of the rule that gets skipped.
+  THE ART IS THIS CARD'S OWN DRAWING, NOT A COPY OF THE ICON. The icon is a
+  favicon before it is anything else and carries one shape; a card is wide enough
+  to carry a scene. So the icon is a nozzle and this is a printer farm — a whole
+  machine in the centre at full contrast, one receded and cropped by each edge, so
+  the row reads as continuing past the picture.
+
+  THE MACHINE IS DRAWN ONCE. It lives in <defs> and is placed three times with
+  <use>; the receded pair differs only by three custom properties set on the
+  instance, which inherit into the use's shadow tree. Three hand-inlined copies is
+  the same shape as any other list that must never disagree, and it disagrees the
+  first time one is edited alone. This file is never served — only the render
+  script opens it — so a Chromium-only path is not a cross-browser bet.
+
+  THE LETTERING IS REAL TYPE, OVERLAID DELIBERATELY. The artwork is wordless; every
+  word on this card is set here, in the app's own palette, positioned on purpose.
+  That is the half of the rule that gets skipped.
 
   IT CARRIES THREE THINGS AND NOTHING ELSE — name, tagline, one plain line of what
   it is. A preview card renders at roughly a third of its size beside nothing but
@@ -39,31 +52,79 @@
   html, body { width: 100%; height: 100%; }
 
   body {
-    display: grid;
-    grid-template-columns: 1fr auto;
-    align-items: center;
-    gap: 4%;
-    padding: 7% 6%;
+    position: relative;
+    overflow: hidden;
     background:
-      radial-gradient(70% 120% at 78% 30%, #2b2b2b 0%, rgba(43,43,43,0) 62%),
-      linear-gradient(160deg, var(--page-alt), var(--page) 70%);
+      radial-gradient(62% 105% at 50% 84%, #2c2c2c 0%, rgba(44,44,44,0) 62%),
+      linear-gradient(160deg, var(--page-alt), var(--page) 72%);
     color: var(--text);
     font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
   }
 
-  .words { min-width: 0; }
+  /* ------------------------------------------------------------------ the farm
+
+     ALL THREE STAND ON ONE FLOOR — same `bottom`, so the beds line up and the row
+     reads as a rank of machines rather than three drawings at three depths. The
+     centre one is bigger, and a shared floor is exactly what makes that read as
+     nearer rather than merely larger.
+
+     NOTHING IS CROPPED BY THE BOTTOM EDGE. Cropping at the sides is the idea; a
+     machine cropped at the bottom just has no feet. */
+  .p {
+    position: absolute;
+    display: block;
+    bottom: 6%;
+    /* Receded by default — the centre instance overrides. */
+    --frame: #565656;
+    --part: #4a4a4a;
+    --hot: #565656;
+  }
+
+  /* The receded pair has to survive being seen at a quarter of this size, which
+     is where a link is most often met; a flank that dissolves there leaves one
+     printer and no farm. These are as light as they go while a --text-2 line
+     still clears 4.5:1 over them. */
+  .p-left  { left: -9%;   width: 21%; }
+  .p-right { left: 88%;   width: 21%; }
+
+  .p-mid {
+    left: 37.5%;
+    width: 25%;
+    --frame: var(--primary);
+    --part: var(--fun);
+    --hot: var(--wanted);
+  }
+
+  /* ----------------------------------------------------------------- the words
+
+     Upper left, clear of the centre machine. The clearance is worked out rather
+     than nudged: at 1280x640 a unit 25% wide is 25 x 0.875 x 2.0 = 43.75% of the
+     height, so standing 6% up its top is 50.25% from the top. The words end
+     around 42% down. That gap is why the description stays on one line. */
+  .words {
+    position: absolute;
+    left: 5.5%;
+    top: 9%;
+    width: 62%;
+    z-index: 2;
+  }
 
   /* A spectral rule, echoing the three job types. Decoration, and it never
      carries meaning on its own. */
-  .rule { display: flex; gap: 0.6vw; margin-bottom: 4.5vh; }
-  .rule span { width: 1.5vw; height: 1.5vw; border-radius: 4px; display: block; }
+  .rule { display: flex; gap: 0.55vw; margin-bottom: 3.4vh; }
+  .rule span { width: 1.4vw; height: 1.4vw; border-radius: 4px; display: block; }
   .rule span:nth-child(1) { background: var(--primary); }
   .rule span:nth-child(2) { background: var(--wanted); }
   .rule span:nth-child(3) { background: var(--fun); }
 
+  /* All three lines are nowrap. A card is read at a third of its size, where a
+     wrapped line that leaves one word stranded looks like a mistake rather than a
+     line break — and a wrap also moves a line onto backdrop the contrast gate
+     measured at the other aspect. */
   .name {
-    font-size: 13vh;
+    white-space: nowrap;
+    font-size: 11vh;
     font-weight: 700;
     letter-spacing: -0.025em;
     line-height: 1.02;
@@ -71,12 +132,9 @@
   }
 
   .tagline {
-    /* Sized to sit on ONE line at both aspects. It wrapped at 6.2vh and left
-       "models" orphaned on a line of its own, which on a card read at a third of
-       its size looks like a mistake rather than a line break. */
     white-space: nowrap;
-    margin-top: 3.4vh;
-    font-size: 5.5vh;
+    margin-top: 2.6vh;
+    font-size: 4.4vh;
     font-weight: 560;
     line-height: 1.24;
     letter-spacing: -0.012em;
@@ -84,46 +142,50 @@
   }
 
   .what {
-    margin-top: 4.4vh;
-    font-size: 4.2vh;
+    white-space: nowrap;
+    margin-top: 2.8vh;
+    font-size: 3.4vh;
     font-weight: 500;
     line-height: 1.35;
     color: var(--text-2);
   }
 
-  .art { width: 47vh; height: 47vh; flex: 0 0 auto; }
-  .art svg { display: block; width: 100%; height: 100%; }
-
   /* The gate hides everything in this class to photograph the real backdrop. */
   .hide-measured .measured { visibility: hidden; }
+
+  .defs { position: absolute; width: 0; height: 0; overflow: hidden; }
 </style>
 </head>
 <body>
+
+  <!-- The machine, drawn once. Its real bounds are x 66..446 and y 76..406 — the
+       BOTTOM IS THE UPRIGHTS AT 406, NOT THE BED RAIL AT 378. A viewBox taken from
+       the bed cuts the legs off every instance, which does not read as a crop, it
+       reads as machines sinking through the floor. -->
+  <svg class="defs" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <defs>
+      <g id="machine">
+        <rect x="66"  y="76"  width="22"  height="330" rx="9"  fill="var(--frame)"/>
+        <rect x="424" y="76"  width="22"  height="330" rx="9"  fill="var(--frame)"/>
+        <rect x="66"  y="76"  width="380" height="22"  rx="9"  fill="var(--frame)"/>
+        <rect x="98"  y="170" width="316" height="24"  rx="12" fill="var(--frame)"/>
+        <rect x="212" y="182" width="88"  height="62"  rx="12" fill="var(--hot)"/>
+        <path d="M228 244 L284 244 L268 282 L244 282 Z" fill="var(--hot)"/>
+        <rect x="104" y="352" width="304" height="26"  rx="10" fill="var(--frame)"/>
+        <rect x="168" y="290" width="176" height="62"  rx="10" fill="var(--part)"/>
+      </g>
+    </defs>
+  </svg>
+
+  <svg class="p p-left"  viewBox="56 66 400 350" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><use href="#machine"/></svg>
+  <svg class="p p-mid"   viewBox="56 66 400 350" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><use href="#machine"/></svg>
+  <svg class="p p-right" viewBox="56 66 400 350" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><use href="#machine"/></svg>
 
   <div class="words">
     <div class="rule" aria-hidden="true"><span></span><span></span><span></span></div>
     <p class="name measured">print-tracker</p>
     <p class="tagline measured">3D print jobs, filament and models</p>
     <p class="what measured">On your device. Works offline. No account.</p>
-  </div>
-
-  <div class="art" aria-hidden="true">
-    <!-- The app's icon, inlined so the render needs no second file. Wordless. -->
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-      <rect x="150" y="150" width="212" height="212" rx="18" fill="#8fd6a4"/>
-      <g stroke="#1a1a1a" stroke-width="9" stroke-linecap="round" opacity="0.55">
-        <line x1="176" y1="150" x2="176" y2="362"/>
-        <line x1="212" y1="150" x2="212" y2="362"/>
-        <line x1="248" y1="150" x2="248" y2="362"/>
-        <line x1="284" y1="150" x2="284" y2="362"/>
-        <line x1="320" y1="150" x2="320" y2="362"/>
-      </g>
-      <rect x="96" y="116" width="56" height="280" rx="22" fill="#9fc2f5"/>
-      <rect x="360" y="116" width="56" height="280" rx="22" fill="#9fc2f5"/>
-      <circle cx="256" cy="256" r="34" fill="#1a1a1a"/>
-      <circle cx="256" cy="256" r="16" fill="#9fc2f5"/>
-      <path d="M362 344 C 404 352, 424 378, 424 414" fill="none" stroke="#f0c674" stroke-width="16" stroke-linecap="round"/>
-    </svg>
   </div>
 
 </body>

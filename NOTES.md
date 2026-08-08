@@ -116,6 +116,39 @@ capability, with the rejected ones and the reason each was rejected.
 
 ---
 
+## The artwork
+
+**`icon.svg` at the root is the one source.** `tools/render-icons.mjs` writes
+`public/icon.svg` from it alongside the four PNGs, and `--check` fails if the
+served copy has drifted. Edit the root file, run the render, commit what it
+writes. The check needs no browser so it runs in CI; it does **not** prove the
+PNGs were re-rendered, because that needs a browser the runner does not have —
+but one command writes both, so a stale served copy is the signature of a render
+that never ran.
+
+**The card's art is its own drawing, not a copy of the icon.** The icon is a
+favicon before it is anything else and carries one shape; the card is wide enough
+to carry a scene. So the icon is a nozzle and the card is a printer farm. Inside
+the card the machine is drawn ONCE, in `<defs>`, and placed three times with
+`<use>`; the receded pair differs only by three custom properties set on the
+instance. `social-card.html` is never served, so that is a Chromium-only path
+rather than a cross-browser bet.
+
+**Two values in the card that look arbitrary and are not.** The machine's bounding
+box bottom is **y406, the uprights — not y378, the bed rail**; a box taken from
+the bed cuts the legs off every instance, which reads as machines sinking through
+the floor rather than as a crop. And the receded pair is `#565656` / `#4a4a4a`
+because they have to survive being seen at a quarter size, which is where a link
+is most often met; darker and the flanks dissolve, leaving one printer and no
+farm.
+
+**Why the mark was redrawn.** The first icon was a filament spool seen face-on: a
+dark hub with a light centre, inside a rounded body. That is the shape of a pupil,
+and read cold the icon was thread with an eye in it. No gate catches that, and the
+session that drew it was the one party that could not see it.
+
+---
+
 ## How this is verified
 
 `npm run check` runs every gate, and it is the same entry point CI uses — a gate
@@ -151,8 +184,13 @@ the log and check whether the steps ran or were skipped.
 
 ### The staged candidate
 
-**Version 0.1.1**, at https://staging.3d-printing-pal.pages.dev — the link
-preview card and its Open Graph tags, waiting on a pass before promotion.
+**Version 0.1.2**, at https://staging.3d-printing-pal.pages.dev — a new icon and
+new card artwork, waiting on a pass before promotion.
+
+**It supersedes 0.1.1 rather than queueing behind it.** 0.1.1's entire content was
+the link preview card, which 0.1.2 redraws, so passing 0.1.1 separately would be
+passing something already replaced. It never reached production, so nothing is
+being skipped — both promote together.
 
 That alias is the candidate's standing address and is the only one worth writing
 down here. **Every deploy also gets its own immutable `<hash>.3d-printing-pal.pages.dev`
@@ -210,7 +248,7 @@ the deploy, and only then push anything else to `main`.
 
 ## Roadmap
 
-- Promote 0.1.1 once the card and its tags have passed on a device.
+- Promote 0.1.2 once the icon and the card have passed on a device.
 - Undo for destructive actions.
 - Reordering within a column from the Move control, not only by drag.
 - A low-filament warning threshold that can be set per material.

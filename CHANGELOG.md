@@ -9,6 +9,33 @@ triplet is `version.capability.iteration`. Releases do not have names.
 
 ---
 
+## 0.1.2 — ITERATION — 2026-08-08
+
+The app has a new icon, and the link preview card has new artwork.
+
+### Fixed
+
+- A new icon: a print nozzle laying down layers. The old one was a filament spool
+  seen face-on, and at a glance it read as an eye rather than a spool.
+- The link preview card now shows a row of printers instead of the spool, so
+  sending someone the address shows something that looks like what the app is for.
+
+### Still not right
+
+- Filament counts as used the moment it is logged against a job, whichever column
+  that job is sitting in. That is the honest answer to how much is left on a
+  spool, but it means a job parked in research with grams already logged has spent
+  that filament as far as the inventory is concerned.
+- There is no undo yet. Deletions ask first and say what they will unlink, but once
+  a thing is gone the way back is an export taken beforehand.
+- Costs and prices are plain numbers with a currency symbol you choose. There is
+  no per-currency formatting and no conversion.
+- An installed app on iPadOS will not always let a waiting update take over while
+  the app is open. If the version at the bottom of the screen is not the one you
+  expect, close the app fully and open it again.
+
+---
+
 ## 0.1.1 — ITERATION — 2026-08-08
 
 Sharing a link to the app now shows a proper card instead of a bare address.
