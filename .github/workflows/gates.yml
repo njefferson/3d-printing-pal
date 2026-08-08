@@ -2,10 +2,12 @@ name: Gates
 
 # Every gate this repo is held to, in one place both a developer and CI invoke.
 #
-# IT RUNS ON `claude/**` AS WELL AS `main`. A workflow written `branches: [main]`
-# in a repo whose work happens on working branches never executes at all — the
-# hub's own doctrine gate was written that way and had not run once. An unrun
-# workflow and a missing workflow are the same artefact.
+# IT RUNS ON EVERY BRANCH WORK ACTUALLY LANDS ON — `staging` is where candidates
+# go, `main` is production, and `claude/**` stays because the harness keeps
+# creating those. A workflow written `branches: [main]` in a repo whose work
+# happens elsewhere never executes at all: the hub's own doctrine gate was written
+# that way and had not run once. An unrun workflow and a missing workflow are the
+# same artefact.
 #
 # THE SHARED GATES ARE THE HUB'S OWN COPIES, not forks of them. The hub is
 # checked out SHA-pinned, with credentials not persisted, into an untracked path
@@ -13,7 +15,7 @@ name: Gates
 
 on:
   push:
-    branches: [main, "claude/**"]
+    branches: [main, staging, "claude/**"]
   pull_request:
   workflow_dispatch:
 

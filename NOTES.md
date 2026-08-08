@@ -149,22 +149,32 @@ The workflow skips every deploy step until `CLOUDFLARE_API_TOKEN` and
 — which means a green run is not by itself evidence that anything deployed. Read
 the log and check whether the steps ran or were skipped.
 
-**Nothing has been deployed yet.** The repo had no commits and no default branch
-when this app was written, so there is no Pages project, no production URL and no
-staging preview to record here.
+### The staged candidate
 
-**Staging is not wired yet, and that is the next thing.** The doctrine's staging
-gate needs a preview URL to hand over, which needs a Pages project, which needs
-the branch policy settled and `main` created. Once that exists, `staging` joins
-the deploy workflow's triggers and the candidate URL and its version get recorded
-in this section — the handoff gate reads them from here.
+**Version 0.1.0**, at https://staging.3d-printing-pal.pages.dev
+
+**That address has never served anything, and this entry is not a claim that it
+has.** It is where the candidate appears once the Cloudflare secrets exist and a
+deploy for `staging` actually runs. It is written down now because the handoff
+gate reads the candidate and its version from this section, and a candidate
+nobody can find is the failure that rule exists for.
+
+**The URL to trust is the one the deploy log prints, not this one.** Every
+Cloudflare Pages deployment also gets a unique `<hash>.3d-printing-pal.pages.dev`
+address that always resolves, and the log is where it appears. A branch alias
+like the one above **may not resolve at all until the project has a production
+deployment** — that has happened before on these apps, and the fix is creating
+`main`, not a hunt.
+
+**Nothing has been deployed yet.** The repo was created empty, so there is no
+Pages project, no production deployment and no preview. Two things are needed
+before any of that changes, and neither can be done from a session: the two
+Cloudflare secrets, and `main` existing.
 
 ---
 
 ## Roadmap
 
-- Wire `staging` and record the candidate URL here, once `main` and the Pages
-  project exist.
 - Undo for destructive actions.
 - Reordering within a column from the Move control, not only by drag.
 - A low-filament warning threshold that can be set per material.

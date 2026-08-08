@@ -1,6 +1,12 @@
 name: Deploy
 
-# main -> production. Deploys the static app in public/ to Cloudflare Pages.
+# staging -> a preview deployment, main -> production. Deploys the static app in
+# public/ to Cloudflare Pages, and which of the two it is comes from
+# `--branch=${{ github.ref_name }}` on the deploy step below.
+#
+# `staging` is the candidate: it is passed on the owner's own device, and only his
+# explicit promote puts anything on `main`. Nothing here promotes by itself.
+#
 # Needs two repo secrets: CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID.
 #
 # THIS WORKFLOW EXITS 0 WHEN THE SECRETS ARE ABSENT, so it never fails red while
@@ -14,9 +20,13 @@ name: Deploy
 
 on:
   push:
-    branches: [main]
+    branches: [main, staging]
   workflow_dispatch:
 
+# Per-ref, so a staging deploy can never cancel a production one. Note that
+# within a branch it still cancels: a second push landing twenty seconds after a
+# promote can cancel the promote's own deploy, which concludes `cancelled` rather
+# than failed and reads like nothing happened.
 concurrency:
   group: deploy-${{ github.ref_name }}
   cancel-in-progress: true
