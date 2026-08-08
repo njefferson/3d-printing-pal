@@ -205,13 +205,13 @@ the log and check whether the steps ran or were skipped.
 
 ### The staged candidate
 
-**Version 0.1.2**, at https://staging.3d-printing-pal.pages.dev — a new icon and
-new card artwork, waiting on a pass before promotion.
+**There is none right now.** `staging` and `main` are the same commit — 0.1.2 was
+promoted on 2026-08-08 — so https://staging.3d-printing-pal.pages.dev currently
+serves exactly what production serves. The next candidate goes here.
 
-**It supersedes 0.1.1 rather than queueing behind it.** 0.1.1's entire content was
-the link preview card, which 0.1.2 redraws, so passing 0.1.1 separately would be
-passing something already replaced. It never reached production, so nothing is
-being skipped — both promote together.
+**0.1.1 never reached production on its own, and that was deliberate.** Its entire
+content was the link preview card, which 0.1.2 redrew; promoting it separately
+would have shipped artwork already replaced. Both went in the same promotion.
 
 That alias is the candidate's standing address and is the only one worth writing
 down here. **Every deploy also gets its own immutable `<hash>.3d-printing-pal.pages.dev`
@@ -251,6 +251,24 @@ slip in at the end of an unrelated change.
 
 ### Shipped to production
 
+**0.1.2 reached production on 2026-08-08**, at https://3d-printing-pal.pages.dev
+
+Promoted with `git push origin staging:main` on the owner's explicit say-so. The
+production deploy's steps RAN rather than skipped, and its log printed:
+
+    npx wrangler pages deploy public --project-name=3d-printing-pal --branch=main
+    ✨ Deployment complete! Take a peek over at https://5e3cdabf.3d-printing-pal.pages.dev
+
+**The promoted commit was `2623a6b`, not the release commit `d1147f6`.** A
+NOTES-and-marker commit had landed on top of the release, and a promotion ships
+the branch HEAD rather than the release commit — so the HEAD is what has to be
+green, and it was checked as such rather than assuming the release commit's run
+covered it.
+
+This carried 0.1.1 to production too. It had been on staging unpromoted, and its
+only content — the link preview card — was redrawn by 0.1.2, so promoting it
+alone would have shipped artwork already replaced.
+
 **0.1.0 reached production on 2026-08-08**, at https://3d-printing-pal.pages.dev
 
 Promoted with `git push origin staging:main` on the owner's explicit say-so, which
@@ -269,7 +287,6 @@ the deploy, and only then push anything else to `main`.
 
 ## Roadmap
 
-- Promote 0.1.2 once the icon and the card have passed on a device.
 - Undo for destructive actions.
 - Reordering within a column from the Move control, not only by drag.
 - A low-filament warning threshold that can be set per material.
