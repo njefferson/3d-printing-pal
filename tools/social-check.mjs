@@ -43,6 +43,11 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const BROWSER = process.env.CHROMIUM_PATH || '/opt/pw-browsers/chromium';
 const VERBOSE = process.argv.includes('--verbose');
 
+// Takes an optional card path so alternative compositions can be measured by THIS
+// gate rather than by a second copy of its maths. Defaults to the shipping card,
+// so `npm run social` is unchanged.
+const CARD = process.argv.slice(2).find((a) => !a.startsWith('--')) || join(ROOT, 'social-card.html');
+
 // 4.5:1 across the board. Most of this text is large enough for the 3:1
 // allowance, but a card is read shrunk to a third of its size, so the large-text
 // exemption is not honestly available here.
@@ -66,7 +71,7 @@ const browser = await chromium.launch({
 
 for (const size of SIZES) {
   const page = await browser.newPage({ viewport: { width: size.width, height: size.height }, deviceScaleFactor: 1 });
-  await page.goto(pathToFileURL(join(ROOT, 'social-card.html')).href, { waitUntil: 'networkidle' });
+  await page.goto(pathToFileURL(CARD).href, { waitUntil: 'networkidle' });
 
   // Step 2 first, while the text is still visible: where is each LINE?
   const lines = await page.evaluate(() => {
