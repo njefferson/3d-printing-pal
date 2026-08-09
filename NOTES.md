@@ -80,7 +80,11 @@ is the way back. Recorded here as owed, not as done.
   drag inserts at the drop position.
 - No printing or PDF output.
 - No multi-device sync, by design rather than by omission.
-- No photos or files attached to a model — links only.
+- No files attached to a model — pictures and links only.
+- A picture has to be added by hand; dropping in an address cannot pull the photo
+  from the page. Doing that needs a server to read the page's Open Graph tags,
+  which would end "nothing is fetched" — a trade the owner has not been asked to
+  make yet.
 
 ---
 
@@ -113,6 +117,48 @@ capability, with the rejected ones and the reason each was rejected.
   doubles every control when they do.
 - **Media-query thresholds stay in `px`.** `rem` inside a media query resolves
   against the initial root font size, not the reader's.
+
+---
+
+## Pictures (0.2.0)
+
+**Nothing is still fetched, and that sentence is still true.** A picture is one
+the reader supplies — chosen, pasted or photographed — prepared on their own
+device and stored locally. No image is ever loaded from another site, and
+`img-src` carries `blob:` but no remote host, so a hotlink cannot creep in later.
+
+**Why a URL cannot fill in the rest.** Reading a model page's title and photo
+means reading a cross-origin response, which a browser refuses unless that site
+sends `Access-Control-Allow-Origin` — and none of them do for their HTML. That is
+the same-origin policy, not a header we control, so page metadata needs a server
+this app does not have. What a URL *can* give offline is in `public/app/fromurl.js`:
+the site name from the hostname, and a title guess from the path slug. Both are
+offered into empty fields only, never over something typed.
+
+**The budget is the feature.** `public/app/image.js` downscales to a 512px longest
+edge before anything is stored, because every picture is held about four times
+over — once live and once inside each retained snapshot's base64 — so a 2MB
+original is most of a hundred megabytes by the time the backup ring has it. Three
+things in that file are non-obvious and each is a real defect avoided: EXIF
+orientation is applied at decode or portrait photos are sideways forever; the
+encoded type is read back because `toBlob` returns PNG rather than failing when
+WebP is unavailable; and nothing is ever scaled up.
+
+**Snapshots are bounded by BYTES now, not by count.** Three snapshots of a picture
+catalog is three more copies of every image, so a count-bound ring grew without
+limit in the only dimension that runs out. The newest is always kept whatever it
+weighs — dropping the copy taken seconds ago to satisfy a budget defeats the point
+of taking it.
+
+**`images` is a DATA store**, which is what puts it inside the atomic replace, the
+export and the validator's duplicate and reference checks with no special case
+anywhere. Pictures live in their own store rather than on the model record so
+listing models does not drag every blob into memory to draw a text row, and they
+are never held in `state`.
+
+**A backup from before pictures existed still restores.** Schema 1 has no images
+list and is filled forward, because the old file is exactly the one reached for in
+a crisis.
 
 ---
 
@@ -167,6 +213,13 @@ on a push.
   record for record. Then offers five broken files — duplicate id, dangling spool
   reference, truncated, wrong format, newer schema — and asserts each is refused
   AND that the existing data is untouched afterwards.
+- **`tools/shell-check.mjs`** — every module the app ships is in the service
+  worker's precache list, and every listed path exists. Adding a module is
+  ordinary; adding it to `SHELL` is a second step nothing reminds you about, and
+  missing it fails only for a reader who is offline — invisible to whoever caused
+  it. It fails the other way too, because `cache.addAll` rejects the whole batch
+  on one bad path, so a stale entry empties the cache rather than shrinking it.
+  Planted red both ways.
 - **`tools/update-walk.mjs`** — drives genuinely different second and third
   service workers through the browser's own update machinery, then runs the app
   offline. A mocked registration proves the mock works and nothing else.

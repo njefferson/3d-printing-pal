@@ -10,10 +10,20 @@
 // ask about — and the data is gone. An aborted transaction rolls the clear back.
 
 export const DB_NAME = 'print-tracker';
-export const DB_VERSION = 1;
+export const DB_VERSION = 2;
 
 // Stores that hold the reader's own records. `snapshots` and `meta` are ours.
-export const DATA_STORES = ['spools', 'models', 'jobs'];
+//
+// `images` IS A DATA STORE ON PURPOSE, and that one decision carries most of the
+// picture feature: being in this list is what puts it inside the atomic replace,
+// inside the export, and inside the validator's id and duplicate checks, with no
+// special case written for it anywhere. A picture kept outside this list would be
+// a second kind of data with a second set of rules, and the restore guarantee
+// would quietly stop covering it.
+//
+// Pictures live in their own store rather than on the model record so that
+// listing models does not drag every blob into memory to draw a text row.
+export const DATA_STORES = ['spools', 'models', 'jobs', 'images'];
 export const ALL_STORES = [...DATA_STORES, 'snapshots', 'meta'];
 
 let dbPromise = null;
@@ -43,6 +53,10 @@ export function openDb() {
     const req = indexedDB.open(DB_NAME, DB_VERSION);
     req.onupgradeneeded = () => {
       const db = req.result;
+      // Additive, and deliberately written as "create what is missing" rather
+      // than as a numbered migration: a reader arriving from version 1 gets the
+      // images store and keeps every record they already had, because nothing
+      // here touches the stores that exist.
       for (const name of DATA_STORES) {
         if (!db.objectStoreNames.contains(name)) db.createObjectStore(name, { keyPath: 'id' });
       }
@@ -66,6 +80,25 @@ export async function getAll(store) {
   const rows = await request(tx.objectStore(store).getAll());
   await finish(tx);
   return rows;
+}
+
+// Keys without values. The point of this is the images store: `getAll` there
+// would pull every picture's bytes into memory to answer "how many are there",
+// which is the exact cost having a separate store was meant to avoid.
+export async function getAllKeys(store) {
+  const db = await openDb();
+  const tx = db.transaction(store, 'readonly');
+  const keys = await request(tx.objectStore(store).getAllKeys());
+  await finish(tx);
+  return keys;
+}
+
+export async function get(store, id) {
+  const db = await openDb();
+  const tx = db.transaction(store, 'readonly');
+  const row = await request(tx.objectStore(store).get(id));
+  await finish(tx);
+  return row;
 }
 
 export async function put(store, record) {

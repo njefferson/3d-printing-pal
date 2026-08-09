@@ -22,16 +22,46 @@
 import * as db from './db.js';
 import { VERSION } from './version.js';
 import { COLUMN_IDS, TYPE_IDS, stampFor } from './derive.js';
+import { blobToBase64, base64ToBlob } from './image.js';
 
 export const FORMAT = 'print-tracker-backup';
-export const SCHEMA = 1;
+
+// 2 added the images store. A schema-1 backup is still readable — see the
+// forward-fill in `validate` — because a backup taken before a feature existed
+// is the ONE file a reader is most likely to reach for in a crisis, and refusing
+// it because it predates a picture would be the restore failing at the only
+// moment it matters.
+export const SCHEMA = 2;
+
+// Snapshots used to be bounded by COUNT, and with text-only records that was the
+// same thing as being bounded. Pictures broke that: three snapshots of a catalog
+// with images is three more base64 copies of every one of them, so a count-bound
+// ring grows without limit in the dimension that actually runs out. The bound is
+// now bytes first, with a count as the outer stop.
 const MAX_SNAPSHOTS = 3;
+const MAX_SNAPSHOT_BYTES = 12 * 1024 * 1024;
 
 /** Build the whole dataset as one plain object. One instant, used everywhere. */
 export async function buildExport(at = new Date()) {
   const everything = await db.readEverything();
   const stamp = stampFor(at);
   const prefs = (everything.meta || []).find((row) => row.key === 'prefs')?.value || null;
+
+  // Blobs are not JSON, and the backup being ONE file is the property the whole
+  // restore guarantee rests on. So pictures travel as base64 here and are turned
+  // back into Blobs by the validator.
+  const images = [];
+  for (const record of everything.images || []) {
+    images.push({
+      id: record.id,
+      type: record.type || record.blob?.type || 'image/webp',
+      width: record.width || null,
+      height: record.height || null,
+      bytes: record.bytes || record.blob?.size || 0,
+      addedAt: record.addedAt || null,
+      data: record.blob ? await blobToBase64(record.blob) : '',
+    });
+  }
 
   const payload = {
     format: FORMAT,
@@ -44,10 +74,12 @@ export async function buildExport(at = new Date()) {
       spools: (everything.spools || []).length,
       models: (everything.models || []).length,
       jobs: (everything.jobs || []).length,
+      images: images.length,
     },
     spools: everything.spools || [],
     models: everything.models || [],
     jobs: everything.jobs || [],
+    images,
     prefs,
   };
 
@@ -92,8 +124,25 @@ export async function storeSnapshot(payload, filename, reason) {
     json: toJson(payload),
   };
   await db.put('snapshots', record);
+
+  // Newest first, then keep taking while BOTH budgets allow it. The byte budget
+  // is the one that does the work once pictures exist; the count is the outer
+  // stop so a catalog of nothing but text does not accumulate forever either.
+  // The newest snapshot is always kept, whatever it weighs — dropping the copy
+  // taken seconds ago to satisfy a budget would defeat the point of taking it.
   const all = (await db.getAll('snapshots')).sort((a, b) => String(b.takenAt).localeCompare(String(a.takenAt)));
-  for (const stale of all.slice(MAX_SNAPSHOTS)) await db.remove('snapshots', stale.id);
+  let kept = 0;
+  let bytes = 0;
+  for (const snap of all) {
+    const size = String(snap.json || '').length;
+    const first = kept === 0;
+    if (first || (kept < MAX_SNAPSHOTS && bytes + size <= MAX_SNAPSHOT_BYTES)) {
+      kept += 1;
+      bytes += size;
+      continue;
+    }
+    await db.remove('snapshots', snap.id);
+  }
   return record;
 }
 
@@ -134,6 +183,12 @@ export function validate(text) {
       `That backup was written by a newer version of print-tracker (format ${raw.schema}; this one reads ${SCHEMA}). Update the app first.`,
     ]);
   }
+
+  // A BACKUP FROM BEFORE A STORE EXISTED IS STILL A VALID BACKUP. Schema 1 has
+  // no images list, and the file a reader reaches for in a crisis is exactly the
+  // old one. Fill the gap forward rather than refusing it — the alternative is
+  // the restore failing at the only moment it is ever needed.
+  if (raw.schema < 2 && raw.images === undefined) raw.images = [];
 
   for (const name of db.DATA_STORES) {
     if (!Array.isArray(raw[name])) errors.push(`The backup has no "${name}" list.`);
@@ -201,6 +256,39 @@ export function validate(text) {
     if (!Number.isFinite(total)) errors.push(`spools: entry ${i + 1} has no usable total weight.`);
   });
 
+  // A picture is a reference like any other, so it is checked like any other. A
+  // model pointing at an image that is not in the file would restore as a tile
+  // with a permanent gap where the picture goes.
+  for (const name of ['models', 'jobs']) {
+    raw[name].forEach((record, i) => {
+      if (!record || typeof record !== 'object') return;
+      if (record.imageId && !ids.images.has(record.imageId)) {
+        errors.push(`${name}: entry ${i + 1} points at a picture that is not in this backup.`);
+      }
+    });
+  }
+
+  // DECODE EVERY PICTURE NOW, rather than trusting the base64 and discovering a
+  // truncated file after the clear. `atob` throws on anything that is not
+  // base64, which is precisely the question the write would have asked — this is
+  // the same rule as the duplicate-id check, applied to bytes.
+  raw.images.forEach((record, i) => {
+    if (!record || typeof record !== 'object') return;
+    const where = `images: entry ${i + 1}`;
+    if (typeof record.data !== 'string' || !record.data) {
+      errors.push(`${where} has no picture data.`);
+      return;
+    }
+    try {
+      record.blob = base64ToBlob(record.data, record.type);
+    } catch {
+      errors.push(`${where} is damaged and could not be read as a picture.`);
+      return;
+    }
+    // The record that goes into the store carries the Blob, not the text.
+    delete record.data;
+  });
+
   if (errors.length) return fail(errors);
 
   return {
@@ -210,6 +298,7 @@ export function validate(text) {
       spools: raw.spools.length,
       models: raw.models.length,
       jobs: raw.jobs.length,
+      images: raw.images.length,
     },
     payload: raw,
   };

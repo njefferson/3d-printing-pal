@@ -30,7 +30,7 @@ export async function runExport() {
   }
   await store.noteExport(payload.exportedAt);
   renderLastExport();
-  say(`Exported ${payload.counts.jobs} jobs, ${payload.counts.spools} spools and ${payload.counts.models} models.`);
+  say(`Exported ${payload.counts.jobs} jobs, ${payload.counts.spools} spools, ${payload.counts.models} models and ${payload.counts.images || 0} pictures.`);
 }
 
 export function renderLastExport() {
@@ -86,6 +86,7 @@ async function onFileChosen(event) {
     spools: store.state.spools.length,
     models: store.state.models.length,
     jobs: store.state.jobs.length,
+    images: store.state.imageIds.length,
   };
 
   report.hidden = false;
@@ -95,6 +96,7 @@ async function onFileChosen(event) {
       el('li', { text: `Jobs: ${now.jobs} now, ${result.counts.jobs} in the file` }),
       el('li', { text: `Spools: ${now.spools} now, ${result.counts.spools} in the file` }),
       el('li', { text: `Models: ${now.models} now, ${result.counts.models} in the file` }),
+      el('li', { text: `Pictures: ${now.images} now, ${result.counts.images || 0} in the file` }),
     ),
     el('p', { class: 'note', text: `Written by version ${result.payload.version || 'unknown'} on ${result.payload.exportedOn || 'an unrecorded date'}.` }),
   );
@@ -104,12 +106,12 @@ async function onFileChosen(event) {
 function startImport(onImported) {
   if (!pending) return;
   const counts = pending.counts;
-  const now = store.state.jobs.length + store.state.spools.length + store.state.models.length;
+  const now = store.state.jobs.length + store.state.spools.length + store.state.models.length + store.state.imageIds.length;
 
   confirmThen(
     {
       title: 'Replace everything?',
-      body: `This removes all ${now} records in the app and puts back ${counts.jobs} jobs, ${counts.spools} spools and ${counts.models} models from the file. A copy of what you have now is saved first — both as a download and inside the app.`,
+      body: `This removes all ${now} records in the app and puts back ${counts.jobs} jobs, ${counts.spools} spools, ${counts.models} models and ${counts.images || 0} pictures from the file. A copy of what you have now is saved first — both as a download and inside the app.`,
       action: 'Replace everything',
     },
     async () => {
@@ -162,7 +164,7 @@ export async function renderSnapshots() {
       say('Safety copy downloaded.');
     });
     node.append(el('div', { class: 'snapshot' },
-      el('span', { class: 'snapshot-when', text: `${readableDate(row.takenAt)} — ${row.counts.jobs} jobs, ${row.counts.spools} spools, ${row.counts.models} models` }),
+      el('span', { class: 'snapshot-when', text: `${readableDate(row.takenAt)} — ${row.counts.jobs} jobs, ${row.counts.spools} spools, ${row.counts.models} models, ${row.counts.images || 0} pictures` }),
       button,
     ));
   }

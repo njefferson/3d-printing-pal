@@ -469,9 +469,40 @@ async function measureState(page, state, theme, viewport) {
       }
 
       // Targets: size, spacing, names.
+      //
+      // AN aria-hidden SUBTREE IS NOT PART OF THE ACCESSIBLE EXPERIENCE, so it is
+      // not measured for names or target size. That is what aria-hidden MEANS,
+      // and the alternative is demanding a label on a control no assistive
+      // technology can reach — which teaches people to write labels nobody hears
+      // in order to quiet a gate.
+      //
+      // BUT aria-hidden ON SOMETHING A KEYBOARD CAN STILL REACH IS A REAL FAULT,
+      // and a worse one than a missing label: focus lands on a control the screen
+      // reader cannot describe, so the user is somewhere they cannot be told
+      // about. That case is caught below rather than skipped, which is why this
+      // is not simply a wider exemption.
+      const ariaHidden = (el) => el.closest('[aria-hidden="true"]') !== null;
+      const keyboardReachable = (el) => {
+        const tabindex = el.getAttribute('tabindex');
+        if (tabindex !== null) return Number(tabindex) >= 0;
+        return !el.disabled; // a, button, input, select, textarea are focusable by default
+      };
+
+      for (const el of root.querySelectorAll('[aria-hidden="true"]')) {
+        const controls = [el, ...el.querySelectorAll('a[href], button, input, select, textarea')]
+          .filter((node) => node.matches?.('a[href], button, input, select, textarea'))
+          .filter((node) => node.type !== 'hidden')
+          .filter(keyboardReachable);
+        for (const bad of controls) {
+          out.structure.push(
+            `${describe(bad)} is inside aria-hidden but a keyboard can still reach it — focus would land somewhere a screen reader cannot describe`,
+          );
+        }
+      }
+
       const interactive = Array.from(
         root.querySelectorAll('a[href], button, [role="button"], input, select, textarea'),
-      ).filter(visible).filter((el) => el.type !== 'hidden');
+      ).filter(visible).filter((el) => el.type !== 'hidden').filter((el) => !ariaHidden(el));
 
       const measured = [];
       for (const el of interactive) {

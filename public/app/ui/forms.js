@@ -7,7 +7,9 @@
 import { $, el, clear, grams } from '../dom.js';
 import { COLUMNS, MATERIALS, remainingFor, num } from '../derive.js';
 import * as store from '../store.js';
+import { readUrl } from '../fromurl.js';
 import { openPanel, close, registerPanel, confirmThen, say } from './panels.js';
+import { pictureField } from './picture.js';
 
 let editing = { job: null, spool: null, model: null };
 
@@ -220,6 +222,15 @@ function onDeleteSpool() {
 
 // ------------------------------------------------------------------- model
 
+let modelPicture = null;
+
+function ensureModelPicture() {
+  if (modelPicture) return modelPicture;
+  modelPicture = pictureField({ label: 'Picture', describe: 'this model' });
+  $('#model-f-picture').append(modelPicture.node);
+  return modelPicture;
+}
+
 export function openModel(id, opener) {
   const model = id ? store.state.models.find((m) => m.id === id) : null;
   editing.model = model?.id || null;
@@ -231,6 +242,8 @@ export function openModel(id, opener) {
   $('#model-f-notes').value = model?.notes || '';
   $('#model-delete').hidden = !model;
 
+  ensureModelPicture().set(model?.imageId || '');
+
   clear($('#model-f-sources'));
   for (const source of model?.sources || []) addSourceRow(source);
   clear($('#model-f-listings'));
@@ -238,6 +251,25 @@ export function openModel(id, opener) {
 
   openPanel('dlg-model', opener);
   $('#model-f-name').focus();
+}
+
+/**
+ * Fill what a URL can say on its own — the site it came from, and a title guess
+ * from the path. No network: see fromurl.js for why fetching the page is not
+ * something a browser can do.
+ *
+ * ONLY EMPTY FIELDS ARE FILLED. A guess that overwrites something typed is a
+ * guess that destroys data, and it would do it at the exact moment the reader was
+ * looking somewhere else.
+ */
+function offerFromUrl(url, { label, site } = {}) {
+  const { site: siteName, title } = readUrl(url);
+  if (!siteName) return;
+  if (label && !label.value.trim()) label.value = siteName;
+  if (site && !site.value.trim()) site.value = siteName;
+
+  const name = $('#model-f-name');
+  if (title && name && !name.value.trim()) name.value = title;
 }
 
 function addSourceRow(source = null) {
@@ -251,6 +283,12 @@ function addSourceRow(source = null) {
   remove.setAttribute('aria-label', `Remove source link ${$('#model-f-sources').children.length + 1}`);
   remove.addEventListener('click', () => row.remove());
   row.append(remove);
+
+  // On paste and on leaving the field, not on every keystroke — a guess that
+  // arrives letter by letter while someone is still typing is a fight.
+  url.addEventListener('paste', () => setTimeout(() => offerFromUrl(url.value, { label }), 0));
+  url.addEventListener('change', () => offerFromUrl(url.value, { label }));
+
   row._read = () => ({ label: label.value, url: url.value });
   $('#model-f-sources').append(row);
 }
@@ -271,12 +309,21 @@ function addListingRow(listing = null) {
   remove.setAttribute('aria-label', `Remove listing ${$('#model-f-listings').children.length + 1}`);
   remove.addEventListener('click', () => row.remove());
   row.append(remove);
+
+  url.addEventListener('paste', () => setTimeout(() => offerFromUrl(url.value, { site }), 0));
+  url.addEventListener('change', () => offerFromUrl(url.value, { site }));
+
   row._read = () => ({ site: site.value, url: url.value, unitsSold: units.value, revenue: revenue.value });
   $('#model-f-listings').append(row);
 }
 
 async function onSaveModel(event) {
   event.preventDefault();
+
+  // The picture is written to the store HERE and not a moment earlier, so a
+  // cancelled edit leaves nothing behind.
+  const imageId = await ensureModelPicture().commit();
+
   await store.saveModel({
     id: editing.model,
     name: $('#model-f-name').value,
@@ -285,7 +332,12 @@ async function onSaveModel(event) {
     notes: $('#model-f-notes').value,
     sources: Array.from($('#model-f-sources').children).map((r) => r._read()),
     listings: Array.from($('#model-f-listings').children).map((r) => r._read()),
+    imageId,
   });
+
+  // Only worth asking once there is something worth keeping.
+  if (imageId) store.askToPersist();
+
   close('dlg-model');
   say('Model saved.');
 }

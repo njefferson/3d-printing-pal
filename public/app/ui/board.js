@@ -23,6 +23,7 @@
 import { $, el, clear } from '../dom.js';
 import { COLUMNS, TYPES, sortForBoard } from '../derive.js';
 import * as store from '../store.js';
+import { thumbFor } from './thumb.js';
 import { openPanel, close, registerPanel, say } from './panels.js';
 
 const cardNodes = new Map();
@@ -151,15 +152,18 @@ function buildCard(job) {
   const moveBtn = el('button', { type: 'button', class: 'btn' }, 'Move');
   const editBtn = el('button', { type: 'button', class: 'btn' }, 'Open');
 
+  const thumb = el('div', { class: 'card-thumb' });
+
   const node = el(
     'li',
     { class: 'card', dataset: { jobId: job.id } },
     el('div', { class: 'card-top' }, el('div', { class: 'card-topmain' }, badge, title), grip),
+    thumb,
     meta,
     el('div', { class: 'card-actions' }, moveBtn, editBtn),
   );
 
-  node._parts = { grip, title, badge, meta, moveBtn, editBtn };
+  node._parts = { grip, title, badge, meta, moveBtn, editBtn, thumb };
 
   moveBtn.addEventListener('click', () => openMove(job.id, moveBtn));
   editBtn.addEventListener('click', () => onEdit(node.dataset.jobId));
@@ -182,6 +186,20 @@ function updateCard(node, job) {
   p.title.textContent = job.title || 'Untitled job';
   p.badge.textContent = type?.label || job.type;
   p.badge.className = `badge badge-${job.type}`;
+
+  // A job shows its own picture if it has one, and otherwise the picture of the
+  // model it prints — which is where the picture usually is, since that is the
+  // thing that came from a site with a photograph on it.
+  const model = job.modelId ? store.state.models.find((m) => m.id === job.modelId) : null;
+  const imageId = job.imageId || model?.imageId || '';
+  // Cards are recycled rather than rebuilt, so the thumbnail is only replaced
+  // when the picture it should be showing has actually changed. Rebuilding it on
+  // every redraw would re-read the blob and flicker on every filter press.
+  if (node._thumbId !== imageId) {
+    node._thumbId = imageId;
+    clear(p.thumb);
+    p.thumb.append(thumbFor(imageId, job.title || 'this job'));
+  }
 
   const bits = [];
   if (job.printer) bits.push(`Printer: ${job.printer}`);

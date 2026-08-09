@@ -119,6 +119,7 @@ export async function buildReport() {
       jobs: store.state.jobs.length,
       spools: store.state.spools.length,
       models: store.state.models.length,
+      images: store.state.imageIds.length,
     };
   } catch (error) {
     dbError = error.message;
@@ -191,6 +192,7 @@ export async function buildReport() {
     lines.push(`  jobs                  ${counts.jobs}`);
     lines.push(`  spools                ${counts.spools}`);
     lines.push(`  models                ${counts.models}`);
+    lines.push(`  pictures              ${counts.images}`);
     lines.push(`  last export           ${store.state.lastExportAt || 'never from this device'}`);
   } else {
     lines.push('  unavailable — the database could not be read');

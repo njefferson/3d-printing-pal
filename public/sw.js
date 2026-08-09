@@ -23,7 +23,7 @@
 // which is how a brand-new visitor gets told a new version is ready thirty
 // seconds into their first visit.
 
-const CACHE = 'print-tracker-0.1.2';
+const CACHE = 'print-tracker-0.2.0';
 
 const SHELL = [
   './',
@@ -41,6 +41,8 @@ const SHELL = [
   './app/derive.js',
   './app/store.js',
   './app/backup.js',
+  './app/image.js',
+  './app/fromurl.js',
   './app/dom.js',
   './app/errlog.js',
   './app/releases.js',
@@ -53,6 +55,8 @@ const SHELL = [
   './app/ui/info.js',
   './app/ui/diagnostic.js',
   './app/ui/update.js',
+  './app/ui/picture.js',
+  './app/ui/thumb.js',
 ];
 
 self.addEventListener('install', (event) => {

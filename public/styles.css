@@ -634,3 +634,70 @@ dialog.panel form { display: flex; flex-direction: column; min-height: 0; }
 @media (prefers-contrast: more) {
   :root { --hairline: var(--rail); }
 }
+
+/* ------------------------------------------------------------------ pictures
+
+   A picture is there to be recognised at a glance, so it is sized in `rem` like
+   the type around it: a reader who raises their text size is telling the app
+   they want things bigger, and a thumbnail pinned to a px height would be the one
+   element that ignored them.
+
+   `aspect-ratio` with `object-fit: cover` keeps every tile the same shape
+   whatever was pasted in, so a board of mixed portrait and landscape pictures
+   does not step up and down as it is read.
+
+   The empty state keeps the SAME box. Cards holding their shape whether or not a
+   picture has loaded is what stops the board reflowing under a thumb as the
+   blobs arrive. */
+
+.thumb {
+  aspect-ratio: 4 / 3;
+  width: 100%;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--page-alt);
+  border: 1px solid var(--hairline);
+}
+
+.thumb.is-empty {
+  /* Not a broken-image glyph and not an icon: a quiet panel. Nothing is wrong,
+     there is simply no picture yet. */
+  background-image: linear-gradient(135deg, var(--page-alt) 0%, var(--surface) 100%);
+}
+
+.thumb-img { display: block; width: 100%; height: 100%; object-fit: cover; }
+
+.card-thumb { margin-top: 8px; }
+.card-thumb .thumb { aspect-ratio: 16 / 9; }
+
+/* The catalog row puts the picture beside the name rather than above it, so a
+   long list stays scannable down the left edge. */
+.rowcard-head { display: flex; gap: 12px; align-items: flex-start; }
+.rowcard-head > div:last-child { min-width: 0; flex: 1 1 auto; }
+.rowcard-head .thumb { flex: 0 0 auto; width: 5rem; aspect-ratio: 1 / 1; }
+
+/* ------------------------------------------------------- the picture control */
+
+.pic-field .pic-zone { display: flex; flex-direction: column; gap: 12px; }
+.pic-field .pic-zone.is-over { outline: 2px dashed var(--primary); outline-offset: 4px; }
+.pic-preview .thumb, .pic-preview { max-width: 16rem; }
+.pic-preview .pic-img { display: block; width: 100%; border-radius: 8px; border: 1px solid var(--hairline); }
+
+.pic-empty {
+  margin: 0;
+  padding: 1.25rem;
+  border: 1px dashed var(--rail);
+  border-radius: 8px;
+  color: var(--text-2);
+  text-align: center;
+}
+
+.pic-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* Kept out of the layout AND out of the tab order — the buttons beside it are
+   the real controls. `display: none` would stop it opening at all in some
+   engines, which is why it is moved rather than hidden. */
+.pic-file { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+
+.pic-status { min-height: 1.25rem; }
+.pic-status.is-bad { color: var(--danger); font-weight: 600; }

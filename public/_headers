@@ -29,12 +29,23 @@
 # So: the only network requests this app ever makes are the service worker
 # collecting this app's own files, from this origin, so it works offline.
 #
+# img-src CARRIES `blob:` AND THAT IS THE WHOLE PICTURE FEATURE. Pictures the
+# reader adds are stored as Blobs in IndexedDB and shown through
+# URL.createObjectURL, which produces a blob: URL. Under `img-src 'self'` alone
+# every one of them is refused and the tiles are empty, with the reason only in
+# the console.
+#
+# It does NOT carry `https:` or a remote host, and that is the other half: no
+# picture is ever loaded from somebody else's server. A hotlinked image would
+# announce to that site every time a board is drawn, break when their CDN moved,
+# and vanish offline. Pictures are copied in, downscaled, and served from here.
+#
 # No Strict-Transport-Security: pages.dev is HTTPS-only and Cloudflare handles
 # TLS for it. A header with lock-in semantics that cannot be tested from here is
 # worse than leaving it to the platform.
 
 /*
-  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; object-src 'none'
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' blob:; font-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; object-src 'none'
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   X-Frame-Options: DENY

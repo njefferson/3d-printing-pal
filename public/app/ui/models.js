@@ -9,6 +9,7 @@
 import { $, el, clear, money } from '../dom.js';
 import { chargedForModel, jobsForModel } from '../derive.js';
 import * as store from '../store.js';
+import { thumbFor } from './thumb.js';
 
 let onEdit = () => {};
 
@@ -36,9 +37,15 @@ function buildModelRow(model, jobs, currency) {
   edit.setAttribute('aria-label', `Open ${name}`);
   edit.addEventListener('click', () => onEdit(model.id));
 
-  const head = el('div', {},
-    el('h3', { class: 'rowcard-title', text: name }),
-    el('p', { class: 'rowcard-sub', text: [model.designer && `by ${model.designer}`, (model.tags || []).join(', ')].filter(Boolean).join(' · ') }),
+  // PICTURE AND NAME, never picture instead of name. The picture is what makes a
+  // model recognisable at a glance; the name is what makes it findable, what is
+  // read aloud, and what is there when the picture is not.
+  const head = el('div', { class: 'rowcard-head' },
+    thumbFor(model.imageId, name),
+    el('div', {},
+      el('h3', { class: 'rowcard-title', text: name }),
+      el('p', { class: 'rowcard-sub', text: [model.designer && `by ${model.designer}`, (model.tags || []).join(', ')].filter(Boolean).join(' · ') }),
+    ),
   );
 
   const body = el('div', { class: 'rowcard-body' });
