@@ -258,8 +258,8 @@ the log and check whether the steps ran or were skipped.
 
 ### The staged candidate
 
-**There is none right now.** `staging` and `main` are the same commit — 0.1.2 was
-promoted on 2026-08-08 — so https://staging.3d-printing-pal.pages.dev currently
+**There is none right now.** `staging` and `main` are the same commit — 0.2.0 was
+promoted on 2026-08-09 — so https://staging.3d-printing-pal.pages.dev currently
 serves exactly what production serves. The next candidate goes here.
 
 **0.1.1 never reached production on its own, and that was deliberate.** Its entire
@@ -303,6 +303,21 @@ stops arriving, and that trade is the owner's to make rather than a session's to
 slip in at the end of an unrelated change.
 
 ### Shipped to production
+
+**0.2.0 reached production on 2026-08-09**, at https://3d-printing-pal.pages.dev
+
+Pictures on models and job cards. Promoted with `git push origin staging:main` on
+the owner's explicit say-so, as a clean fast-forward of the one release commit.
+The deploy's steps RAN rather than skipped, and its log printed:
+
+    npx wrangler pages deploy public --project-name=3d-printing-pal --branch=main
+    ✨ Deployment complete! Take a peek over at https://d3620631.3d-printing-pal.pages.dev
+
+**This is the release that moved the database.** `DB_VERSION` went 1 to 2 and the
+export `SCHEMA` went 1 to 2. A reader arriving from 0.1.2 keeps everything they
+had — the upgrade only creates the missing `images` store — and a backup written
+by 0.1.2 still restores, because `validate` fills the absent images list forward
+rather than refusing the file.
 
 **0.1.2 reached production on 2026-08-08**, at https://3d-printing-pal.pages.dev
 
