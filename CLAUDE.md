@@ -75,6 +75,42 @@ This repo's own gates live in `tools/` because they are specific to this app:
   a non-drag alternative that exists in the markup, and every declaration matches
   something.
 
+## Working on this locally
+
+No build step: `public/` is the app. Node 20 or newer, and two things that are
+not obvious and both fail loudly the first time.
+
+**The two repos must be siblings.** Seven gates invoke the hub by relative path
+(`../noahjefferson/docs-check.mjs` and friends) rather than copying it, which is
+what stops five divergent versions existing. So the parent folder has to hold
+both:
+
+```
+git clone https://github.com/njefferson/noahjefferson.git
+git clone https://github.com/njefferson/3d-printing-pal.git
+cd 3d-printing-pal && npm ci
+```
+
+**Five tools need a real browser** — the accessibility gate, both walks, the card
+contrast check and the icon render. They look for the sandbox Chromium first and
+fall back to Playwright's own, so install it once:
+
+```
+npx playwright install chromium
+```
+
+Without it those five fail, which is most of what `npm run check` is.
+
+**Seeing the app.** `npm run serve` boots it through the REAL `_headers`, so the
+Content-Security-Policy is exercised rather than assumed — that is how a policy
+that silently broke the service worker was caught. Open the address it prints.
+
+**`npm run check`** runs every gate, the same entry point CI uses.
+
+**`npm run render:icons` and `npm run render:social` are developer-time**, not CI
+steps: they launch a browser to write PNGs that are then committed. Run them after
+editing `icon.svg` or `social-card.html`, and commit what they write.
+
 ## Branches and releases
 
 `staging` and `main`. Push to `main` deploys; `staging` is the candidate the owner
