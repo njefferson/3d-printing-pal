@@ -9,6 +9,7 @@
     "node": ">=20"
   },
   "scripts": {
+    "prepare": "node ../noahjefferson/branch-guard.mjs --repo . --install || true",
     "a11y": "node tools/a11y.mjs",
     "a11y:verbose": "node tools/a11y.mjs --verbose",
     "notes": "node tools/changelog.mjs",
@@ -18,6 +19,8 @@
     "textsize": "node ../noahjefferson/scripts/check-textsize.mjs public/styles.css public/index.html",
     "docs": "node ../noahjefferson/docs-check.mjs .",
     "privacy": "node ../noahjefferson/privacy-check.mjs --repo .",
+    "quotes": "node ../noahjefferson/quote-check.mjs --repo .",
+    "guard": "node ../noahjefferson/branch-guard.mjs --repo . --artefact",
     "pins": "node ../noahjefferson/pin-check.mjs --repo .",
     "pwa": "node ../noahjefferson/pwa-check.mjs --repo .",
     "palette": "node ../noahjefferson/palette-check.mjs palettes/3d-printing-pal.json",
@@ -26,7 +29,7 @@
     "render:icons": "node tools/render-icons.mjs",
     "icons": "node tools/render-icons.mjs --check",
     "serve": "node tools/serve.mjs",
-    "check": "npm run --silent docs && npm run --silent privacy && npm run --silent pins && npm run --silent pwa && npm run --silent palette && npm run --silent icons && npm run --silent shell && npm run --silent social && npm run --silent textsize && npm run --silent notes:check && npm run --silent voice && npm run --silent interactions && npm run --silent a11y && npm run --silent backup && npm run --silent update",
+    "check": "npm run --silent docs && npm run --silent privacy && npm run --silent quotes && npm run --silent pins && npm run --silent pwa && npm run --silent palette && npm run --silent icons && npm run --silent shell && npm run --silent social && npm run --silent textsize && npm run --silent notes:check && npm run --silent voice && npm run --silent interactions && npm run --silent a11y && npm run --silent backup && npm run --silent update",
     "backup": "node tools/backup-walk.mjs",
     "update": "node tools/update-walk.mjs",
     "social": "node tools/social-check.mjs",

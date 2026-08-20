@@ -353,6 +353,62 @@ the deploy, and only then push anything else to `main`.
 
 ---
 
+## The privacy scrub, 2026-08-20
+
+**This repo was scanned for the first time and came back clean of content.**
+Both halves of the rule were checked: nothing personal about the owner, and no
+quotation or attribution of anybody's words — his or a third party's.
+
+What was actually run, and what each returned:
+
+- `node ../noahjefferson/privacy-check.mjs --repo .` — 0 disclosures across
+  tracked files.
+- `node ../noahjefferson/quote-check.mjs --repo .` — 6 tracked markdown files
+  read, 0 set-apart quotations, so 0 declarations owed and no `.quote-allow`
+  needed here yet.
+- A wider sweep than either gate performs, over every tracked `.md`, `.ts`,
+  `.mjs`, `.js`, `.html` and `.yml`, for any quotation of 20 to 300 characters
+  carrying a first- or second-person pronoun or sitting after a speech cue:
+  **17 candidates, all read, all legitimate.** Sixteen are the app's own patch
+  notes in `public/app/releases.js`, which address the reader in the second
+  person on purpose; one is the reader's own voice in a design comment in
+  `public/app/ui/backup-ui.js`; one is `tools/notes-voice.mjs` citing product
+  copy to explain its own rule.
+- A grep for facts about the owner or any third party — a person's device, a
+  family member, a friend, reported speech. Every hit was a process fact about
+  the release gate or the licence notice, not a fact about a person.
+
+**The scan is the scrub; the gates are its floor.** Both gates were green on
+this repo before any of the above ran, and the wider sweep is what makes that
+green mean something. A scan returning nothing is indistinguishable from a scan
+pointed the wrong way, so the sweep's shape is recorded here rather than its
+result alone.
+
+**The gates now run in CI, and each was watched failing first.** `gates.yml`
+already ran `privacy-check.mjs`; it now also runs `quote-check.mjs` beside it
+and `branch-guard.mjs --repo . --artefact`. Each was verified by planting a
+SYNTHETIC violation — a fabricated sentence, never a real one, because planting
+a real quotation to prove the gate catches quotations puts it back in a tracked
+file permanently. All three exited 1 on the plant and 0 once it was removed.
+
+**The hub pin in `gates.yml` was stale, and would have failed the two new
+steps.** It named a hub commit that carries `privacy-check.mjs` and neither
+`quote-check.mjs` nor `branch-guard.mjs`, and which is not an ancestor of the
+hub's current `main` at all. Both checkout steps now pin
+`6da5c6e765538fed5dd702e9d9e40a5d80001fea`, which carries all three. A
+cross-repo gate depends on the other repo's published history: check that the
+pinned SHA carries the file before adding a step that runs it.
+
+**The branch guard is installed.** `.branch-guard` declares `work=staging`,
+`promote=main`, `escape=PAL_PROMOTE`, and `package.json` gained a `prepare`
+script so `npm ci` reinstalls the hook into `.git/hooks` in every fresh clone
+and every CI job.
+
+**Git history is out of scope and the question is settled.** A history scan
+coming back red is not new information and is not a reason to reopen it.
+
+---
+
 ## Roadmap
 
 - Undo for destructive actions.

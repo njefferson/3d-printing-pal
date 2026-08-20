@@ -41,7 +41,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: njefferson/noahjefferson
-          ref: 78f88256cac93db6b0f5050302cad1928bfb5da4
+          ref: 6da5c6e765538fed5dd702e9d9e40a5d80001fea
           path: .hub
           persist-credentials: false
 
@@ -66,6 +66,23 @@ jobs:
       # ---------------------------------------------------------------- hub gates
       - name: Privacy — nothing personal about the owner lands in any repo
         run: node .hub/privacy-check.mjs --repo .
+
+      # THE SECOND HALF OF THE SAME RULE. privacy-check.mjs anchors every pattern
+      # on the owner's name or role, so a verbatim sentence of somebody's speech
+      # carries neither and passes it. This holds the other half: every set-apart
+      # quotation is declared, and a quotation of him is never declarable.
+      - name: Every set-apart quotation says whose words it is
+        if: ${{ !cancelled() }}
+        run: node .hub/quote-check.mjs --repo .
+
+      # --artefact, NEVER the plain check: that also asserts .git/hooks/pre-commit
+      # is installed and current, which is a fact about ONE CLONE, and
+      # actions/checkout leaves .git/hooks empty by definition. The plain spelling
+      # can never hold on a runner. What CI can check is the tracked artefact
+      # against what .branch-guard declares.
+      - name: The commit guard is the one that was declared
+        if: ${{ !cancelled() }}
+        run: node .hub/branch-guard.mjs --repo . --artefact
 
       - name: Docs — no tables or grids anywhere he reads
         run: node .hub/docs-check.mjs .
@@ -133,7 +150,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: njefferson/noahjefferson
-          ref: 78f88256cac93db6b0f5050302cad1928bfb5da4
+          ref: 6da5c6e765538fed5dd702e9d9e40a5d80001fea
           path: .hub
           persist-credentials: false
 

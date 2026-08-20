@@ -1,0 +1,5 @@
+# Product work waits on staging for the on-device pass (CLAUDE.md, Doctrine 7).
+# main is production: a push there deploys.
+work=staging
+promote=main
+escape=PAL_PROMOTE
