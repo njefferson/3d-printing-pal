@@ -301,6 +301,16 @@ the log and check whether the steps ran or were skipped.
 
 **0.3.0 is on staging**, at https://staging.3d-printing-pal.pages.dev
 
+Deployed from `9c67483`. Its deploy steps RAN rather than skipped, and the log
+printed:
+
+    ✨ Deployment complete! Take a peek over at https://9e65514b.3d-printing-pal.pages.dev
+    ✨ Deployment alias URL: https://staging.3d-printing-pal.pages.dev
+
+Its Gates run is green with all eighteen gate steps having **executed** — checked
+step by step rather than read off the run's conclusion, because the previous
+commit's run also had a conclusion and fifteen of its steps never ran.
+
 Undo, and reordering a column without a drag. The two go together on purpose:
 reordering by button needed a way back for a press that put a card in the wrong
 place, and undo needed something worth undoing to be measured against.
@@ -334,6 +344,19 @@ the app says nothing about the app.
 
 **The Cloudflare secrets already existed on this repo.** The first push to
 `staging` deployed with no setup step and created the Pages project as it went.
+
+### A CI step naming a hub gate has two inputs, and adding it supplies one
+
+The pin at the top of `gates.yml` is the other one. A step reading
+`node .hub/<gate>.mjs` is character-for-character what runs locally, where the hub
+is a sibling clone at its own HEAD — so it can be watched passing on the only path
+that says nothing about a pinned checkout. `third-person-check.mjs` was wired in
+against a pin from before that file existed and could only ever print
+`Cannot find module`.
+
+**Move the pin in the same commit as the step, and verify the file is present at
+the new SHA** (`git cat-file -e <sha>:<file>` in the hub clone). The remedy is
+written beside the pin too. Hub LESSONS §117.
 
 ### A red gate does not stop a deploy — known, and not yet fixed
 
