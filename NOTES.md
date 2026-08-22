@@ -123,7 +123,7 @@ capability, with the rejected ones and the reason each was rejected.
 
 ---
 
-## A job can make its model (0.4.0)
+## A job can make its model (0.4.0, 0.4.1)
 
 **The Model box takes a NAME, not an id.** It was a `<select>` over models that
 already existed, which made entering a model a *prerequisite* for recording a
@@ -153,10 +153,34 @@ dependent on read order.
 data at the moment they were looking elsewhere. Clearing counts as touching, so
 "not from a model" sticks.
 
+**The tick box is only there for a name that is new (0.4.1).** An existing name
+links whichever way it is set and an empty box means no model, so the question
+"save this as a model?" has an answer in exactly one case — and a control on
+screen while it cannot do anything is one nobody trusts. Declining is expressed by
+withholding the name from `saveJob` rather than by a second flag the store would
+have to be trusted to honour: the store's rule is *a name that matches nothing
+becomes a model*, and the way to not create one is to not pass a name.
+
 **The always-visible hint is what lets the box be free text at all.** It says
-which of the two things saving will do before it does it. A hint that appeared
+which of the three things saving will do before it does it. A hint that appeared
 only on a mismatch would teach nobody what the field does, and would be a state
 that is usually absent — which is a state nothing measures.
+
+**`hidden` needs `!important`, and three controls were on screen because it did
+not have it.** The UA rule is `[hidden] { display: none }`, which any class setting
+`display` outbids. `.field` is `display: flex` and `.btn` is `display: inline-flex`
+— so the new tick box sat in the form permanently, **and `#job-delete` had been
+visible on the ADD form all along**, a Delete control for a job that did not exist
+yet. Four classes in the stylesheet had each been given their own `[hidden]` rule
+one at a time as they hit this; those are gone and one `[hidden] { display: none
+!important }` replaces them, so the next conditional element needs nobody to
+remember. Found by the target-size check reporting two controls 7px apart in a
+state where one of them was supposed to be absent, and then by a registry selector
+matching nothing once the fix landed.
+
+**The add form and the edit form are separate a11y states**, because they differ
+by exactly the control that was wrong: `job-edit` is the only one where Delete is
+on screen, and it asserts that it is.
 
 **Both walks assert the ARITHMETIC of their seed, not a count.** The a11y seed
 makes 3 models (1 entered + 2 from job titles, with the repeated name matching)
@@ -382,11 +406,16 @@ the picture goes with it. Open Move on a card and put it before another card in
 the same column. The strip under the tabs should name the last change every time,
 and should stay put rather than disappearing while it is being read.
 
-**0.4.0 — a job can make its model.** The Model box takes a typed name and the box
-fills from the job's title, so the ordinary case is no typing at all. Add a job
-called something that is not in Models and check it appears there. Add another job
-with the same name in different capitals and check a second one does NOT appear.
-Then press Undo and check the job and its model both go.
+**0.4.0 and 0.4.1 — a job can make its model, and can decline to.** The Model box
+takes a typed name and fills from the job's title, so the ordinary case is no
+typing at all. Add a job called something that is not in Models and check it
+appears there. Add another with the same name in different capitals and check a
+second one does NOT appear. Add a third, turn off *Save this as a model*, and
+check the job is kept while the catalog is not touched. Then press Undo and check a
+job and its model go together.
+
+Also worth a glance because it was wrong until 0.4.1: **the Delete button should
+not be on the Add job form**, only on a job opened from a card.
 
 None of that can be confirmed from a session — this sandbox reaches no external
 site, and a browser walk proves the code, not the device.

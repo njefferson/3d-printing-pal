@@ -96,6 +96,20 @@ body {
   -webkit-text-size-adjust: 100%;
 }
 
+/* HIDDEN MUST ALWAYS WIN, and it needs `!important` to.
+ *
+ * The UA rule is `[hidden] { display: none }`, which any class setting `display`
+ * outbids on specificity. `.field` sets `display: flex`, so the moment a field
+ * became conditional its `hidden` attribute did nothing at all and a tick box
+ * meant for one case sat in the form permanently. Four classes in this file had
+ * already been given their own `[hidden]` rule one at a time as each one hit this;
+ * this is the rule they were each standing in for, so they are gone and the next
+ * conditional element needs nobody to remember.
+ *
+ * Caught by the target-size check finding two controls 7px apart in a state where
+ * one of them was supposed to be absent. */
+[hidden] { display: none !important; }
+
 .sr-only {
   position: absolute;
   width: 1px; height: 1px;
@@ -125,7 +139,6 @@ body {
   background: var(--surface-raised);
   border-bottom: 2px solid var(--rail);
 }
-.strip[hidden] { display: none; }
 .strip-text { margin: 0; flex: 1 1 16rem; font-size: 0.9375rem; }
 .strip-actions { display: flex; gap: var(--gap); flex-wrap: wrap; }
 
@@ -200,7 +213,6 @@ body {
   padding: 16px;
 }
 .view { min-width: 0; }
-.view[hidden] { display: none; }
 
 .view-head {
   display: flex;
@@ -217,7 +229,6 @@ a { color: var(--primary); }
 
 .note { color: var(--text-3); font-size: 0.875rem; margin: 0 0 12px; }
 .empty { color: var(--text-2); font-size: 0.9375rem; }
-.empty[hidden] { display: none; }
 .noscript { padding: 16px; color: var(--text); }
 
 /* ----------------------------------------------------------------- chips */
@@ -399,6 +410,10 @@ a { color: var(--primary); }
 .field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 14px; min-width: 0; }
 .field-inline { margin-bottom: 0; }
 .field-check { flex-direction: row; align-items: center; gap: 8px; margin-bottom: 0; min-height: var(--tap); }
+/* A tick box directly under a text box is two adjacent targets, and the parent's
+ * 4px gap measured 7px between them — under the 8px floor by one pixel, which is
+ * a miss nobody sees and a finger finds. */
+.field .field-check { margin-top: 8px; }
 .field label, .fieldset legend { font-size: 0.875rem; color: var(--text-2); font-weight: 600; }
 .row { display: flex; gap: 12px; flex-wrap: wrap; }
 .row .field { flex: 1 1 9rem; }
@@ -600,7 +615,6 @@ dialog.panel form { display: flex; flex-direction: column; min-height: 0; }
 }
 
 .report { border: 1px solid var(--rail); border-radius: var(--radius); padding: 12px; background: var(--surface-raised); }
-.report[hidden] { display: none; }
 .report h3 { margin-top: 0; }
 .report ul { margin: 6px 0 0; padding-left: 20px; }
 .report-bad { color: var(--danger); }

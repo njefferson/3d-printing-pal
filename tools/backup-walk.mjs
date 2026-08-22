@@ -589,6 +589,58 @@ async function main() {
     pass(`a name differing only in case and spacing links rather than duplicates: "${rematch}"`);
   }
 
+  // A THIRD job that DECLINES the model. The tick is on by default, so this is
+  // the case a reader reaches by turning something off — and the failure to guard
+  // against is a name that gets saved anyway because the flag was read in the form
+  // and not honoured by the store.
+  await page.click('#tab-board');
+  await page.waitForTimeout(200);
+  await page.click('#job-new');
+  await page.fill('#job-f-title', 'One off bracket');
+  const offered = await page.evaluate(() => ({
+    hidden: document.getElementById('job-f-model-save-field').hidden,
+    checked: document.getElementById('job-f-model-save').checked,
+  }));
+  if (offered.hidden || !offered.checked) {
+    fail(`a name that is not in the models offered ${offered.hidden ? 'no' : 'an unticked'} save-this-as-a-model choice`);
+  }
+  await page.uncheck('#job-f-model-save');
+  const declinedHint = await page.evaluate(() => document.getElementById('job-f-model-hint').textContent);
+  await page.click('#job-save');
+  await page.waitForTimeout(320);
+
+  const afterDeclined = await counts(page);
+  const declinedLinked = await page.evaluate(() =>
+    // Read from the database rather than from a screen: a job silently carrying a
+    // modelId that no view happens to show is exactly the shape being ruled out.
+    new Promise((resolve) => {
+      const r = indexedDB.open('print-tracker');
+      r.onsuccess = () => {
+        const req = r.result.transaction('jobs', 'readonly').objectStore('jobs').getAll();
+        req.onsuccess = () => {
+          const job = req.result.find((j) => j.title === 'One off bracket');
+          resolve(job ? Boolean(job.modelId) : null);
+          r.result.close();
+        };
+      };
+    }));
+
+  if (afterDeclined.models !== afterSecond.models) {
+    fail(`declining to save the model still made one — ${afterDeclined.models} models where there were ${afterSecond.models}`);
+  } else if (afterDeclined.jobs !== afterSecond.jobs + 1) {
+    fail('declining the model lost the job as well, which is not what was declined');
+  } else if (declinedLinked !== false) {
+    fail(`the declined job's modelId is ${declinedLinked === null ? 'unreadable' : 'set'} — it should point at nothing`);
+  } else if (!/will not be saved/.test(declinedHint)) {
+    fail(`the hint read "${declinedHint}" with the tick off — it has to say the model is not being kept`);
+  } else {
+    pass(`turning the tick off keeps the job and makes no model: "${declinedHint}"`);
+  }
+
+  // Three jobs now, and the one model, undone.
+  await page.click('#undo-do');
+  await page.waitForTimeout(320);
+
   // Both jobs and the one model, undone.
   for (let i = 0; i < 2; i += 1) {
     const hidden = await page.evaluate(() => document.getElementById('undo-strip').hidden);

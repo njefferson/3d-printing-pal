@@ -332,6 +332,17 @@
         <input type="text" id="job-f-model" list="job-f-model-options" autocomplete="off"
                aria-describedby="job-f-model-hint" placeholder="What is being printed">
         <datalist id="job-f-model-options"></datalist>
+        <!-- ONLY WHEN THE NAME IS NEW. Ticked or not, an existing model is linked
+             and an empty box means no model, so the question "save this as a
+             model?" has an answer in exactly one case — and a control that is on
+             screen while it cannot do anything is a control nobody trusts.
+             Because it comes and goes, it is audited as its own accessibility
+             state rather than riding on the job form's: a surface that is usually
+             absent is a surface usually nothing measures. -->
+        <div class="field field-check" id="job-f-model-save-field" hidden>
+          <input type="checkbox" id="job-f-model-save" checked>
+          <label for="job-f-model-save">Save this as a model</label>
+        </div>
         <p class="note" id="job-f-model-hint"></p>
       </div>
 

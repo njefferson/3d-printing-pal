@@ -110,7 +110,18 @@ const STATE_TEXT = {
   // `.note` is the Model box's hint, which is ALWAYS on screen — that is what
   // makes it registerable. It shares the class with #job-f-nospools, which is
   // hidden once a spool exists and so is filtered out before measuring.
-  job: ['#dlg-job h2', '#dlg-job label', '#dlg-job legend', '#dlg-job .note', '#dlg-job .btn', '#dlg-job .btn-danger'],
+  job: ['#dlg-job h2', '#dlg-job label', '#dlg-job legend', '#dlg-job .note', '#dlg-job .btn'],
+  // The EDIT form, which is a different surface from the add form by exactly one
+  // control: Delete. That button was registered against the add form and matched
+  // for the wrong reason — `.btn` sets `display: inline-flex`, which outbid the UA
+  // rule for `hidden`, so Delete was on screen while adding a job that did not
+  // exist yet. Fixing `hidden` made the selector match nothing, which is how this
+  // was found.
+  'job-edit': ['#dlg-job h2', '#dlg-job label', '#dlg-job .note', '#dlg-job .btn', '#dlg-job .btn-danger'],
+  // The same form with the Model box holding a name that is not in the models, so
+  // the save-this-as-a-model tick is on screen. It is hidden in every other state,
+  // which is exactly why it needs one of its own.
+  'job-newmodel': ['#dlg-job h2', '#dlg-job label', '#dlg-job legend', '#dlg-job .note', '#dlg-job .btn'],
   spool: ['#dlg-spool h2', '#dlg-spool label', '#dlg-spool .btn', '#dlg-spool .note'],
   model: ['#dlg-model h2', '#dlg-model label', '#dlg-model legend', '#dlg-model .btn'],
   move: ['#dlg-move h2', '#dlg-move p', '#dlg-move h3', '#dlg-move .btn'],
@@ -132,6 +143,8 @@ const STATE_NONTEXT = {
   // identify a component. It is drawn with --hairline, which the palette spec
   // exempts as decoration.
   job: ['#dlg-job input[type="text"]', '#dlg-job select', '#dlg-job textarea', '#dlg-job .btn', '#dlg-job input[list]'],
+  'job-newmodel': ['#dlg-job input[type="text"]', '#dlg-job select', '#dlg-job textarea', '#dlg-job .btn', '#dlg-job input[type="checkbox"]'],
+  'job-edit': ['#dlg-job input[type="text"]', '#dlg-job select', '#dlg-job .btn', '#dlg-job .btn-danger'],
   spool: ['#dlg-spool input[type="text"]', '#dlg-spool input[type="number"]', '#dlg-spool .btn'],
   model: ['#dlg-model input[type="text"]', '#dlg-model .btn'],
   move: ['#dlg-move .btn'],
@@ -200,6 +213,52 @@ const STATES = [
   { name: 'info', surface: 'dlg-info', enter: async (p) => press(p, '#info-open') },
   { name: 'diagnostic', surface: 'dlg-diagnostic', enter: async (p) => press(p, '#diag-open') },
   { name: 'job', surface: 'dlg-job', enter: async (p) => { await showView(p, 'board'); await press(p, '#job-new'); } },
+  {
+    name: 'job-newmodel',
+    surface: 'dlg-job',
+    // A tick box that is only ever on screen for a name the models do not have.
+    // Reached the way a reader reaches it — by typing a title, which fills the
+    // Model box — rather than by unhiding the field, so this proves the route as
+    // well as the pixels.
+    enter: async (p) => {
+      await showView(p, 'board');
+      await press(p, '#job-new');
+      await p.fill('#job-f-title', 'Something not in the models');
+      await p.waitForTimeout(60);
+      const shown = await p.evaluate(() => ({
+        hidden: document.getElementById('job-f-model-save-field').hidden,
+        checked: document.getElementById('job-f-model-save').checked,
+        hint: document.getElementById('job-f-model-hint').textContent,
+      }));
+      if (shown.hidden) {
+        fail('job-newmodel', 'typing a name the models do not have left the save-this-as-a-model tick hidden, so there is no way to decline it but to clear the box');
+      } else if (!shown.checked) {
+        fail('job-newmodel', 'the save-this-as-a-model tick defaults to off, which makes the ordinary case the one that needs a press');
+      } else if (!/will be added/.test(shown.hint)) {
+        fail('job-newmodel', `the hint reads "${shown.hint}" while the tick is on`);
+      } else {
+        pass('job-newmodel', 'a new name shows the tick, on by default, and the hint agrees with it');
+      }
+    },
+  },
+  {
+    name: 'job-edit',
+    surface: 'dlg-job',
+    // Opened from a card, which is the only route that shows Delete.
+    enter: async (p) => {
+      await showView(p, 'board');
+      await press(p, '.card .card-actions button:last-child');
+      const del = await p.evaluate(() => {
+        const button = document.getElementById('job-delete');
+        return { hidden: button.hidden, shown: button.checkVisibility ? button.checkVisibility() : true };
+      });
+      if (del.hidden || !del.shown) {
+        fail('job-edit', 'the edit form has no visible Delete, so the add form and the edit form are the same surface and one of them is wrong');
+      } else {
+        pass('job-edit', 'editing an existing job shows Delete; adding one does not');
+      }
+    },
+  },
   { name: 'spool', surface: 'dlg-spool', enter: async (p) => { await showView(p, 'inventory'); await press(p, '#spool-new'); } },
   { name: 'model', surface: 'dlg-model', enter: async (p) => { await showView(p, 'models'); await press(p, '#model-new'); } },
   {

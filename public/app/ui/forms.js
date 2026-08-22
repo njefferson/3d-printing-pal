@@ -46,14 +46,16 @@ export function initForms() {
   $('#job-f-title').addEventListener('input', () => {
     if (modelTouched || editing.job) return;
     $('#job-f-model').value = $('#job-f-title').value;
-    renderModelHint();
+    renderModelField();
   });
   for (const event of ['input', 'change']) {
     $('#job-f-model').addEventListener(event, () => {
       modelTouched = true;
-      renderModelHint();
+      renderModelField();
     });
   }
+  // The tick decides what the hint below it promises, so it redraws the hint.
+  $('#job-f-model-save').addEventListener('change', renderModelField);
   $('#model-f-addsource').addEventListener('click', () => addSourceRow());
   $('#model-f-addlisting').addEventListener('click', () => addListingRow());
 
@@ -96,12 +98,14 @@ export function openJob(id, opener) {
   modelInput.value = linked?.name || '';
   modelTouched = Boolean(modelInput.value);
 
+  $('#job-f-model-save').checked = true;
+
   const options = $('#job-f-model-options');
   clear(options);
   for (const model of store.state.models) {
     if (model.name) options.append(el('option', { value: model.name }));
   }
-  renderModelHint();
+  renderModelField();
 
   const links = $('#job-f-links');
   clear(links);
@@ -122,28 +126,41 @@ function syncRequesterVisibility() {
 // ------------------------------------------------------------- the model box
 
 /**
- * Say which of the two things the save will do, BEFORE it does it.
+ * What the Model box says it will do, and the one case where it offers a choice.
  *
- * This is the whole defence against a typo becoming a second model, and it is why
- * the box can be free text at all. It is always visible rather than appearing on
- * a mismatch: a hint that only shows up when something is wrong teaches nobody
- * what the field does, and a state that is usually absent is a state usually
- * nothing measures.
+ * THREE OUTCOMES, and the reader can see which one they are getting before they
+ * commit to it: link to a model that exists, make a new one, or have no model at
+ * all. The hint is always visible — a hint that only appears on a mismatch
+ * teaches nobody what the field does, and a state that is usually absent is a
+ * state usually nothing measures.
+ *
+ * The tick box appears ONLY for a name that is new, because that is the only
+ * case where there is anything to decide. An existing name links whatever it is
+ * set to, and an empty box means no model; offering the question there would be a
+ * control that does nothing, which is worse than no control.
  */
-function renderModelHint() {
+function renderModelField() {
   const typed = $('#job-f-model').value.trim();
   const hint = $('#job-f-model-hint');
+  const saveField = $('#job-f-model-save-field');
+  const saveBox = $('#job-f-model-save');
+
+  const found = typed ? store.modelNamed(typed) : null;
+  saveField.hidden = !typed || Boolean(found);
+
   if (!typed) {
     hint.textContent = 'Not from a saved model. Type a name and it is added to your models if it is not there already.';
     return;
   }
-  const found = store.modelNamed(typed);
-  // The WORDS carry it, not a colour. "Links to" and "will be added" are the two
-  // outcomes and they read differently; a colour variant would be a state that
-  // only appears sometimes, which is a state the gate never measures.
-  hint.textContent = found
-    ? `Links to ${found.name}, already in your models.`
-    : `${typed} will be added to your models.`;
+  if (found) {
+    hint.textContent = `Links to ${found.name}, already in your models.`;
+    return;
+  }
+  // The WORDS carry it, not a colour. These read differently from one another;
+  // a colour variant would be a state that only appears sometimes.
+  hint.textContent = saveBox.checked
+    ? `${typed} will be added to your models.`
+    : `${typed} will not be saved, and this job will have no model. The job's own title still says what it is.`;
 }
 
 function addLinkRow(link = null) {
@@ -185,7 +202,14 @@ async function onSaveJob(event) {
   // Asked BEFORE the save, so the answer is about what was there a moment ago
   // rather than about the model the save may have just made.
   const typed = $('#job-f-model').value.trim();
-  const isNewModel = Boolean(typed) && !store.modelNamed(typed);
+  const found = typed ? store.modelNamed(typed) : null;
+  const isNewModel = Boolean(typed) && !found && $('#job-f-model-save').checked;
+
+  // A name the reader declined to save is not passed on at all. The store's rule
+  // is "a name that matches nothing becomes a model", so declining has to be
+  // expressed by withholding the name rather than by a second flag the store
+  // would have to be trusted to honour.
+  const modelName = (found || isNewModel) ? typed : '';
 
   // A NAME, never an id — see the note above saveJob for why the store is what
   // creates the model rather than this form.
@@ -194,7 +218,7 @@ async function onSaveJob(event) {
     title: $('#job-f-title').value,
     type: $('#job-f-type').value,
     requester: $('#job-f-type').value === 'request' ? $('#job-f-requester').value : '',
-    modelName: typed,
+    modelName,
     printer: $('#job-f-printer').value,
     quantity: $('#job-f-quantity').value,
     priceCharged: $('#job-f-price').value,
