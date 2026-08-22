@@ -458,8 +458,29 @@ itself in, then save with only "who asked for it" added. The card should carry a
 button to the site. Then press Undo and check the job, the model and the link all
 go together.
 
-Leaving a promoted candidate recorded here is how the next session concludes
-something is waiting when nothing is.
+**Verified at `096d762`, the 0.5.0 release commit.** Its deploy steps RAN rather
+than skipped, and its log printed:
+
+    ✨ Deployment complete! Take a peek over at https://d4838341.3d-printing-pal.pages.dev
+    ✨ Deployment alias URL: https://staging.3d-printing-pal.pages.dev
+
+Its Gates run is green with all 22 gate steps and 4 security steps having
+**executed**, checked one by one rather than read off the run's conclusion.
+
+**THE PROMOTING SESSION RE-READS THE HEAD.** A promotion ships the branch head,
+and the head moves every time anything lands here — including the commit that
+records this. The SHA above is evidence about a release commit, not a standing
+claim about the branch.
+
+Three ways a run can fail to mean what it looks like, all three met on
+2026-08-22: a conclusion with steps that never ran, after an early failure
+skipped the rest; a conclusion of `cancelled`, from a push superseding its
+predecessor, which measures nothing and is not red either; and a green workflow
+that deployed nothing, which is what a fully-skipped deploy looks like.
+
+When this is promoted, the section says there is none — leaving a promoted
+candidate recorded here is how the next session concludes something is waiting
+when nothing is.
 
 **0.1.1 never reached production on its own, and that was deliberate.** Its entire
 content was the link preview card, which 0.1.2 redrew; promoting it separately
