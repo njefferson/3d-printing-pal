@@ -40,6 +40,13 @@ export function initForms() {
   $('#job-f-type').addEventListener('change', syncRequesterVisibility);
   $('#job-f-addlink').addEventListener('click', () => addLinkRow());
 
+  // A pasted link fills the Title, which then fills the Model box — so one paste
+  // is the whole of an ordinary request. `paste` is deferred by a tick because the
+  // value is not in the box yet when the event fires.
+  const link = $('#job-f-link');
+  link.addEventListener('paste', () => setTimeout(offerFromLink, 0));
+  for (const event of ['input', 'change']) link.addEventListener(event, offerFromLink);
+
   // The title fills the Model box until the reader touches it. Most jobs here are
   // a print OF the thing the job is named after, so the common case is no typing
   // at all — and the one that is not is a box they clear once.
@@ -88,6 +95,10 @@ export function openJob(id, opener) {
   $('#job-f-column').value = job?.column || 'research';
   $('#job-f-notes').value = job?.notes || '';
   $('#job-delete').hidden = !job;
+  // Not restored from the model on an edit: the box is for adding a link, and
+  // showing one already filed would invite editing it here, which is the model's
+  // business. The links a model has are listed under it in Models.
+  $('#job-f-link').value = '';
 
   // The NAME of the linked model, not its id — the box is what the reader would
   // say out loud, and an id in a text field is a thing they can accidentally
@@ -126,6 +137,31 @@ function syncRequesterVisibility() {
 // ------------------------------------------------------------- the model box
 
 /**
+ * Read a pasted link and offer what it says, into EMPTY boxes only.
+ *
+ * The same rule `offerFromUrl` follows for a model's own source rows: a guess
+ * that overwrites something typed destroys data at the moment the reader was
+ * looking elsewhere. So a link pasted over a title somebody wrote changes
+ * nothing, and the link is still kept.
+ *
+ * A link also means there IS a thing on somebody's site, which is what a model
+ * is — so it re-ticks *Save this as a model*, because declining now costs the
+ * link as well and the hint below says so.
+ */
+function offerFromLink() {
+  const url = $('#job-f-link').value.trim();
+  const { title } = readUrl(url);
+  const titleBox = $('#job-f-title');
+
+  if (title && !titleBox.value.trim()) {
+    titleBox.value = title;
+    if (!modelTouched && !editing.job) $('#job-f-model').value = title;
+  }
+  if (url) $('#job-f-model-save').checked = true;
+  renderModelField();
+}
+
+/**
  * What the Model box says it will do, and the one case where it offers a choice.
  *
  * THREE OUTCOMES, and the reader can see which one they are getting before they
@@ -158,8 +194,17 @@ function renderModelField() {
   }
   // The WORDS carry it, not a colour. These read differently from one another;
   // a colour variant would be a state that only appears sometimes.
-  hint.textContent = saveBox.checked
-    ? `${typed} will be added to your models.`
+  const link = $('#job-f-link').value.trim();
+  if (saveBox.checked) {
+    hint.textContent = link
+      ? `${typed} will be added to your models, with the link.`
+      : `${typed} will be added to your models.`;
+    return;
+  }
+  // THE LINK GOES WITH IT, and that is worth saying rather than discovering. A
+  // link is kept on the model, so no model means nowhere to keep it.
+  hint.textContent = link
+    ? `${typed} will not be saved, and the link goes with it. The job is kept.`
     : `${typed} will not be saved, and this job will have no model. The job's own title still says what it is.`;
 }
 
@@ -219,6 +264,7 @@ async function onSaveJob(event) {
     type: $('#job-f-type').value,
     requester: $('#job-f-type').value === 'request' ? $('#job-f-requester').value : '',
     modelName,
+    sourceUrl: $('#job-f-link').value,
     printer: $('#job-f-printer').value,
     quantity: $('#job-f-quantity').value,
     priceCharged: $('#job-f-price').value,

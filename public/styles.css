@@ -414,11 +414,38 @@ a { color: var(--primary); }
  * 4px gap measured 7px between them — under the 8px floor by one pixel, which is
  * a miss nobody sees and a finger finds. */
 .field .field-check { margin-top: 8px; }
+
+/* The card's source link is an <a> wearing the button's clothes, because what it
+ * does is a navigation and a <button> that navigates is a lie to anything reading
+ * the page. `.btn` already carries the 44px floor and the border SC 1.4.11
+ * measures, so it inherits both. */
+.card-source { text-decoration: none; }
+
+/* A LINK THAT IS THE WHOLE LINE IS A TARGET, not prose. SC 2.5.8's exemption is
+ * for a link inline in a sentence, where enlarging it would wreck the paragraph
+ * around it; these sit alone in a list item and there is nothing to wreck. They
+ * measured 79x19 and no gate had ever seen them, because no seeded model carried
+ * a link until a job could file one. */
+.rowcard-links { margin: 0 0 12px; padding-left: 20px; }
+.rowcard-links a { display: inline-flex; align-items: center; min-height: var(--tap); }
 .field label, .fieldset legend { font-size: 0.875rem; color: var(--text-2); font-weight: 600; }
 .row { display: flex; gap: 12px; flex-wrap: wrap; }
 .row .field { flex: 1 1 9rem; }
 
-input[type="text"], input[type="number"], input[type="date"], input[type="file"], select, textarea {
+/* SELECTED BY EXCLUSION, not by a list of types.
+ *
+ * This was a list — text, number, date, file — and the first new input type added
+ * to a form landed outside it: `type="url"` rendered 21px tall against the 44px
+ * floor, in four states, because nobody thought of the list while adding a field.
+ * A list of the types that count goes narrow the same way a gate's definition
+ * does, and in the same direction: whatever the author had in front of them.
+ *
+ * The two exclusions each have their own rule below and their own sizing:
+ * a checkbox is a 44px square, and a colour well sizes itself. `hidden` is
+ * excluded because giving a `type="hidden"` input a height would put it on
+ * screen — the one way this form can be wrong, named rather than left to be
+ * discovered. */
+input:not([type="checkbox"]):not([type="color"]):not([type="hidden"]), select, textarea {
   font: inherit;
   font-size: 1rem;
   min-height: var(--tap);

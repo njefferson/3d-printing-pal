@@ -52,9 +52,29 @@ export function siteFrom(url) {
 /**
  * A title guess from the path.
  *
- * `/models/1234-articulated-dragon` becomes "Articulated Dragon". Leading id
- * numbers are dropped because every one of these sites puts one there; a segment
- * that is ONLY digits is not a title and is skipped entirely.
+ * `/models/1234-articulated-dragon` becomes "Articulated Dragon".
+ *
+ * IT PICKS THE BEST SEGMENT, NOT THE LAST ONE, and that is the whole of it. The
+ * first version walked from the end and took the first word-looking segment, so
+ * the link somebody actually sends —
+ * `/model/905441-bolt-euv-2022-privacy-screen-post-replacement/files`, copied
+ * from the Files tab, which is the tab you send to a person who is going to
+ * print it — offered the title **"Files"**. The name was in the URL the whole
+ * time, one segment earlier.
+ *
+ * The signal is structural rather than a list of route words, because a list of
+ * route words is the per-vendor coupling this file exists to avoid:
+ *
+ *   2 — the segment begins with digits and a dash. Every site here mints slugs
+ *       that way, and nothing else in a path looks like it.
+ *   1 — the segment is more than one word. A route is `files`, `download`,
+ *       `comments`; a name is not.
+ *   0 — a single word. Taken only when nothing scores higher, so `/models/dragon`
+ *       still reads, and `/…/slug/files` no longer does.
+ *
+ * A Thingiverse `thing:2478331/files` still yields "Files": that path carries no
+ * title in any segment, so there is nothing better to find. It is a guess in an
+ * editable field and it is wrong there — recorded rather than hidden.
  */
 export function titleFrom(url) {
   const parsed = parse(url);
@@ -63,31 +83,42 @@ export function titleFrom(url) {
   const segments = parsed.pathname.split('/').filter(Boolean);
   if (!segments.length) return '';
 
-  // Walk from the end: the last segment that looks like words rather than an id.
-  for (let i = segments.length - 1; i >= 0; i -= 1) {
-    const raw = decodeSafe(segments[i]);
+  let best = null;
+  for (const segment of segments) {
+    const raw = decodeSafe(segment);
 
     // A `route:id` segment — Thingiverse's `thing:2478331` — carries no title at
     // all. Squeezing one out of it produces "Thing:2478331", which is worse than
     // an empty field because it looks like an answer.
     if (raw.includes(':')) continue;
 
-    const words = raw
+    const idPrefixed = /^\d+-/.test(raw);
+    let parts = raw
       .replace(/\.[a-z0-9]{2,4}$/i, '')     // a trailing file extension
       .replace(/[_+]/g, '-')
-      .split('-')
-      .filter((part) => part && !/^\d+$/.test(part)); // drop pure-number parts
+      .split('-');
 
-    if (!words.length) continue;
+    // Only a LEADING run of digits is an id. An interior number is part of the
+    // name — "bolt-euv-2022-privacy-screen" is a 2022 model, and dropping every
+    // pure-number part deleted the year along with the id.
+    while (parts.length && /^\d+$/.test(parts[0])) parts.shift();
+    parts = parts.filter(Boolean);
+    if (!parts.length) continue;
+
     // A single short token is more likely a route than a name — "models", "p", "m".
-    if (words.length === 1 && words[0].length <= 3) continue;
+    if (parts.length === 1 && parts[0].length <= 3) continue;
 
-    return words
-      .map((word) => (word.length <= 2 ? word : word.charAt(0).toUpperCase() + word.slice(1)))
-      .join(' ')
-      .trim();
+    const score = idPrefixed ? 2 : (parts.length > 1 ? 1 : 0);
+    // `>=` so that among equal scores the LAST segment wins, which is where a
+    // name sits when a path has no id at all.
+    if (!best || score >= best.score) best = { score, parts };
   }
-  return '';
+  if (!best) return '';
+
+  return best.parts
+    .map((word) => (word.length <= 2 ? word : word.charAt(0).toUpperCase() + word.slice(1)))
+    .join(' ')
+    .trim();
 }
 
 /** Both guesses at once. Empty strings where there is nothing to say. */

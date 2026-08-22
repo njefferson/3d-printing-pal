@@ -672,6 +672,132 @@ async function main() {
     pass('no job points at a missing model, so the export still restores');
   }
 
+  // ------------------------------------------------- the request as it arrives
+  //
+  // THE WHOLE WORKFLOW, in the order it actually happens. Somebody sends a link
+  // and nothing else. Everything the app needs to file it is inside that link, so
+  // this drives the form the way a reader would — paste first, then say who
+  // asked — and asserts that nothing else had to be typed.
+  //
+  // The URL is the real shape people send: a Printables model page copied from
+  // its FILES tab, which is the tab you send to somebody who is going to print
+  // the thing. That trailing segment is what made the title guess return "Files".
+  const LINK = 'https://www.printables.com/model/905441-bolt-euv-2022-privacy-screen-post-replacement/files';
+  const LINK_TITLE = 'Bolt Euv 2022 Privacy Screen Post Replacement';
+
+  const beforeRequest = await counts(page);
+  const requestBaseline = await exportThroughTheButton(page);
+
+  await page.click('#tab-board');
+  await page.waitForTimeout(200);
+  await page.click('#job-new');
+  await page.fill('#job-f-link', LINK);
+  await page.waitForTimeout(80);
+
+  const filled = await page.evaluate(() => ({
+    title: document.getElementById('job-f-title').value,
+    model: document.getElementById('job-f-model').value,
+    hint: document.getElementById('job-f-model-hint').textContent,
+    tick: document.getElementById('job-f-model-save').checked,
+  }));
+  if (filled.title !== LINK_TITLE) {
+    fail(`pasting the link filled the Title with "${filled.title}", expected "${LINK_TITLE}" — the name is in the link and nothing should have to be typed`);
+  } else if (filled.model !== LINK_TITLE) {
+    fail(`the Title filled but the Model box says "${filled.model}" — the chain from link to model is broken`);
+  } else if (!filled.tick) {
+    fail('a pasted link left the save-this-as-a-model tick off, which would throw the link away');
+  } else if (!/with the link/.test(filled.hint)) {
+    fail(`the hint reads "${filled.hint}" — it has to say the link is being kept, since a job with no model has nowhere to keep one`);
+  } else {
+    pass(`one paste fills the name and says what happens: "${filled.hint}"`);
+  }
+
+  await page.selectOption('#job-f-type', 'request');
+  await page.fill('#job-f-requester', 'John');
+  await page.click('#job-save');
+  await page.waitForTimeout(340);
+
+  const afterRequest = await counts(page);
+  if (afterRequest.models !== beforeRequest.models + 1) {
+    fail(`the pasted request produced ${afterRequest.models} models, expected ${beforeRequest.models + 1}`);
+  }
+
+  // The link is on the MODEL, read from the database rather than from a screen.
+  const stored = await page.evaluate(() => new Promise((resolve) => {
+    const r = indexedDB.open('print-tracker');
+    r.onsuccess = () => {
+      const req = r.result.transaction('models', 'readonly').objectStore('models').getAll();
+      req.onsuccess = () => {
+        const model = req.result.find((m) => /Privacy Screen/.test(m.name || ''));
+        resolve(model ? { name: model.name, sources: model.sources || [] } : null);
+        r.result.close();
+      };
+    };
+  }));
+  if (!stored) {
+    fail('no model was made from the pasted link');
+  } else if (stored.sources.length !== 1 || stored.sources[0].url !== LINK) {
+    fail(`the model carries ${JSON.stringify(stored.sources)} — expected exactly the link that was pasted`);
+  } else if (stored.sources[0].label !== 'Printables') {
+    fail(`the link was filed under "${stored.sources[0].label}" rather than the site it came from`);
+  } else {
+    pass(`the link is kept on the model, labelled ${stored.sources[0].label}, without a second screen`);
+  }
+
+  // And it is reachable from the CARD, which is the thing you are looking at when
+  // you decide what to print next.
+  const onCard = await page.evaluate(() => {
+    const card = Array.from(document.querySelectorAll('.card'))
+      .find((c) => /Privacy Screen/.test(c.textContent));
+    if (!card) return null;
+    const link = card.querySelector('.card-source');
+    if (!link || link.hidden) return { missing: true };
+    return { href: link.getAttribute('href'), text: link.textContent, name: link.getAttribute('aria-label') };
+  });
+  if (!onCard) {
+    fail('the job did not reach the board');
+  } else if (onCard.missing) {
+    fail('the card has no link to where the file came from, so choosing what to print still means leaving the board');
+  } else if (onCard.href !== LINK) {
+    fail(`the card links to ${onCard.href} rather than the address that was pasted`);
+  } else if (!onCard.name || !onCard.name.startsWith(onCard.text)) {
+    fail(`the card link reads "${onCard.text}" and answers to "${onCard.name}", which does not start with it (SC 2.5.3)`);
+  } else {
+    pass(`the card carries the link: "${onCard.text}" to ${onCard.href}`);
+  }
+
+  // A second job for the same thing must not file the address twice.
+  await page.click('#job-new');
+  await page.fill('#job-f-link', LINK);
+  await page.waitForTimeout(80);
+  await page.click('#job-save');
+  await page.waitForTimeout(340);
+
+  const twice = await page.evaluate(() => new Promise((resolve) => {
+    const r = indexedDB.open('print-tracker');
+    r.onsuccess = () => {
+      const req = r.result.transaction('models', 'readonly').objectStore('models').getAll();
+      req.onsuccess = () => {
+        const model = req.result.find((m) => /Privacy Screen/.test(m.name || ''));
+        resolve(model ? (model.sources || []).length : -1);
+        r.result.close();
+      };
+    };
+  }));
+  if (twice !== 1) fail(`printing the same thing twice filed the address ${twice} times`);
+  else pass('a second job for the same model does not file the same address again');
+
+  for (let i = 0; i < 2; i += 1) {
+    await page.click('#undo-do');
+    await page.waitForTimeout(340);
+  }
+  const afterRequestUndo = await exportThroughTheButton(page);
+  if (JSON.stringify(strip(JSON.parse(afterRequestUndo.text))) !== JSON.stringify(strip(JSON.parse(requestBaseline.text)))) {
+    fail('undoing a pasted request did NOT return the data to what it was');
+  } else {
+    pass('a request filed from a link is one gesture: undo takes the job, the model and the link back together');
+  }
+
   // ---------------------------------------- the deliveredAt interpretation
   // The requirement is "a computed total of price-charged across its delivered
   // jobs". Read as "current column is delivered", that total silently drops the

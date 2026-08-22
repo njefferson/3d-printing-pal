@@ -150,7 +150,15 @@ function buildCard(job) {
   const badge = el('span', { class: 'badge' });
   const meta = el('p', { class: 'card-meta' });
   const moveBtn = el('button', { type: 'button', class: 'btn' }, 'Move');
-  const editBtn = el('button', { type: 'button', class: 'btn' }, 'Open');
+  // A class rather than a position: the actions row gained a third child and
+  // `button:last-child` silently stopped matching anything.
+  const editBtn = el('button', { type: 'button', class: 'btn card-open' }, 'Open');
+  // WHERE THE FILE IS, on the card that makes you want it. The link lives on the
+  // model, which is a different tab — so choosing something to print meant
+  // reading the board, leaving it, finding the model, and coming back. Hidden
+  // when the model has no link, or the job has no model.
+  const sourceLink = el('a', { class: 'btn card-source', rel: 'noopener noreferrer', target: '_blank' });
+  sourceLink.hidden = true;
 
   const thumb = el('div', { class: 'card-thumb' });
 
@@ -160,10 +168,10 @@ function buildCard(job) {
     el('div', { class: 'card-top' }, el('div', { class: 'card-topmain' }, badge, title), grip),
     thumb,
     meta,
-    el('div', { class: 'card-actions' }, moveBtn, editBtn),
+    el('div', { class: 'card-actions' }, moveBtn, editBtn, sourceLink),
   );
 
-  node._parts = { grip, title, badge, meta, moveBtn, editBtn, thumb };
+  node._parts = { grip, title, badge, meta, moveBtn, editBtn, thumb, sourceLink };
 
   moveBtn.addEventListener('click', () => openMove(job.id, moveBtn));
   editBtn.addEventListener('click', () => onEdit(node.dataset.jobId));
@@ -207,6 +215,25 @@ function updateCard(node, job) {
   if (job.type === 'request' && job.requester) bits.push(`For: ${job.requester}`);
   clear(p.meta);
   for (const bit of bits) p.meta.append(el('span', { text: bit }));
+
+  // The first source the model carries. `http(s)` only, checked here rather than
+  // trusted from the record, because an imported file is somebody else's bytes.
+  const source = (model?.sources || []).find((s) => isWebLink(s.url));
+  if (source) {
+    p.sourceLink.hidden = false;
+    p.sourceLink.href = source.url;
+    p.sourceLink.textContent = source.label || 'Open the file';
+    // The visible words are the site's name, so the accessible name has to start
+    // with them (SC 2.5.3) and then say what pressing it does.
+    p.sourceLink.setAttribute(
+      'aria-label',
+      `${source.label || 'Open the file'} — where ${job.title || 'this job'} came from, opens in a new tab`,
+    );
+  } else {
+    p.sourceLink.hidden = true;
+    p.sourceLink.removeAttribute('href');
+    p.sourceLink.textContent = '';
+  }
 
   p.moveBtn.setAttribute('aria-label', `Move ${job.title || 'this job'} to another column`);
   p.editBtn.setAttribute('aria-label', `Open ${job.title || 'this job'}`);
@@ -296,6 +323,16 @@ function nextSiblingOf(job, siblings) {
 
 function labelFor(id) {
   return COLUMNS.find((c) => c.id === id)?.label || id;
+}
+
+/** Only http(s) reaches an href. A `javascript:` source row is a stored hazard. */
+function isWebLink(url) {
+  try {
+    const parsed = new URL(String(url || ''), location.href);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+  } catch {
+    return false;
+  }
 }
 
 // ------------------------------------------------------------------- drag

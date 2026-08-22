@@ -99,6 +99,7 @@ const STATE_TEXT = {
     '.badge-wanted',
     '.badge-fun',
     '.card-grip',
+    '.card-source',
   ],
   inventory: [...BASE_TEXT, '.rowcard-title', '.rowcard-sub', '.remaining', '.note'],
   models: [...BASE_TEXT, '.rowcard-title', '.rowcard-sub', '.remaining'],
@@ -130,7 +131,7 @@ const STATE_TEXT = {
 };
 
 const STATE_NONTEXT = {
-  board: ['.btn', '.iconbtn', '.chip', '.card', '.column', '.card-grip', '.column-toggle'],
+  board: ['.btn', '.iconbtn', '.chip', '.card', '.column', '.card-grip', '.column-toggle', '.card-source'],
   inventory: ['.btn', '.rowcard', 'select', 'input[type="checkbox"]', '.bar'],
   models: ['.btn', '.rowcard'],
   'update-stuck': ['.strip', '.btn'],
@@ -142,7 +143,7 @@ const STATE_NONTEXT = {
   // which is text, so its border carries no information a reader needs to
   // identify a component. It is drawn with --hairline, which the palette spec
   // exempts as decoration.
-  job: ['#dlg-job input[type="text"]', '#dlg-job select', '#dlg-job textarea', '#dlg-job .btn', '#dlg-job input[list]'],
+  job: ['#dlg-job input[type="text"]', '#dlg-job input[type="url"]', '#dlg-job select', '#dlg-job textarea', '#dlg-job .btn', '#dlg-job input[list]'],
   'job-newmodel': ['#dlg-job input[type="text"]', '#dlg-job select', '#dlg-job textarea', '#dlg-job .btn', '#dlg-job input[type="checkbox"]'],
   'job-edit': ['#dlg-job input[type="text"]', '#dlg-job select', '#dlg-job .btn', '#dlg-job .btn-danger'],
   spool: ['#dlg-spool input[type="text"]', '#dlg-spool input[type="number"]', '#dlg-spool .btn'],
@@ -247,7 +248,7 @@ const STATES = [
     // Opened from a card, which is the only route that shows Delete.
     enter: async (p) => {
       await showView(p, 'board');
-      await press(p, '.card .card-actions button:last-child');
+      await press(p, '.card .card-open');
       const del = await p.evaluate(() => {
         const button = document.getElementById('job-delete');
         return { hidden: button.hidden, shown: button.checkVisibility ? button.checkVisibility() : true };
@@ -1261,6 +1262,13 @@ async function seed(page) {
     if (job.title === 'Dragon egg') {
       await page.click('#job-f-addlink');
       await page.fill('#job-f-links .linkrow input[type="number"]', '240');
+    }
+    // One job carries a link, so the card's source control exists to be measured.
+    // Registered in STATE_NONTEXT for `board`, where a selector matching nothing
+    // is a FAILURE — so this seed line and that registration hold each other up.
+    if (job.title === 'Benchy') {
+      await page.fill('#job-f-link', 'https://www.printables.com/model/905441-bolt-euv-2022-privacy-screen-post-replacement/files');
+      await page.waitForTimeout(60);
     }
     await page.click('#job-save');
     await page.waitForTimeout(180);

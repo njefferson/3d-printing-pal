@@ -6,6 +6,7 @@
 
 import * as db from './db.js';
 import { COLUMN_IDS, TYPE_IDS, num, sortForBoard } from './derive.js';
+import { siteFrom } from './fromurl.js';
 
 // PICTURES ARE NEVER HELD IN `state`. Every other store is small enough to keep
 // in memory; images are not, and a board that loaded every blob to draw a row of
@@ -505,11 +506,11 @@ function normaliseName(name) {
  */
 export async function saveJob(input) {
   const existing = state.jobs.find((j) => j.id === input.id);
-  const before = await capture({ jobs: [existing?.id].filter(Boolean) });
   const column = COLUMN_SAFE(input.column, COLUMN_IDS, 'research');
 
   let modelId = input.modelId || '';
   let createdModel = null;
+  let updatedModel = null;
   if (input.modelName !== undefined) {
     const named = normaliseName(input.modelName) ? modelNamed(input.modelName) : null;
     if (named) {
@@ -533,6 +534,35 @@ export async function saveJob(input) {
     }
   }
 
+  // THE LINK GOES ON THE MODEL, because the model is the thing that exists on
+  // somebody else's site and the job is one instance of printing it. Print it
+  // again next month for somebody else and it is the same link — a copy on each
+  // job would be the same address written down N times, drifting apart the moment
+  // one of them was corrected.
+  //
+  // Which is also why a job with no model has nowhere to keep a link, and that is
+  // the right answer rather than a gap: a thing with a source page IS a model.
+  const link = String(input.sourceUrl || '').trim();
+  if (link) {
+    const source = { label: siteFrom(link) || 'Source', url: link };
+    if (createdModel) {
+      createdModel.sources = [source];
+    } else if (modelId) {
+      const target = state.models.find((m) => m.id === modelId);
+      // Compared as written, after dropping a fragment and a trailing slash.
+      // `/model/x` and `/model/x/files` stay two links: deciding they are one
+      // means knowing `files` is a tab rather than a different page, which is
+      // exactly the per-site knowledge this app refuses to carry.
+      if (target && !(target.sources || []).some((s) => sameLink(s.url, link))) {
+        updatedModel = {
+          ...target,
+          sources: [...(target.sources || []), source],
+          updatedAt: nowIso(),
+        };
+      }
+    }
+  }
+
   const record = {
     id: input.id || newId(),
     title: (input.title || '').trim(),
@@ -552,27 +582,43 @@ export async function saveJob(input) {
     deliveredAt: existing?.deliveredAt || (column === 'delivered' ? nowIso() : null),
     updatedAt: nowIso(),
   };
-  // ONE TRANSACTION whether or not a model is being made, so there is no state in
-  // which the job points at a model that is not there yet.
-  const stores = createdModel ? ['jobs', 'models'] : ['jobs'];
-  await db.writeMany(stores, (handles) => {
+  // Captured HERE rather than at the top, because a model gaining a link has to
+  // be read as it was before that decision was made.
+  const before = await capture({
+    jobs: [existing?.id].filter(Boolean),
+    ...(updatedModel ? { models: [updatedModel.id] } : {}),
+  });
+
+  // ONE TRANSACTION whether or not a model is being made or changed, so there is
+  // no state in which the job points at a model that is not there yet, or at one
+  // that does not yet carry the link the job was saved with.
+  const touchesModels = Boolean(createdModel || updatedModel);
+  await db.writeMany(touchesModels ? ['jobs', 'models'] : ['jobs'], (handles) => {
     handles.jobs.put(record);
     if (createdModel) handles.models.put(createdModel);
+    if (updatedModel) handles.models.put(updatedModel);
   });
   upsert(state.jobs, record);
   if (createdModel) upsert(state.models, createdModel);
+  if (updatedModel) upsert(state.models, updatedModel);
 
   // The entry is built ONCE rather than chosen between two branches. It used to
   // be a ternary, and a ternary is where a new store gets added to the branch the
   // author was looking at and not to the other one.
-  const entry = existing ? { ...before } : { jobs: [{ id: record.id, record: null }] };
+  const entry = existing ? { ...before } : { ...before, jobs: [{ id: record.id, record: null }] };
   if (createdModel) entry.models = [{ id: createdModel.id, record: null }];
   remember(existing ? `editing ${record.title || 'a job'}` : `adding ${record.title || 'a job'}`, entry);
 
   // Both, because a new model changes the models view and the inventory's model
   // column as well as the board.
-  announce(createdModel ? 'models' : 'jobs');
+  announce(touchesModels ? 'models' : 'jobs');
   return record;
+}
+
+/** Two links the same, ignoring a fragment and a trailing slash. */
+function sameLink(a, b) {
+  const tidy = (u) => String(u || '').trim().split('#')[0].replace(/\/+$/, '').toLowerCase();
+  return Boolean(tidy(a)) && tidy(a) === tidy(b);
 }
 
 export async function deleteJob(id) {

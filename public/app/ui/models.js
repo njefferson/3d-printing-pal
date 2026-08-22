@@ -63,12 +63,12 @@ function buildModelRow(model, jobs, currency) {
 
   if ((model.sources || []).length) {
     body.append(el('h4', { class: 'rowcard-sub', text: 'Where the file came from' }));
-    body.append(el('ul', {}, ...model.sources.map((s) => el('li', {}, linkOrText(s.url, s.label || s.url)))));
+    body.append(el('ul', { class: 'rowcard-links' }, ...model.sources.map((s) => el('li', {}, linkOrText(s.url, s.label || s.url)))));
   }
 
   if ((model.listings || []).length) {
     body.append(el('h4', { class: 'rowcard-sub', text: 'Where it is listed' }));
-    body.append(el('ul', {}, ...model.listings.map((l) => {
+    body.append(el('ul', { class: 'rowcard-links' }, ...model.listings.map((l) => {
       const extras = [];
       if (l.unitsSold != null && l.unitsSold !== '') extras.push(`${l.unitsSold} sold`);
       if (l.revenue != null && l.revenue !== '') extras.push(`${money(l.revenue, currency)} revenue`);

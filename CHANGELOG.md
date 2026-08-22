@@ -9,6 +9,69 @@ triplet is `version.capability.iteration`. Releases do not have names.
 
 ---
 
+## 0.5.0 — CAPABILITY — 2026-08-22
+
+A request usually arrives as a link and nothing else. The link is now the first
+thing the app asks for, and the last thing you need to type.
+
+### New
+
+- **Link** is the first box on a job. Paste the address somebody sent and the name
+  fills itself in from it, the model fills in from the name, and the address is
+  kept with the model when the job is saved. For an ordinary request that leaves
+  who asked for it, and nothing else.
+- The address is kept on the model rather than the job, because the model is the
+  thing that exists on somebody's site. Print it again next month for somebody
+  else and it is the same address, already there.
+- Job cards now carry a button to where the file came from — the site's name,
+  opening in a new tab. Choosing what to print next no longer means reading the
+  board, leaving it for the Models tab, and coming back.
+- A second job for the same thing does not file the same address twice.
+
+### Fixed
+
+- The name taken from an address was often the wrong word. A Printables link
+  copied from the Files tab — the one you send to somebody who is going to print
+  the thing — offered the name "Files". It now reads the part of the address that
+  is the name, and keeps a year inside a name instead of dropping it as if it were
+  an id number.
+- Links under a model in the Models tab were too small to press reliably. They are
+  now full-height targets like every other control.
+- Web address boxes were a third of the height of every other box, which made them
+  hard to hit and out of step with the rest of the form.
+
+### Still not right
+
+- Only the name and the site can be read from an address. The picture and the
+  description cannot: a browser is not allowed to read another site's pages, so
+  those need a server this app does not have and will not get without that being
+  a deliberate trade.
+- The Link box on a job is for adding an address, and it starts empty when you
+  reopen a job. The addresses a model has are listed under it in Models, which is
+  where they are changed.
+- A job with no model has nowhere to keep a link, because a link is kept on the
+  model. Turning off *Save this as a model* with a link pasted says so before you
+  save.
+- Undo lasts for as long as the app is open. Closing it, or reloading the page,
+  starts again with nothing to undo — something deleted yesterday comes back from
+  a backup, not from here.
+- Restoring a backup cannot be undone. It replaces everything on purpose, and the
+  way back is the safety copy the app downloads immediately before it does so.
+- Changing a filter, the currency or the sort order is not a change undo tracks.
+  It covers jobs, spools and models — the things a wrong press loses.
+- A picture has to be added by hand.
+- Filament counts as used the moment it is logged against a job, whichever column
+  that job is sitting in. That is the honest answer to how much is left on a
+  spool, but it means a job parked in research with grams already logged has spent
+  that filament as far as the inventory is concerned.
+- Costs and prices are plain numbers with a currency symbol you choose. There is
+  no per-currency formatting and no conversion.
+- An installed app on iPadOS will not always let a waiting update take over while
+  the app is open. If the version at the bottom of the screen is not the one you
+  expect, close the app fully and open it again.
+
+---
+
 ## 0.4.1 — ITERATION — 2026-08-22
 
 Saving a job no longer decides on your behalf whether the name in the Model box

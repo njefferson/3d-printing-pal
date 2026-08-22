@@ -123,6 +123,62 @@ capability, with the rejected ones and the reason each was rejected.
 
 ---
 
+## A request arrives as a link (0.5.0)
+
+**THE ENTRY ORDER WAS THE REVERSE OF THE ARRIVAL ORDER, and that is the whole
+defect.** A request turns up as one thing: an address. The form began with Title,
+so cataloguing it meant typing out a name you were holding a copy of, filling five
+more boxes, saving, going to the Models tab, finding the model that had just been
+made, opening it, adding a source row, and pasting the address there. Ten steps
+across two screens, with the one piece of information that was actually sent
+entered last.
+
+**Link is now the first box.** It fills Title, Title fills Model, and the address
+is filed on the model by `saveJob` — in the same transaction and the same undo
+entry as the job, for the same reason the model itself is. For an ordinary request
+that leaves who asked for it, and nothing else.
+
+**The address goes on the MODEL.** The model is the thing that exists on somebody
+else's site; the job is one instance of printing it. Print it again next month for
+somebody else and it is the same address. A copy per job would be one address
+written down N times, drifting apart the moment one was corrected. That is also
+why a job with no model has nowhere to keep a link — and that is the right answer
+rather than a gap: a thing with a source page IS a model. The hint says so before
+the save rather than after.
+
+**Deduplicated on the address as written**, minus a fragment and a trailing slash.
+`/model/x` and `/model/x/files` stay two links, because deciding they are one
+means knowing that `files` is a tab rather than a different page — the per-site
+knowledge this app refuses to carry.
+
+**The other end was just as backward.** The link lived only in the Models tab, so
+choosing what to print next meant reading the board, leaving it, finding the
+model, and coming back to move the card. Cards now carry the source as a button
+labelled with the site.
+
+**`fromurl.js` had no check of its own, and shipped returning "Files".** It was
+exercised only through a browser walk that pasted one URL into one form, which
+proved the wiring and nothing about the parsing. The real link somebody sends is
+copied from the Files tab — `/model/905441-…-replacement/files` — and the parser
+walked from the END and took the first word-looking segment. `tools/fromurl-check.mjs`
+is nine URL SHAPES rather than a list of sites, each carrying the reason it is
+there, and it was planted red with the old behaviour before it was believed.
+
+Two more defects the same rewrite fixed: an interior number was dropped as if it
+were an id, so "bolt-euv-2022-privacy-screen" lost its year; and the segment is
+now chosen by score — an id-prefixed slug beats a multi-word segment beats a lone
+word — which is structural rather than a list of route words to maintain.
+
+**Two pre-existing defects surfaced only because a seeded model finally had a
+link:** the source links under a model measured 79x19px against a 44px floor, and
+`input[type="url"]` was outside the CSS list that sizes inputs, so the new box
+rendered 21px tall. That list is now an EXCLUSION — every input except a checkbox,
+a colour well and a hidden one — because a list of the types that count goes
+narrow in exactly the direction §119 describes, and this is the second time in two
+releases (§123 was the first).
+
+---
+
 ## A job can make its model (0.4.0, 0.4.1)
 
 **The Model box takes a NAME, not an id.** It was a `<select>` over models that
@@ -393,10 +449,14 @@ the log and check whether the steps ran or were skipped.
 
 ### The staged candidate
 
-**There is none right now.** `staging` and `main` are the same commit — 0.3.0,
-0.4.0 and 0.4.1 were promoted together on 2026-08-22 — so
-https://staging.3d-printing-pal.pages.dev currently serves exactly what production
-serves. The next candidate goes here.
+**0.5.0 is on staging**, at https://staging.3d-printing-pal.pages.dev — the
+candidate is **0.5.0**.
+
+A request arrives as a link, so the link is now the first box on a job. To try:
+paste a model page address into the Link box of a new job and check the name fills
+itself in, then save with only "who asked for it" added. The card should carry a
+button to the site. Then press Undo and check the job, the model and the link all
+go together.
 
 Leaving a promoted candidate recorded here is how the next session concludes
 something is waiting when nothing is.
