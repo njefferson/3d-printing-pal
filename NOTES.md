@@ -335,6 +335,30 @@ not to be a defect. A page that only lists wins is an advertisement.
 
 ---
 
+## What a release has to go back and close
+
+**A release that removes a limitation removes it from every list that states it**,
+in the same commit. The lists are named here because a session cannot grep for a
+sentence it does not know exists, and this file drifts in one direction only: it
+accumulates limitations and never sheds them. `CHANGELOG.md` does not have that
+problem, because the version gate holds it to the version constant. Nothing holds
+these.
+
+- **Settled decisions**, above — a decision that has been unsettled has to say so.
+  It read "no undo, deliberately, for now" for three days after undo shipped.
+- **What it cannot do now**, above — the entries that say *cannot* are the
+  load-bearing ones, because *cannot* is what stops the next session building the
+  thing. It still said the Move button could not reorder within a column.
+- **The staged candidate** and **Shipped to production**, below.
+- The **Found and not fixed** section of the live status page, whose address is
+  recorded above.
+
+Both stale entries were found by a later feature happening to touch the same file.
+Nothing looked for them and nothing would have, and the next thing that would have
+used them is a plan. Hub LESSONS §122, and §120 for what that plan costs.
+
+---
+
 ## Deployment
 
 Cloudflare Pages, project `3d-printing-pal`, from `.github/workflows/deploy.yml`.
