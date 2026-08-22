@@ -91,15 +91,33 @@ git clone https://github.com/njefferson/3d-printing-pal.git
 cd 3d-printing-pal && npm ci
 ```
 
+**Everything below runs INSIDE the clone**, not in the folder holding both. Run
+`npm ci` a level up and it fails complaining about a lockfile, which names
+nothing about directories and reads like a broken repo. If the path has spaces in
+it, quote it.
+
 **Five tools need a real browser** — the accessibility gate, both walks, the card
 contrast check and the icon render. They look for the sandbox Chromium first and
-fall back to Playwright's own, so install it once:
+fall back to Playwright's own, so install it once, AFTER `npm ci`:
 
 ```
-npx playwright install chromium
+npx --no-install playwright-core install chromium
 ```
 
-Without it those five fail, which is most of what `npm run check` is.
+**`playwright-core`, and `--no-install`, and both are load-bearing.** The obvious
+spelling — `npx playwright install chromium` — fetches the current `playwright`
+package and downloads whatever Chromium revision THAT wants. This repo pins
+`playwright-core` (see the `//browser` note in `package.json`), and the two are a
+matched pair: a playwright-core given a different revision connects and then hangs
+on a protocol mismatch, with no error to read. So the wrong spelling costs a few
+hundred megabytes and buys five gates that hang instead of failing. `--no-install`
+is what makes npx use the copy `npm ci` just put in `node_modules` rather than
+fetching its own.
+
+CI runs the same command with `--with-deps` added, which installs Linux system
+packages; on macOS and Windows it is unnecessary.
+
+Without a matching browser those five fail, which is most of what `npm run check` is.
 
 **Seeing the app.** `npm run serve` boots it through the REAL `_headers`, so the
 Content-Security-Policy is exercised rather than assumed — that is how a policy
