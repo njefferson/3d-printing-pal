@@ -393,11 +393,12 @@ the log and check whether the steps ran or were skipped.
 
 ### The staged candidate
 
-**0.3.0 and 0.4.0 are both on staging**, at https://staging.3d-printing-pal.pages.dev
+**0.3.0, 0.4.0 and 0.4.1 are all on staging**, at https://staging.3d-printing-pal.pages.dev
+— the candidate is **0.4.1**.
 
-Neither has been promoted, and they go up together the way 0.1.1 and 0.1.2 did —
-0.4.0 builds on 0.3.0's undo, so there is no order in which the second ships
-without the first.
+None has been promoted, and they go up together the way 0.1.1 and 0.1.2 did: 0.4.0
+builds on 0.3.0's undo and 0.4.1 refines 0.4.0, so there is no order in which a
+later one ships without the earlier.
 
 **0.3.0 — undo, and reordering a column without a drag.** Delete a spool that
 several jobs draw on and press Undo: the spool and all of its links come back
@@ -414,27 +415,42 @@ second one does NOT appear. Add a third, turn off *Save this as a model*, and
 check the job is kept while the catalog is not touched. Then press Undo and check a
 job and its model go together.
 
-Also worth a glance because it was wrong until 0.4.1: **the Delete button should
-not be on the Add job form**, only on a job opened from a card.
+**0.4.1 adds the choice not to.** With a name that is not in the models, a tick
+box says *Save this as a model*; turn it off and the job is kept while the catalog
+is not touched.
+
+Also worth a glance because it was wrong from the first release until 0.4.1:
+**the Delete button should not be on the Add job form**, only on a job opened from
+a card. `[hidden]` was losing to `.btn`'s `display`.
 
 None of that can be confirmed from a session — this sandbox reaches no external
 site, and a browser walk proves the code, not the device.
 
-**Verified at `327db96`, the branch HEAD — not at either release commit.** A
-promotion ships the head, so the head is what has to be green. Its deploy steps
-RAN rather than skipped, and its log printed:
+**Verified at `d55de2e`, the 0.4.1 release commit.** Its deploy steps RAN rather
+than skipped, and its log printed:
 
-    ✨ Deployment complete! Take a peek over at https://4c0dccdf.3d-printing-pal.pages.dev
+    ✨ Deployment complete! Take a peek over at https://9b4d884b.3d-printing-pal.pages.dev
     ✨ Deployment alias URL: https://staging.3d-printing-pal.pages.dev
 
-Its Gates run is green with all 22 gate steps and the 4 security steps having
-**executed**, checked one by one rather than read off the run's conclusion. That
-distinction has now paid for itself twice in one day, in two different ways.
-`9ccff77`'s run had a conclusion while fifteen of its steps never ran. And 0.4.0's
-own release commit `e3676f3` carries a conclusion of **`cancelled`** — the NOTES
-push that followed superseded it under `cancel-in-progress`. A cancelled run
-measures nothing, and it is not red either, which makes it the easiest of the
-three to mistake for fine.
+Its Gates run is green with all 22 gate steps and 4 security steps having
+**executed**, checked one by one rather than read off the run's conclusion.
+
+**THE PROMOTING SESSION RE-READS THE HEAD, and this paragraph cannot do it for
+them.** A promotion ships the branch head, and the head moves every time anything
+lands here — including the commit that records this. So the SHA above is evidence
+about a release commit, not a standing claim about the branch. Read the head's own
+run at the time of promoting.
+
+Three ways a run can fail to mean what it looks like, all three met on 2026-08-22
+and worth knowing before reading one:
+
+- **A conclusion with steps that never ran.** `9ccff77` concluded, and fifteen of
+  its eighteen steps were skipped after an early failure.
+- **A conclusion of `cancelled`.** `e3676f3`, superseded by the push that followed
+  it under `cancel-in-progress`. It measures nothing and it is not red, which
+  makes it the easiest of the three to read as fine.
+- **A green workflow that deployed nothing**, which is what a fully-skipped deploy
+  looks like when the Cloudflare secrets are absent.
 
 **0.1.1 never reached production on its own, and that was deliberate.** Its entire
 content was the link preview card, which 0.1.2 redrew; promoting it separately
