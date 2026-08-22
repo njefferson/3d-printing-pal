@@ -103,13 +103,14 @@ const STATE_TEXT = {
   inventory: [...BASE_TEXT, '.rowcard-title', '.rowcard-sub', '.remaining', '.note'],
   models: [...BASE_TEXT, '.rowcard-title', '.rowcard-sub', '.remaining'],
   'update-stuck': [...BASE_TEXT, '.strip-text'],
+  undo: [...BASE_TEXT, '.strip-text'],
   firstrun: ['#dlg-firstrun h2', '#dlg-firstrun p', '#dlg-firstrun li', '#dlg-firstrun .btn', '.panel-foot-note'],
   info: ['#dlg-info h2', '#dlg-info h3', '#dlg-info p', '#dlg-info li', '#dlg-info a', '#dlg-info .release-head'],
   diagnostic: ['#dlg-diagnostic h2', '#dlg-diagnostic p', '#dlg-diagnostic .diag-text'],
   job: ['#dlg-job h2', '#dlg-job label', '#dlg-job legend', '#dlg-job .btn', '#dlg-job .btn-danger'],
   spool: ['#dlg-spool h2', '#dlg-spool label', '#dlg-spool .btn', '#dlg-spool .note'],
   model: ['#dlg-model h2', '#dlg-model label', '#dlg-model legend', '#dlg-model .btn'],
-  move: ['#dlg-move h2', '#dlg-move p', '#dlg-move .btn'],
+  move: ['#dlg-move h2', '#dlg-move p', '#dlg-move h3', '#dlg-move .btn'],
   confirm: ['#dlg-confirm h2', '#dlg-confirm p', '#dlg-confirm .btn', '#dlg-confirm .btn-danger'],
   import: ['#dlg-import h2', '#dlg-import p', '#dlg-import label', '#dlg-import .btn'],
 };
@@ -119,6 +120,7 @@ const STATE_NONTEXT = {
   inventory: ['.btn', '.rowcard', 'select', 'input[type="checkbox"]', '.bar'],
   models: ['.btn', '.rowcard'],
   'update-stuck': ['.strip', '.btn'],
+  undo: ['.strip', '.btn'],
   firstrun: ['#dlg-firstrun .btn', '#dlg-firstrun .iconbtn'],
   info: ['#dlg-info .btn', '#dlg-info .iconbtn'],
   diagnostic: ['#dlg-diagnostic .btn', '#dlg-diagnostic .diag-text'],
@@ -164,6 +166,32 @@ const STATES = [
       document.getElementById('update-apply').hidden = false;
       document.getElementById('update-later').textContent = 'Not now';
     }),
+  },
+  {
+    name: 'undo',
+    surface: null,
+    // ASSERTED, NOT STAGED. The seed above makes five changes through the real
+    // forms, so by the time any state runs the strip is genuinely on screen and
+    // carrying a real label. Setting `hidden = false` here instead would prove the
+    // strip renders and prove nothing about whether anything ever shows it — and
+    // the strip's whole failure mode is being wired to nothing.
+    enter: async (p) => {
+      await showView(p, 'board');
+      const found = await p.evaluate(() => ({
+        hidden: document.getElementById('undo-strip').hidden,
+        text: document.getElementById('undo-text').textContent,
+        name: document.getElementById('undo-do').getAttribute('aria-label'),
+      }));
+      if (found.hidden) {
+        fail('undo', 'the undo strip is hidden after the seed made five changes through the forms, so nothing on it is measured and nothing offers the reader a way back');
+      } else if (!/\S/.test(found.text)) {
+        fail('undo', 'the undo strip is showing with no words in it — "Undo" alone does not say what would come back');
+      } else if (!found.name?.startsWith('Undo ')) {
+        fail('undo', `the undo button's accessible name is "${found.name}", which does not begin with its visible word (SC 2.5.3)`);
+      } else {
+        pass('undo', `the strip names its last change: "${found.text}"`);
+      }
+    },
   },
   { name: 'firstrun', surface: 'dlg-firstrun', enter: async (p) => openFirstRun(p) },
   { name: 'info', surface: 'dlg-info', enter: async (p) => press(p, '#info-open') },
@@ -743,6 +771,36 @@ async function checkDismiss(page, state) {
 
 // ------------------------------------------------------------- press checks
 
+/** The ids of the cards in Research, in the order they are drawn. */
+async function cardOrder(page) {
+  return page.evaluate(() =>
+    Array.from(document.querySelectorAll('#col-research .card')).map((c) => c.dataset.jobId));
+}
+
+async function openMoveFor(page, mode, jobId) {
+  const button = page.locator(`.card[data-job-id="${jobId}"] .card-actions button`).first();
+  if (mode === 'touch') await button.tap();
+  else await button.click();
+  await page.waitForTimeout(150);
+}
+
+/** The first button in the open move list whose words match, with its index. */
+async function findMoveButton(page, pattern) {
+  return page.evaluate((source) => {
+    const re = new RegExp(source);
+    const buttons = Array.from(document.querySelectorAll('#move-list button'));
+    const at = buttons.findIndex((b) => re.test(b.textContent));
+    return at < 0 ? null : { at, text: buttons[at].textContent };
+  }, pattern.source);
+}
+
+async function pressMove(page, mode, at) {
+  const button = page.locator('#move-list button').nth(at);
+  if (mode === 'touch') await button.tap();
+  else await button.click();
+  await page.waitForTimeout(260);
+}
+
 async function checkPressing(page) {
   // Both input paths. An emulated interaction is a claim about ONE of them.
   for (const mode of ['mouse', 'touch']) {
@@ -750,6 +808,35 @@ async function checkPressing(page) {
     await closeEverything(page);
     await showView(page, 'board');
 
+    // THE DRAG DOES TWO THINGS, so this presses for two things. A card carried by
+    // drag lands in a column AND at a place within it, and the Move panel
+    // answered only the first until 0.3.0 — while this check pressed whichever
+    // button happened to be at the top of the list, so a panel that had lost half
+    // its job would still have passed.
+    //
+    // The reorder goes first because it needs two cards in Research, and the
+    // column move below takes one away on every pass.
+    const orderBefore = await cardOrder(page);
+    if (orderBefore.length < 2) {
+      fail(where, `only ${orderBefore.length} card(s) left in Research — the gate cannot prove reordering works`);
+    } else {
+      await openMoveFor(page, mode, orderBefore[0]);
+      const reorder = await findMoveButton(page, /^Put (before|last) /);
+      if (!reorder) {
+        fail(where, "the Move panel offers no way to change a card's place within its column, so reordering is drag-only (SC 2.5.7)");
+        await closeEverything(page);
+      } else {
+        await pressMove(page, mode, reorder.at);
+        const orderAfter = await cardOrder(page);
+        if (orderAfter.join() === orderBefore.join()) {
+          fail(where, `"${reorder.text}" closed the panel and the column's order did not change`);
+        } else {
+          pass(where, `"${reorder.text}" reordered a column without a drag`);
+        }
+      }
+    }
+
+    await closeEverything(page);
     const before = await page.evaluate(() => {
       const card = document.querySelector('#col-research .card');
       return card ? { id: card.dataset.jobId, column: 'research' } : null;
@@ -759,21 +846,20 @@ async function checkPressing(page) {
       continue;
     }
 
-    const moveButton = page.locator(`.card[data-job-id="${before.id}"] .card-actions button`).first();
-    if (mode === 'touch') await moveButton.tap();
-    else await moveButton.click();
-    await page.waitForTimeout(120);
-
+    await openMoveFor(page, mode, before.id);
     const moveOpen = await page.evaluate(() => document.getElementById('dlg-move').open);
     if (!moveOpen) {
       fail(where, 'pressing Move did nothing — the move list did not open');
       continue;
     }
 
-    const target = page.locator('#move-list button').first();
-    if (mode === 'touch') await target.tap();
-    else await target.click();
-    await page.waitForTimeout(220);
+    const toColumn = await findMoveButton(page, /^Move to /);
+    if (!toColumn) {
+      fail(where, 'the Move panel offers no other column to move to');
+      await closeEverything(page);
+      continue;
+    }
+    await pressMove(page, mode, toColumn.at);
 
     const after = await page.evaluate((id) => {
       const card = document.querySelector(`.card[data-job-id="${id}"]`);

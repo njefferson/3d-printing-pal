@@ -10,9 +10,13 @@
 // reader chose; image.js downscales and re-encodes first, and only that result is
 // ever stored. See the note in that file for why the budget is the feature.
 //
-// NOTHING IS WRITTEN UNTIL THE FORM IS SAVED. The control holds a prepared
-// picture in memory and hands it over on read, so cancelling a half-finished edit
-// leaves no orphan blob behind — the same rule the rest of the form follows.
+// NOTHING IS WRITTEN HERE AT ALL. The control holds a prepared picture in memory
+// and hands the BYTES to the store on save; the store is what writes it. This
+// field wrote the image itself once, and the write happened outside the model
+// save — so undoing a picture change restored the old model record and left the
+// new blob in the database with nothing pointing at it, an orphan the export then
+// carried forever. Cancelling a half-finished edit leaves nothing behind either,
+// for the same reason.
 
 import { el, clear } from '../dom.js';
 import { prepare, firstImage, describeBytes } from '../image.js';
@@ -21,8 +25,8 @@ import * as store from '../store.js';
 /**
  * Build a picture field.
  *
- * `read()` returns `{ imageId, pending, removed }` — the caller stores the
- * pending picture only when the form is actually saved.
+ * `read()` returns `{ prepared, removed }` for `store.saveModel`, and `saved()`
+ * is the acknowledgement that the save went through.
  */
 export function pictureField({ label = 'Picture', describe = 'this model' } = {}) {
   let currentId = '';
@@ -163,20 +167,23 @@ export function pictureField({ label = 'Picture', describe = 'this model' } = {}
       say('');
       await showCurrent();
     },
-    /** Called on save. Stores the pending picture and returns the id to keep. */
-    async commit() {
-      if (pending) {
-        const id = await store.putImage(pending);
-        URL.revokeObjectURL(pending.url);
-        pending = null;
-        currentId = id;
-        return id;
-      }
-      if (removed) {
-        currentId = '';
-        return '';
-      }
-      return currentId;
+    /**
+     * What the form hands to `store.saveModel` — the prepared bytes, never an id.
+     * Reading does not change anything, so a save that fails leaves the field as
+     * the reader left it and they can press it again.
+     */
+    read() {
+      return { prepared: pending, removed };
+    },
+    /**
+     * The save went through. Only now is the held picture let go: revoking its
+     * URL any earlier would blank the preview while the panel is still on screen.
+     */
+    saved(imageId) {
+      if (pending?.url) URL.revokeObjectURL(pending.url);
+      pending = null;
+      removed = false;
+      currentId = imageId || '';
     },
   };
 }

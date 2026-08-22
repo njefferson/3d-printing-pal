@@ -16,6 +16,7 @@ import { initForms, openJob, openSpool, openModel } from './ui/forms.js';
 import { initBackup, renderLastExport, renderSnapshots } from './ui/backup-ui.js';
 import { initInfo, maybeFirstRun } from './ui/info.js';
 import { initDiagnostic } from './ui/diagnostic.js';
+import { initUndo } from './ui/undo.js';
 import { initUpdates } from './ui/update.js';
 
 // The build stamp is written AT BOOT, not when a panel opens. The whole point is
@@ -52,6 +53,7 @@ async function start() {
   initBackup({ onImported: renderAll });
   initInfo();
   initDiagnostic();
+  initUndo();
 
   for (const view of views) {
     document.getElementById(`tab-${view}`).addEventListener('click', () => showView(view));

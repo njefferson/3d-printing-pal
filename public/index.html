@@ -70,6 +70,25 @@
   </nav>
 </header>
 
+<!-- A STANDING CONTROL, NOT A TIMED TOAST. A toast is a control with a deadline:
+     it is gone before a reader who looked away comes back, and on a tablet it is
+     a small target in a corner that the hand holding the device is nowhere near.
+     This appears with the first undoable change and then STAYS, changing only its
+     words — so it shifts the page once in a session rather than on every action,
+     which is the actual cost a toast avoids and then charges elsewhere.
+
+     It says what it will undo IN WORDS THE READER CAN SEE. "Undo" on its own asks
+     them to remember which of the last few things they did was the last one.
+
+     Not a live region: panels.js already announces every change through #live,
+     and a second one here would say everything twice. -->
+<div id="undo-strip" class="strip undo-strip" role="region" aria-label="Undo" hidden>
+  <p class="strip-text" id="undo-text"></p>
+  <div class="strip-actions">
+    <button type="button" id="undo-do" class="btn">Undo</button>
+  </div>
+</div>
+
 <main id="main">
 
   <!-- ------------------------------------------------------------- board -->

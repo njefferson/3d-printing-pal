@@ -386,6 +386,133 @@ async function main() {
     }
   }
 
+  // ------------------------------------------------------------------ undo
+  //
+  // THE SAME ASSERTION THE RESTORE GETS, because undo is the same promise: put
+  // the data back exactly as it was. Four changes of four different shapes — an
+  // edit, a reorder, a cascading delete and a create that writes a picture — then
+  // four undos, then an export compared byte for byte against the one taken
+  // before any of it. Anything undo leaves behind shows up here: an orphaned
+  // image, a column whose order never came back, a job whose link to a deleted
+  // spool was not restored, a timestamp rewritten on the way through.
+  //
+  // The create-with-a-picture is in the list on purpose. It is the one that was
+  // actually broken: the form wrote the image before calling saveModel, so the
+  // write sat outside the undo entry and the blob stayed in the database with
+  // nothing pointing at it. A count would have missed it — the model was gone and
+  // the totals looked right. Only comparing the whole export sees it.
+  const beforeUndo = JSON.parse(second.text);
+
+  await page.click('#tab-inventory');
+  await page.waitForTimeout(200);
+  await page.click('#inventory-list .rowcard .btn');
+  await page.waitForTimeout(200);
+  await page.fill('#spool-f-color', 'Midnight Blue');
+  await page.click('#spool-save');
+  await page.waitForTimeout(250);
+
+  // The reorder that had no non-drag path until this release.
+  await page.click('#tab-board');
+  await page.waitForTimeout(200);
+  await page.click('.card .card-actions button');
+  await page.waitForTimeout(250);
+  // "Put before X" or "Put last in X" depending on where this card already sits —
+  // the panel omits the option that would do nothing, so which one is offered
+  // depends on the seeded order. Either is the reorder; neither is a column move.
+  const reordered = await page.evaluate(() => {
+    const button = Array.from(document.querySelectorAll('#move-list button'))
+      .find((b) => /^Put (before|last) /.test(b.textContent));
+    if (!button) return null;
+    button.click();
+    return button.textContent;
+  });
+  if (!reordered) {
+    fail('the Move panel offered no way to change a card\'s position within its column — reordering is drag-only');
+  } else {
+    pass(`the Move panel reorders without a drag: "${reordered}"`);
+  }
+  await page.waitForTimeout(300);
+
+  // The cascade: every job that drew on this spool loses the link.
+  await page.click('#tab-inventory');
+  await page.waitForTimeout(200);
+  await page.click('#inventory-list .rowcard .btn');
+  await page.waitForTimeout(200);
+  await page.click('#spool-delete');
+  await page.waitForTimeout(220);
+  await page.click('#confirm-go');
+  await page.waitForTimeout(350);
+
+  await page.click('#tab-models');
+  await page.waitForTimeout(200);
+  await page.click('#model-new');
+  await page.fill('#model-f-name', 'Undo me');
+  await page.setInputFiles('.pic-file', {
+    name: 'undo-me.png',
+    mimeType: 'image/png',
+    buffer: makePng(800, 500),
+  });
+  await page.waitForFunction(
+    () => /Ready —/.test(document.querySelector('.pic-status')?.textContent || ''),
+    null,
+    { timeout: 8000 },
+  );
+  await page.click('#model-save');
+  await page.waitForTimeout(300);
+
+  const named = await page.evaluate(() => ({
+    hidden: document.getElementById('undo-strip').hidden,
+    text: document.getElementById('undo-text').textContent,
+  }));
+  if (named.hidden) fail('four changes were made and the undo strip is still hidden — there is no route back');
+  else if (!named.text.includes('Undo me')) fail(`the undo strip says "${named.text}", which does not name the change that was just made`);
+  else pass(`the undo strip names the last change: "${named.text}"`);
+
+  const midway = await counts(page);
+  if (midway.spools !== 0 || midway.models !== beforeUndo.models.length + 1) {
+    fail(`the four changes did not land as expected: ${JSON.stringify(midway)}`);
+  }
+
+  for (let i = 0; i < 4; i += 1) {
+    const hidden = await page.evaluate(() => document.getElementById('undo-strip').hidden);
+    if (hidden) { fail(`undo ran out after ${i} of 4 changes`); break; }
+    await page.click('#undo-do');
+    await page.waitForTimeout(320);
+  }
+
+  const third = await exportThroughTheButton(page);
+  const afterUndo = JSON.parse(third.text);
+  const undone = JSON.stringify(strip(afterUndo));
+
+  if (undone !== after) {
+    fail('four changes undone did NOT return the data to what it was');
+    for (const key of ['spools', 'models', 'jobs', 'images']) {
+      const was = JSON.stringify(beforeUndo[key] || []);
+      const now = JSON.stringify(afterUndo[key] || []);
+      if (was !== now) fail(`  ${key} differ:\n    before ${was.slice(0, 400)}\n    after  ${now.slice(0, 400)}`);
+    }
+  } else {
+    pass(`an edit, a reorder, a cascading delete and a create-with-a-picture, all undone, restore the data byte for byte (${afterUndo.jobs.length} jobs, ${afterUndo.spools.length} spools, ${afterUndo.models.length} models, ${(afterUndo.images || []).length} pictures)`);
+  }
+
+  // Said separately because it is the failure that hides: the model can be gone
+  // and its picture still be in the database, costing space in every export from
+  // then on, with nothing on any screen to show for it.
+  if ((afterUndo.images || []).length !== (beforeUndo.images || []).length) {
+    fail(`undo left ${(afterUndo.images || []).length} picture(s) where there were ${(beforeUndo.images || []).length} — a blob nothing points at`);
+  } else {
+    pass('undoing a model that was created with a picture leaves no orphaned picture behind');
+  }
+
+  // Only meaningful if the strip was showing in the first place — "it is hidden
+  // now" is trivially true of a control that is never shown, and a pass that a
+  // broken feature also earns is worse than no check, because it reads as
+  // coverage. The assertion above is what establishes it was there.
+  const emptied = await page.evaluate(() => document.getElementById('undo-strip').hidden);
+  if (named.hidden) fail('the undo strip never appeared, so there is nothing to say about it going away');
+  else if (!emptied) fail('the undo strip is still offering an undo after every change was undone');
+  else pass('the undo strip goes away when there is nothing left to undo');
+
   // ---------------------------------------- the deliveredAt interpretation
   // The requirement is "a computed total of price-charged across its delivered
   // jobs". Read as "current column is delivered", that total silently drops the

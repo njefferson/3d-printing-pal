@@ -214,28 +214,84 @@ function updateCard(node, job) {
 }
 
 // ------------------------------------------------------------- the move list
+//
+// TWO KINDS OF MOVE, because the drag has always done two things. Dragging a card
+// carries it to another column AND to a place within that column, and this panel
+// used to answer only the first — so the order of a column was reachable by drag
+// and by nothing else, which is the exact shape SC 2.5.7 exists to forbid. It
+// passed the interactions gate because an alternative existed; the gate cannot
+// tell that the alternative does less than the drag it stands in for.
+//
+// EACH POSITION IS NAMED AND TAKES ONE PRESS. The other spelling — a pair of
+// up/down buttons pressed repeatedly — moves a card the reader cannot see, since
+// the panel is modal and covers the board. "Put before Calibration cube" says
+// where the card lands before it lands there.
 
 function openMove(jobId, opener) {
   const job = store.state.jobs.find((j) => j.id === jobId);
   if (!job) return;
   moveTargetId = jobId;
 
-  $('#move-what').textContent = `${job.title || 'This job'} is in ${labelFor(job.column)}.`;
+  const here = labelFor(job.column);
+  const siblings = sortForBoard(store.state.jobs.filter((j) => j.column === job.column))
+    .filter((j) => j.id !== jobId);
+
+  $('#move-what').textContent = siblings.length
+    ? `${job.title || 'This job'} is in ${here}, ${ordinalOf(job, siblings)} of ${siblings.length + 1}.`
+    : `${job.title || 'This job'} is the only job in ${here}.`;
 
   const list = $('#move-list');
   clear(list);
+
+  // The card immediately after this one: putting it before that card is where it
+  // already is, so offering it would be a button that does nothing.
+  const currentNext = nextSiblingOf(job, siblings);
+
+  if (siblings.length) {
+    list.append(el('h3', { class: 'movelist-head', text: `Order within ${here}` }));
+    for (const other of siblings) {
+      if (other.id === currentNext?.id) continue;
+      addMove(list, `Put before ${other.title || 'the untitled job'}`, job.column, other.id,
+              `${job.title || 'Job'} moved before ${other.title || 'the untitled job'}.`);
+    }
+    if (currentNext) {
+      addMove(list, `Put last in ${here}`, job.column, null, `${job.title || 'Job'} moved to the end of ${here}.`);
+    }
+  }
+
+  list.append(el('h3', { class: 'movelist-head', text: 'Another column' }));
   for (const column of COLUMNS) {
     if (column.id === job.column) continue;
-    const button = el('button', { type: 'button', class: 'btn' }, `Move to ${column.label}`);
-    button.addEventListener('click', async () => {
-      close('dlg-move');
-      await store.moveJob(jobId, column.id);
-      say(`${job.title || 'Job'} moved to ${column.label}.`);
-    });
-    list.append(button);
+    addMove(list, `Move to ${column.label}`, column.id, null, `${job.title || 'Job'} moved to ${column.label}.`);
   }
 
   openPanel('dlg-move', opener);
+
+  function addMove(into, label, column, beforeId, spoken) {
+    const button = el('button', { type: 'button', class: 'btn' }, label);
+    button.addEventListener('click', async () => {
+      close('dlg-move');
+      await store.moveJob(jobId, column, beforeId);
+      say(spoken);
+    });
+    into.append(button);
+  }
+}
+
+/** Where this job sits among its column, in words rather than an index. */
+function ordinalOf(job, siblings) {
+  const all = sortForBoard(store.state.jobs.filter((j) => j.column === job.column));
+  const at = all.findIndex((j) => j.id === job.id);
+  if (at === 0) return 'first';
+  if (at === siblings.length) return 'last';
+  return `number ${at + 1}`;
+}
+
+function nextSiblingOf(job, siblings) {
+  const all = sortForBoard(store.state.jobs.filter((j) => j.column === job.column));
+  const at = all.findIndex((j) => j.id === job.id);
+  const next = all[at + 1];
+  return next && siblings.some((s) => s.id === next.id) ? next : null;
 }
 
 function labelFor(id) {

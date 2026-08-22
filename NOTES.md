@@ -120,6 +120,47 @@ capability, with the rejected ones and the reason each was rejected.
 
 ---
 
+## Undo (0.3.0)
+
+**The journal holds what was there, not how to reverse what happened.** The other
+shape — every mutation paired with an un-mutation — is smaller and wrong more
+often: the pairs drift, and the cascading ones need an inverse that reproduces the
+cascade exactly. A snapshot of the affected records taken before the write
+reverses all of them by one piece of code, and it is provable rather than clever.
+
+**One gesture is one entry, cascades included.** Deleting a spool four jobs drew
+on is one entry holding the spool and those four jobs. An undo that needed
+pressing five times would be an accounting of the implementation.
+
+**It is memory only, and that is a decision.** Undo is a correction within a
+sitting. Something deleted yesterday is a restore from a backup, which export
+already does properly with a file the reader holds. Persisting it would also force
+a question with no good answer — whether the journal belongs in the export.
+
+**`putImage` and `deleteImage` are no longer exported, and that is the fix.** The
+picture field wrote the image itself and passed the id to `saveModel`, so the
+image write sat outside the model write and therefore outside its undo entry:
+undoing put the old model back and left the new blob in the database with nothing
+pointing at it, costing space in every export from then on. The field now hands
+over the prepared bytes and the store writes both together. Closing the export is
+what stops the next caller reintroducing it.
+
+**Reordering within a column was drag-only until this release**, and
+`INTERACTIONS.json` described the gap accurately in the drag's `what` while the
+`alternative` beside it did not. No gate could see it: a gate can tell that an
+alternative exists and not that it does less than the drag it stands in for. The
+a11y gate now presses for both halves — a column move and a position within a
+column — rather than pressing whichever button happens to be first in the list.
+
+**The proof is the same one the restore gets.** `tools/backup-walk.mjs` exports,
+makes four changes of four shapes (an edit, a reorder, a cascading delete, and a
+create that writes a picture), undoes all four, exports again, and compares byte
+for byte. Both halves were planted red before being believed: dropping the new
+picture's tombstone made the images differ and left an orphan, and a strip that
+never showed failed the assertion that it had appeared.
+
+---
+
 ## Pictures (0.2.0)
 
 **Nothing is still fetched, and that sentence is still true.** A picture is one
@@ -258,9 +299,19 @@ the log and check whether the steps ran or were skipped.
 
 ### The staged candidate
 
-**There is none right now.** `staging` and `main` are the same commit — 0.2.0 was
-promoted on 2026-08-09 — so https://staging.3d-printing-pal.pages.dev currently
-serves exactly what production serves. The next candidate goes here.
+**0.3.0 is on staging**, at https://staging.3d-printing-pal.pages.dev
+
+Undo, and reordering a column without a drag. The two go together on purpose:
+reordering by button needed a way back for a press that put a card in the wrong
+place, and undo needed something worth undoing to be measured against.
+
+What to try on the device, because none of it can be confirmed from a session:
+delete a spool that several jobs draw on and press Undo — the spool and all of
+its links come back together, not one at a time. Add a picture to a model, save,
+then Undo, and the picture goes with it. Open Move on a card and put it before
+another card in the same column. The strip under the tabs should name the last
+change every time, and should stay put rather than disappearing while it is being
+read.
 
 **0.1.1 never reached production on its own, and that was deliberate.** Its entire
 content was the link preview card, which 0.1.2 redrew; promoting it separately

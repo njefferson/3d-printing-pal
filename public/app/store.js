@@ -5,7 +5,7 @@
 // is deleted" — and exactly one place where referential integrity is kept.
 
 import * as db from './db.js';
-import { COLUMN_IDS, TYPE_IDS, num } from './derive.js';
+import { COLUMN_IDS, TYPE_IDS, num, sortForBoard } from './derive.js';
 
 // PICTURES ARE NEVER HELD IN `state`. Every other store is small enough to keep
 // in memory; images are not, and a board that loaded every blob to draw a row of
@@ -32,6 +32,31 @@ export const state = {
   firstRunDone: false,
   ready: false,
 };
+
+// ------------------------------------------------------------------- undo
+//
+// THE JOURNAL HOLDS WHAT WAS THERE, not how to reverse what happened.
+//
+// The other shape — record each operation and its inverse — is smaller and is
+// wrong more often: every mutation needs a matching un-mutation, the two drift,
+// and the ones that cascade (deleting a spool unlinks it from every job that drew
+// on it) need an inverse that reproduces the cascade exactly. A snapshot of the
+// affected records before the change reverses ALL of them by the same code, and
+// it is provable rather than clever: undo puts back precisely what was read.
+//
+// ONE GESTURE IS ONE ENTRY, cascades included. Deleting a spool that four jobs
+// used is one entry holding the spool and those four jobs, so one undo returns
+// all five. An undo that needed pressing five times would be an accounting of the
+// implementation rather than of what the reader did.
+//
+// IT IS MEMORY ONLY, AND THAT IS A DECISION. Undo is a correction within a
+// sitting — the wrong button a moment ago. Something deleted yesterday is a
+// restore from a backup, which export already does properly, with a file the
+// reader holds. Persisting this would also force a question with no good answer:
+// whether the journal belongs in the export, and a backup carrying its own undo
+// history is a strange object to hand somebody.
+const MAX_UNDO = 20;
+const journal = [];
 
 const listeners = new Set();
 
@@ -107,8 +132,17 @@ function forgetAllImageUrls() {
   for (const id of [...imageUrls.keys()]) forgetImageUrl(id);
 }
 
-/** Store a picture prepared by image.js. Returns its id. */
-export async function putImage(prepared) {
+/**
+ * Store a picture prepared by image.js. Returns its id.
+ *
+ * NOT EXPORTED, and that is the fix rather than a preference. The picture field
+ * called this directly and passed the id on to `saveModel`, which put the image
+ * write outside the model write and therefore outside its undo entry — undo
+ * restored the old model and left the new blob orphaned in the database. Every
+ * picture now enters through `saveModel`, so there is no door left to walk
+ * around it.
+ */
+async function putImage(prepared) {
   const record = {
     id: newId(),
     blob: prepared.blob,
@@ -123,7 +157,10 @@ export async function putImage(prepared) {
   return record.id;
 }
 
-export async function deleteImage(id) {
+// Not exported either, and for the same reason as putImage: a picture removed
+// outside the call that removes the thing pointing at it is a removal outside the
+// undo entry, which undo then cannot put back.
+async function deleteImage(id) {
   if (!id) return;
   forgetImageUrl(id);
   await db.remove('images', id);
@@ -163,6 +200,88 @@ export async function askToPersist() {
   }
 }
 
+/**
+ * Read the records a gesture is about to touch, exactly as they are now.
+ *
+ * A record that does not exist yet is captured as `null`, which is what makes a
+ * CREATE undoable by the same code that undoes an edit: undo writes the record
+ * back, or deletes the id when there was nothing there.
+ */
+async function capture(affected) {
+  const before = {};
+  for (const [store, ids] of Object.entries(affected)) {
+    const rows = [];
+    for (const id of new Set(ids.filter(Boolean))) {
+      // Images live only in IndexedDB — they are deliberately never held in
+      // `state`, so they are the one store that has to be read to be captured.
+      const record = store === 'images'
+        ? (await db.get('images', id)) || null
+        : (state[store] || []).find((r) => r.id === id) || null;
+      rows.push({ id, record });
+    }
+    before[store] = rows;
+  }
+  return before;
+}
+
+function remember(label, before) {
+  journal.push({ id: newId(), at: nowIso(), label, before });
+  // Oldest out. Bounded by COUNT rather than bytes: an entry holding a deleted
+  // model's picture is the heavy case, and pictures are already capped at a
+  // couple of hundred kilobytes each, so the worst this ring can hold is a few
+  // megabytes — small beside the database it protects.
+  while (journal.length > MAX_UNDO) journal.shift();
+}
+
+/** What the next undo would reverse, in the reader's words, or null. */
+export function undoLabel() {
+  return journal.length ? journal[journal.length - 1].label : null;
+}
+
+export function canUndo() {
+  return journal.length > 0;
+}
+
+/**
+ * Put back what the last gesture changed.
+ *
+ * ONE TRANSACTION across every store the gesture touched, for the same reason the
+ * import is one transaction: a half-applied undo is a worse state than the one
+ * being undone, and only atomicity rules it out.
+ *
+ * State is then re-read from the database rather than patched in memory. Patching
+ * would be faster and would be a second implementation of the same restore, able
+ * to disagree with the first.
+ */
+export async function undo() {
+  const entry = journal.pop();
+  if (!entry) return null;
+
+  const stores = Object.keys(entry.before);
+  await db.writeMany(stores, (handles) => {
+    for (const [store, rows] of Object.entries(entry.before)) {
+      for (const { id, record } of rows) {
+        if (record) handles[store].put(record);
+        else handles[store].delete(id);
+      }
+    }
+  });
+
+  // Any cached object URL for a touched picture now points at a blob that may
+  // have been replaced or removed. A stale one renders the OLD image with no
+  // error, which reads as a rendering bug rather than a data one.
+  for (const row of entry.before.images || []) forgetImageUrl(row.id);
+
+  await load();
+  announce('undo');
+  return entry.label;
+}
+
+/** Emptied by anything that makes the journal meaningless — an import. */
+function forgetUndo() {
+  journal.length = 0;
+}
+
 export async function savePrefs(patch) {
   state.prefs = { ...state.prefs, ...patch };
   await db.writeMeta('prefs', state.prefs);
@@ -184,6 +303,7 @@ export async function noteExport(iso) {
 
 export async function saveSpool(input) {
   const existing = state.spools.find((s) => s.id === input.id);
+  const before = await capture({ spools: [existing?.id || input.id].filter(Boolean) });
   const record = {
     id: input.id || newId(),
     brand: (input.brand || '').trim(),
@@ -200,6 +320,8 @@ export async function saveSpool(input) {
   };
   await db.put('spools', record);
   upsert(state.spools, record);
+  remember(existing ? `editing ${record.brand || 'a spool'}` : `adding ${record.brand || 'a spool'}`,
+           existing ? before : { spools: [{ id: record.id, record: null }] });
   announce('spools');
   return record;
 }
@@ -213,9 +335,14 @@ export async function saveSpool(input) {
  * touches — this function does not decide, it executes.
  */
 export async function deleteSpool(id) {
+  const spool = state.spools.find((s) => s.id === id);
   const touched = state.jobs
     .filter((j) => (j.spoolLinks || []).some((l) => l.spoolId === id))
     .map((j) => ({ ...j, spoolLinks: (j.spoolLinks || []).filter((l) => l.spoolId !== id), updatedAt: nowIso() }));
+
+  // Captured BEFORE the write, and covering the cascade: the spool and every job
+  // it was unlinked from are one entry, so one undo returns all of them.
+  const before = await capture({ spools: [id], jobs: touched.map((j) => j.id) });
 
   await db.writeMany(['spools', 'jobs'], ({ spools, jobs }) => {
     spools.delete(id);
@@ -224,6 +351,7 @@ export async function deleteSpool(id) {
 
   state.spools = state.spools.filter((s) => s.id !== id);
   for (const job of touched) upsert(state.jobs, job);
+  remember(`deleting ${spool?.brand || 'a spool'}`, before);
   announce('spools');
 }
 
@@ -243,8 +371,38 @@ export function spoolDeletionImpact(id) {
 
 // ---------------------------------------------------------------- models
 
+/**
+ * `input.picture` is `{ prepared, removed }` from the picture field — the bytes,
+ * NOT an id.
+ *
+ * The picture is written HERE rather than by the form, so that creating it is
+ * inside the same gesture as the model save and therefore inside the same undo
+ * entry. When the form stored it first, undoing a picture change put the old one
+ * back and left the new one in the database with nothing pointing at it — an
+ * orphan that the export then carried forever.
+ */
 export async function saveModel(input) {
   const existing = state.models.find((m) => m.id === input.id);
+  const picture = input.picture || null;
+
+  // Captured before anything is written. The new picture's id cannot be known
+  // yet, so its tombstone is added below once it exists.
+  const before = await capture({
+    models: [existing?.id].filter(Boolean),
+    images: [existing?.imageId].filter(Boolean),
+  });
+
+  let imageId = existing?.imageId || '';
+  if (picture?.prepared) {
+    imageId = await putImage(picture.prepared);
+    // It did not exist a moment ago, so undo deletes it rather than restoring it.
+    before.images = [...(before.images || []), { id: imageId, record: null }];
+  } else if (picture?.removed) {
+    imageId = '';
+  } else if (input.imageId !== undefined) {
+    imageId = input.imageId || '';
+  }
+
   const record = {
     id: input.id || newId(),
     name: (input.name || '').trim(),
@@ -253,7 +411,7 @@ export async function saveModel(input) {
     notes: (input.notes || '').trim(),
     sources: normaliseSources(input.sources),
     listings: normaliseListings(input.listings),
-    imageId: input.imageId || '',
+    imageId,
     createdAt: existing?.createdAt || nowIso(),
     updatedAt: nowIso(),
   };
@@ -266,6 +424,8 @@ export async function saveModel(input) {
 
   await db.put('models', record);
   upsert(state.models, record);
+  remember(existing ? `editing ${record.name || 'a model'}` : `adding ${record.name || 'a model'}`,
+           existing ? before : { ...before, models: [{ id: record.id, record: null }] });
   announce('models');
   return record;
 }
@@ -275,6 +435,12 @@ export async function deleteModel(id) {
   const touched = state.jobs
     .filter((j) => j.modelId === id)
     .map((j) => ({ ...j, modelId: '', updatedAt: nowIso() }));
+
+  const before = await capture({
+    models: [id],
+    jobs: touched.map((j) => j.id),
+    images: [model?.imageId].filter(Boolean),
+  });
 
   await db.writeMany(['models', 'jobs'], ({ models, jobs }) => {
     models.delete(id);
@@ -289,6 +455,7 @@ export async function deleteModel(id) {
 
   state.models = state.models.filter((m) => m.id !== id);
   for (const job of touched) upsert(state.jobs, job);
+  remember(`deleting ${model?.name || 'a model'}`, before);
   announce('models');
 }
 
@@ -300,6 +467,7 @@ export function modelDeletionImpact(id) {
 
 export async function saveJob(input) {
   const existing = state.jobs.find((j) => j.id === input.id);
+  const before = await capture({ jobs: [existing?.id].filter(Boolean) });
   const column = COLUMN_SAFE(input.column, COLUMN_IDS, 'research');
   const record = {
     id: input.id || newId(),
@@ -322,13 +490,18 @@ export async function saveJob(input) {
   };
   await db.put('jobs', record);
   upsert(state.jobs, record);
+  remember(existing ? `editing ${record.title || 'a job'}` : `adding ${record.title || 'a job'}`,
+           existing ? before : { jobs: [{ id: record.id, record: null }] });
   announce('jobs');
   return record;
 }
 
 export async function deleteJob(id) {
+  const job = state.jobs.find((j) => j.id === id);
+  const before = await capture({ jobs: [id] });
   await db.remove('jobs', id);
   state.jobs = state.jobs.filter((j) => j.id !== id);
+  remember(`deleting ${job?.title || 'a job'}`, before);
   announce('jobs');
 }
 
@@ -344,9 +517,11 @@ export async function moveJob(id, column, beforeId = null) {
   if (!job) return null;
   const target = COLUMN_SAFE(column, COLUMN_IDS, job.column);
 
-  const siblings = state.jobs
-    .filter((j) => j.column === target && j.id !== id)
-    .sort((a, b) => num(a.order) - num(b.order));
+  // sortForBoard, not a local sort: the board and the move list both read the
+  // column through it, and a second ordering here would put a card somewhere
+  // other than where the reader was shown it would land whenever two rows share
+  // an `order` — which an import can produce.
+  const siblings = sortForBoard(state.jobs.filter((j) => j.column === target && j.id !== id));
 
   let index = siblings.length;
   if (beforeId) {
@@ -363,10 +538,15 @@ export async function moveJob(id, column, beforeId = null) {
     updatedAt: j.id === id ? nowIso() : j.updatedAt,
   }));
 
+  // Every renumbered sibling is in the entry, not just the card that moved —
+  // undoing a move has to put the whole column's order back.
+  const before = await capture({ jobs: updated.map((j) => j.id) });
+
   await db.writeMany(['jobs'], ({ jobs }) => {
     for (const j of updated) jobs.put(j);
   });
   for (const j of updated) upsert(state.jobs, j);
+  remember(`moving ${job.title || 'a job'}`, before);
   announce('jobs');
   return state.jobs.find((j) => j.id === id);
 }
@@ -433,6 +613,10 @@ export function adoptImported(payload) {
   // the OLD picture with no error anywhere, which is the kind of restore fault
   // that looks like a rendering bug for weeks.
   forgetAllImageUrls();
+
+  // Every entry describes records from the database that was just replaced, so
+  // undoing one would write a row from the old dataset into the new one.
+  forgetUndo();
 
   announce('import');
 }

@@ -9,6 +9,60 @@ triplet is `version.capability.iteration`. Releases do not have names.
 
 ---
 
+## 0.3.0 — CAPABILITY — 2026-08-22
+
+There is a way back. Every change to a job, a spool or a model can be undone, and
+a card's position in its column can now be set without dragging it.
+
+### New
+
+- An undo strip under the tabs, which says what it would put back — "Last change:
+  deleting Benchy" — rather than offering a bare Undo and leaving you to remember
+  which of the last few things you did was the last one. It appears with the first
+  change and stays there; it is not a message that vanishes while you are reading
+  it.
+- One press undoes the whole change, including everything it took with it.
+  Deleting a spool that four jobs drew on unlinks it from all four, and undoing
+  that brings back the spool and all four links together.
+- The last twenty changes are kept, so a run of wrong presses can be walked back
+  one at a time.
+- The Move panel now sets a card's place inside its column as well as which column
+  it is in — "Put before Calibration cube", "Put last in Printing". Each position
+  is named and takes one press, so the card lands where the button said it would
+  even though the panel is covering the board.
+
+### Fixed
+
+- Reordering cards within a column was possible by dragging and by nothing else,
+  which made it unusable with a keyboard, with a screen reader, or by anyone who
+  cannot hold a drag steady. The Move panel now does everything the drag does.
+- Adding a picture to a model wrote the picture before it wrote the model. Undoing
+  such a change would have left the picture in the app with nothing pointing at
+  it, taking up room in every backup from then on.
+
+### Still not right
+
+- Undo lasts for as long as the app is open. Closing it, or reloading the page,
+  starts again with nothing to undo — something deleted yesterday comes back from
+  a backup, not from here.
+- Restoring a backup cannot be undone. It replaces everything on purpose, and the
+  way back is the safety copy the app downloads immediately before it does so.
+- Changing a filter, the currency or the sort order is not a change undo tracks.
+  It covers jobs, spools and models — the things a wrong press loses.
+- A picture has to be added by hand. Dropping in an address cannot pull the photo
+  from the page, because a browser is not allowed to read another site's pages.
+- Filament counts as used the moment it is logged against a job, whichever column
+  that job is sitting in. That is the honest answer to how much is left on a
+  spool, but it means a job parked in research with grams already logged has spent
+  that filament as far as the inventory is concerned.
+- Costs and prices are plain numbers with a currency symbol you choose. There is
+  no per-currency formatting and no conversion.
+- An installed app on iPadOS will not always let a waiting update take over while
+  the app is open. If the version at the bottom of the screen is not the one you
+  expect, close the app fully and open it again.
+
+---
+
 ## 0.2.0 — CAPABILITY — 2026-08-09
 
 Models and jobs can carry a picture, so the board can be read by sight instead of

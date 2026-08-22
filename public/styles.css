@@ -79,7 +79,12 @@ body {
    * widest descendant's min-content, so a horizontally scrolling board would
    * widen the whole page and make it scroll sideways at 320px. */
   display: grid;
-  grid-template-rows: auto auto 1fr auto;
+  /* Five named rows: update strip, topbar, undo strip, main, footer. THE ROW
+   * NUMBERS ON EACH CHILD ARE LOAD-BEARING and not decoration — both strips are
+   * hidden most of the time, and a hidden grid child is out of the flow, so under
+   * auto-placement `main` would slide up into an `auto` track and the `1fr` would
+   * land on the footer. Add a row here and renumber everything below it. */
+  grid-template-rows: auto auto auto 1fr auto;
   grid-template-columns: minmax(0, 1fr);
   min-height: 100dvh;
   background: linear-gradient(180deg, var(--page-alt), var(--page));
@@ -123,6 +128,23 @@ body {
 .strip[hidden] { display: none; }
 .strip-text { margin: 0; flex: 1 1 16rem; font-size: 0.9375rem; }
 .strip-actions { display: flex; gap: var(--gap); flex-wrap: wrap; }
+
+/* -------------------------------------------------------------- undo strip */
+/* The same construction one row lower, because it is about the CONTENT rather
+ * than about the app: the update strip sits above the wordmark, this sits under
+ * the tabs and directly over the thing it would put back. */
+/* --rail, NOT --hairline. The first spelling here used the hairline token on both
+ * edges because the strip sits directly under the topbar's own hairline and two
+ * heavy rules in a row looked wrong — and it measured 1.49:1, well under SC
+ * 1.4.11's 3:1. A hairline is exempted as decoration because nothing depends on
+ * seeing it; these edges are the whole boundary of a control, so they are the
+ * component. The rule that looked wrong was the topbar's, and it is redundant
+ * once this is showing. */
+.undo-strip {
+  grid-row: 3;
+  border-top: 2px solid var(--rail);
+}
+.topbar:has(+ .undo-strip:not([hidden])) { border-bottom: 0; }
 
 /* ----------------------------------------------------------------- topbar */
 .topbar {
@@ -173,7 +195,7 @@ body {
 
 /* ------------------------------------------------------------------ main */
 #main {
-  grid-row: 3;
+  grid-row: 4;
   min-width: 0;
   padding: 16px;
 }
@@ -496,7 +518,7 @@ input[type="checkbox"]:checked::after {
 
 /* ---------------------------------------------------------------- footer */
 .footer {
-  grid-row: 4;
+  grid-row: 5;
   padding: 16px;
   border-top: 1px solid var(--hairline);
   display: flex;
@@ -585,6 +607,11 @@ dialog.panel form { display: flex; flex-direction: column; min-height: 0; }
 
 .movelist { display: flex; flex-direction: column; gap: var(--gap); }
 .movelist .btn { justify-content: flex-start; }
+/* The two groups are ordering and column, and without headings the list reads as
+ * one run of similar-looking buttons. `:first-child` keeps the first heading from
+ * pushing the list down by the global h3 margin. */
+.movelist-head { margin: 12px 0 0; font-size: 0.875rem; color: var(--text-2); }
+.movelist-head:first-child { margin-top: 0; }
 
 .snapshot { display: flex; gap: var(--gap); align-items: center; flex-wrap: wrap; margin-bottom: var(--gap); }
 .snapshot-when { flex: 1 1 12rem; font-size: 0.875rem; color: var(--text-2); }

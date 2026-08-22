@@ -320,11 +320,13 @@ function addListingRow(listing = null) {
 async function onSaveModel(event) {
   event.preventDefault();
 
-  // The picture is written to the store HERE and not a moment earlier, so a
-  // cancelled edit leaves nothing behind.
-  const imageId = await ensureModelPicture().commit();
+  // The BYTES are handed over, never an id: the store writes the picture inside
+  // the same call that writes the model, so one undo takes back both. This form
+  // used to store the image first and pass the id, which put the write outside
+  // the undo entry and orphaned the blob.
+  const field = ensureModelPicture();
 
-  await store.saveModel({
+  const model = await store.saveModel({
     id: editing.model,
     name: $('#model-f-name').value,
     designer: $('#model-f-designer').value,
@@ -332,11 +334,12 @@ async function onSaveModel(event) {
     notes: $('#model-f-notes').value,
     sources: Array.from($('#model-f-sources').children).map((r) => r._read()),
     listings: Array.from($('#model-f-listings').children).map((r) => r._read()),
-    imageId,
+    picture: field.read(),
   });
+  field.saved(model.imageId);
 
   // Only worth asking once there is something worth keeping.
-  if (imageId) store.askToPersist();
+  if (model.imageId) store.askToPersist();
 
   close('dlg-model');
   say('Model saved.');

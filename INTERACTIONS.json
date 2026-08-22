@@ -16,7 +16,7 @@
       "timed": false,
       "note": "Started by movement past an 8px threshold, never by a press-and-hold. touch-action: none is set on the grip only, so the board still scrolls everywhere else.",
       "alternative": {
-        "what": "The Move button on every card opens a list of every other column. This is the path keyboard and assistive technology use, and it is what makes the drag an enhancement rather than a requirement.",
+        "what": "The Move button on every card opens a list that answers BOTH halves of the drag: a named position within this column (\"Put before Calibration cube\", \"Put last in Printing\") and every other column. This is the path keyboard and assistive technology use, and it is what makes the drag an enhancement rather than a requirement. It listed only the columns until 0.3.0, so the ORDER of a column was reachable by drag and by nothing else — a gap this file described accurately in `what` and did not describe in `alternative`, and which no gate can see, because a gate can tell that an alternative exists and not that it does less than the drag it stands in for.",
         "selector": ".card-actions button",
         "surface": "dlg-move",
         "singlePointer": true,
