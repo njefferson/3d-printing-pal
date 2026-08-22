@@ -391,6 +391,22 @@ Then press Undo and check the job and its model both go.
 None of that can be confirmed from a session — this sandbox reaches no external
 site, and a browser walk proves the code, not the device.
 
+**Verified at `327db96`, the branch HEAD — not at either release commit.** A
+promotion ships the head, so the head is what has to be green. Its deploy steps
+RAN rather than skipped, and its log printed:
+
+    ✨ Deployment complete! Take a peek over at https://4c0dccdf.3d-printing-pal.pages.dev
+    ✨ Deployment alias URL: https://staging.3d-printing-pal.pages.dev
+
+Its Gates run is green with all 22 gate steps and the 4 security steps having
+**executed**, checked one by one rather than read off the run's conclusion. That
+distinction has now paid for itself twice in one day, in two different ways.
+`9ccff77`'s run had a conclusion while fifteen of its steps never ran. And 0.4.0's
+own release commit `e3676f3` carries a conclusion of **`cancelled`** — the NOTES
+push that followed superseded it under `cancel-in-progress`. A cancelled run
+measures nothing, and it is not red either, which makes it the easiest of the
+three to mistake for fine.
+
 **0.1.1 never reached production on its own, and that was deliberate.** Its entire
 content was the link preview card, which 0.1.2 redrew; promoting it separately
 would have shipped artwork already replaced. Both went in the same promotion.
