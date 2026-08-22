@@ -29,12 +29,13 @@
     "render:icons": "node tools/render-icons.mjs",
     "icons": "node tools/render-icons.mjs --check",
     "serve": "node tools/serve.mjs",
-    "check": "npm run --silent docs && npm run --silent privacy && npm run --silent quotes && npm run --silent pins && npm run --silent pwa && npm run --silent palette && npm run --silent icons && npm run --silent shell && npm run --silent social && npm run --silent textsize && npm run --silent notes:check && npm run --silent voice && npm run --silent interactions && npm run --silent a11y && npm run --silent backup && npm run --silent update",
+    "check": "npm run --silent docs && npm run --silent privacy && npm run --silent quotes && npm run --silent thirdperson && npm run --silent pins && npm run --silent pwa && npm run --silent palette && npm run --silent icons && npm run --silent shell && npm run --silent social && npm run --silent textsize && npm run --silent notes:check && npm run --silent voice && npm run --silent interactions && npm run --silent a11y && npm run --silent backup && npm run --silent update",
     "backup": "node tools/backup-walk.mjs",
     "update": "node tools/update-walk.mjs",
     "social": "node tools/social-check.mjs",
     "render:social": "node tools/render-social.mjs",
-    "shell": "node tools/shell-check.mjs"
+    "shell": "node tools/shell-check.mjs",
+    "thirdperson": "node ../noahjefferson/third-person-check.mjs --repo ."
   },
   "devDependencies": {
     "axe-core": "4.10.2",

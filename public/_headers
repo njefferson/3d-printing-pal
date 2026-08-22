@@ -3,7 +3,7 @@
 # THIS FILE IS EXERCISED BY THE GATE, NOT JUST SHIPPED. tools/serve.mjs parses
 # the /* block below and sends the same headers, and tools/a11y.mjs boots the app
 # through it and fails on any page error — so a Content-Security-Policy that
-# breaks the app goes red here rather than on the owner's device. A CSP written
+# breaks the app goes red here rather than on a reader's device. A CSP written
 # and never run is a guess with a header's authority.
 #
 # THIS APP CAN HAVE A REAL CSP, and that is worth stating plainly because the hub

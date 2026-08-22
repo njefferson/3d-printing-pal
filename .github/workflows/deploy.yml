@@ -4,7 +4,7 @@ name: Deploy
 # public/ to Cloudflare Pages, and which of the two it is comes from
 # `--branch=${{ github.ref_name }}` on the deploy step below.
 #
-# `staging` is the candidate: it is passed on the owner's own device, and only his
+# `staging` is the candidate: it is passed on the owner's own device, and only that
 # explicit promote puts anything on `main`. Nothing here promotes by itself.
 #
 # Needs two repo secrets: CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID.

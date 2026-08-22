@@ -224,7 +224,7 @@ on a push.
   service workers through the browser's own update machinery, then runs the app
   offline. A mocked registration proves the mock works and nothing else.
 
-**Not verified from here, and needing his hands:** the real feel on a device, the
+**Not verified from here, and needing the owner's hands:** the real feel on a device, the
 share sheet, home-screen install, and the iPadOS behaviour below.
 
 ## The status page (Doctrine §7i)
@@ -242,7 +242,7 @@ did, republishing the same file path keeps it.
 creation — every time. Being asked for it is the signal this was skipped.
 
 It has to carry the version on staging, the version in production, and the last
-SHA verified green; what is waiting on HIM marked apart from what is waiting on
+SHA verified green; what is waiting on THE OWNER marked apart from what is waiting on
 the work; and what was found and NOT fixed alongside what was checked and found
 not to be a defect. A page that only lists wins is an advertisement.
 
@@ -357,7 +357,7 @@ the deploy, and only then push anything else to `main`.
 
 **This repo was scanned for the first time and came back clean of content.**
 Both halves of the rule were checked: nothing personal about the owner, and no
-quotation or attribution of anybody's words — his or a third party's.
+quotation or attribution of anybody's words — the owner's or a third party's.
 
 What was actually run, and what each returned:
 

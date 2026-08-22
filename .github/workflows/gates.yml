@@ -70,10 +70,18 @@ jobs:
       # THE SECOND HALF OF THE SAME RULE. privacy-check.mjs anchors every pattern
       # on the owner's name or role, so a verbatim sentence of somebody's speech
       # carries neither and passes it. This holds the other half: every set-apart
-      # quotation is declared, and a quotation of him is never declarable.
+      # quotation is declared, and a quotation of the owner is never declarable.
       - name: Every set-apart quotation says whose words it is
         if: ${{ !cancelled() }}
         run: node .hub/quote-check.mjs --repo .
+
+      # THE SAME RULE'S THIRD HALF. privacy-check anchors on the owner's name and
+      # quote-check finds set-apart quotations; neither can see ordinary prose that
+      # refers to the owner in the third person. This repo had nine such lines with
+      # both of those green.
+      - name: Prose about the owner is written in the third person
+        if: ${{ !cancelled() }}
+        run: node .hub/third-person-check.mjs --repo .
 
       # --artefact, NEVER the plain check: that also asserts .git/hooks/pre-commit
       # is installed and current, which is a fact about ONE CLONE, and
@@ -84,7 +92,7 @@ jobs:
         if: ${{ !cancelled() }}
         run: node .hub/branch-guard.mjs --repo . --artefact
 
-      - name: Docs — no tables or grids anywhere he reads
+      - name: Docs — no tables or grids anywhere the owner reads
         run: node .hub/docs-check.mjs .
 
       - name: npm hygiene

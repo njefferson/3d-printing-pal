@@ -132,7 +132,7 @@ editing `icon.svg` or `social-card.html`, and commit what they write.
 ## Branches and releases
 
 `staging` and `main`. Push to `main` deploys; `staging` is the candidate the owner
-passes on his own device before anything is promoted. A push is not a release —
+passes on their own device before anything is promoted. A push is not a release —
 the deploy for that exact commit has to be read and seen to conclude.
 
 ## Repo metadata (manual, confirm — Doctrine §10)
@@ -141,4 +141,4 @@ Description, website, topics, social preview and default branch are GitHub-UI
 steps the session token cannot perform. The values live in the hub's
 [`METADATA.md`](https://github.com/njefferson/noahjefferson/blob/main/METADATA.md)
 — propose there, the owner applies from there, and the status flips to `set` only
-on his say-so. Never report this repo set up while an item says proposed.
+on the owner's say-so. Never report this repo set up while an item says proposed.
