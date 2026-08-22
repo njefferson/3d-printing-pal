@@ -487,6 +487,16 @@ fits on a screen. To try: look at a column of jobs that have no photographs and
 check the cards are the height of their words. A job whose model has a picture
 should still show it.
 
+**Verified at `191e8de`.** Its deploy steps RAN rather than skipped, and its log
+printed:
+
+    ✨ Deployment complete! Take a peek over at https://4af84679.3d-printing-pal.pages.dev
+    ✨ Deployment alias URL: https://staging.3d-printing-pal.pages.dev
+
+Its Gates run is green with all 22 gate steps and 4 security steps having
+**executed**, checked one by one. Production stays at `f8e9c86` (0.5.0) until this
+is promoted.
+
 **0.1.1 never reached production on its own, and that was deliberate.** Its entire
 content was the link preview card, which 0.1.2 redrew; promoting it separately
 would have shipped artwork already replaced. Both went in the same promotion.
