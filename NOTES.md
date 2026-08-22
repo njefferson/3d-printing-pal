@@ -393,64 +393,13 @@ the log and check whether the steps ran or were skipped.
 
 ### The staged candidate
 
-**0.3.0, 0.4.0 and 0.4.1 are all on staging**, at https://staging.3d-printing-pal.pages.dev
-— the candidate is **0.4.1**.
+**There is none right now.** `staging` and `main` are the same commit — 0.3.0,
+0.4.0 and 0.4.1 were promoted together on 2026-08-22 — so
+https://staging.3d-printing-pal.pages.dev currently serves exactly what production
+serves. The next candidate goes here.
 
-None has been promoted, and they go up together the way 0.1.1 and 0.1.2 did: 0.4.0
-builds on 0.3.0's undo and 0.4.1 refines 0.4.0, so there is no order in which a
-later one ships without the earlier.
-
-**0.3.0 — undo, and reordering a column without a drag.** Delete a spool that
-several jobs draw on and press Undo: the spool and all of its links come back
-together rather than one at a time. Add a picture to a model, save, then Undo, and
-the picture goes with it. Open Move on a card and put it before another card in
-the same column. The strip under the tabs should name the last change every time,
-and should stay put rather than disappearing while it is being read.
-
-**0.4.0 and 0.4.1 — a job can make its model, and can decline to.** The Model box
-takes a typed name and fills from the job's title, so the ordinary case is no
-typing at all. Add a job called something that is not in Models and check it
-appears there. Add another with the same name in different capitals and check a
-second one does NOT appear. Add a third, turn off *Save this as a model*, and
-check the job is kept while the catalog is not touched. Then press Undo and check a
-job and its model go together.
-
-**0.4.1 adds the choice not to.** With a name that is not in the models, a tick
-box says *Save this as a model*; turn it off and the job is kept while the catalog
-is not touched.
-
-Also worth a glance because it was wrong from the first release until 0.4.1:
-**the Delete button should not be on the Add job form**, only on a job opened from
-a card. `[hidden]` was losing to `.btn`'s `display`.
-
-None of that can be confirmed from a session — this sandbox reaches no external
-site, and a browser walk proves the code, not the device.
-
-**Verified at `d55de2e`, the 0.4.1 release commit.** Its deploy steps RAN rather
-than skipped, and its log printed:
-
-    ✨ Deployment complete! Take a peek over at https://9b4d884b.3d-printing-pal.pages.dev
-    ✨ Deployment alias URL: https://staging.3d-printing-pal.pages.dev
-
-Its Gates run is green with all 22 gate steps and 4 security steps having
-**executed**, checked one by one rather than read off the run's conclusion.
-
-**THE PROMOTING SESSION RE-READS THE HEAD, and this paragraph cannot do it for
-them.** A promotion ships the branch head, and the head moves every time anything
-lands here — including the commit that records this. So the SHA above is evidence
-about a release commit, not a standing claim about the branch. Read the head's own
-run at the time of promoting.
-
-Three ways a run can fail to mean what it looks like, all three met on 2026-08-22
-and worth knowing before reading one:
-
-- **A conclusion with steps that never ran.** `9ccff77` concluded, and fifteen of
-  its eighteen steps were skipped after an early failure.
-- **A conclusion of `cancelled`.** `e3676f3`, superseded by the push that followed
-  it under `cancel-in-progress`. It measures nothing and it is not red, which
-  makes it the easiest of the three to read as fine.
-- **A green workflow that deployed nothing**, which is what a fully-skipped deploy
-  looks like when the Cloudflare secrets are absent.
+Leaving a promoted candidate recorded here is how the next session concludes
+something is waiting when nothing is.
 
 **0.1.1 never reached production on its own, and that was deliberate.** Its entire
 content was the link preview card, which 0.1.2 redrew; promoting it separately
@@ -506,6 +455,32 @@ stops arriving, and that trade is the owner's to make rather than a session's to
 slip in at the end of an unrelated change.
 
 ### Shipped to production
+
+**0.3.0, 0.4.0 and 0.4.1 reached production on 2026-08-22**, at
+https://3d-printing-pal.pages.dev
+
+Undo and a non-drag reorder; a job that makes its own model; and the choice not
+to. Promoted with `git push origin staging:main` on the owner's explicit say-so, as
+a clean fast-forward of nine commits — `git merge-base --is-ancestor` was checked
+before pushing rather than after, and the remote was read back rather than the
+push output believed.
+
+The head promoted was `7d3bad0`, and it is also the commit whose gates were read:
+22 gate steps and 4 security steps confirmed to have EXECUTED. The deploy's steps
+RAN rather than skipped, and its log printed:
+
+    npx wrangler pages deploy public --project-name=3d-printing-pal --branch=main
+    ✨ Deployment complete! Take a peek over at https://5c2ccc75.3d-printing-pal.pages.dev
+
+**Three releases went together because they build on each other.** 0.4.0's model
+creation is undoable only because 0.3.0 exists, and 0.4.1 is the choice not to
+create. Shipping any one alone would have put a half-finished idea in front of a
+reader.
+
+**One defect in here predates all three.** `[hidden]` is a UA rule at zero
+specificity, so `.btn { display: inline-flex }` outbid it and the Delete button
+had been on the ADD job form since that form was written. Fixed in 0.4.1 by one
+global rule rather than a fifth per-class one. Hub LESSONS §123.
 
 **0.2.0 reached production on 2026-08-09**, at https://3d-printing-pal.pages.dev
 
