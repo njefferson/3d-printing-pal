@@ -123,6 +123,36 @@ capability, with the rejected ones and the reason each was rejected.
 
 ---
 
+## A card with no picture takes no picture-sized hole (0.5.1)
+
+**FOUND BY RENDERING THE BOARD AND LOOKING AT IT**, which is the only way it could
+have been. Hub LESSONS §124 landed the same day and says exactly this: a suite can
+ask whether a thing exists, is named, is reachable by finger, contrasts in both
+themes, meets the target floor and says the right words — and none of that asks
+how much room it takes. Twenty-two gate steps were green over four releases while
+the empty placeholder took **128px of a 291px card, 44% of every card without a
+picture**, and four such cards filled 1.42 phone screens.
+
+**The reasoning behind the placeholder was right and was being applied to the
+wrong case.** `thumb.js` holds the box open so a board does not reflow as blobs
+arrive — correct for a card whose picture is LOADING. A card with no `imageId`
+has nothing loading and never will, so it was paying a loading cost forever.
+`thumbFor` now takes `keepSpace`: false on a board card, true in the catalog,
+where the picture is a column of a row and its absence would leave the list
+ragged.
+
+**The gate asserts a RELATIONSHIP, not a number** — a card carrying a picture is
+taller than one that is not, and one that is not shows no thumbnail. A pixel count
+would be a snapshot the next font change invalidates. Planted red: putting the
+placeholder back reported 311px against 330px and named what it costs.
+
+**And the seed had never had a picture in it.** The board state measured empty
+cards exclusively, which is why nothing here could have caught this even in
+principle. `makePng` moved out of the data-safety walk into `tools/png.mjs` so both
+walks share one copy rather than the accessibility gate growing a second.
+
+---
+
 ## A request arrives as a link (0.5.0)
 
 **THE ENTRY ORDER WAS THE REVERSE OF THE ARRIVAL ORDER, and that is the whole
@@ -449,9 +479,13 @@ the log and check whether the steps ran or were skipped.
 
 ### The staged candidate
 
-**There is none right now.** `staging` and `main` are the same commit — 0.5.0 was
-promoted on 2026-08-22 — so https://staging.3d-printing-pal.pages.dev serves what
-production serves. The next candidate goes here.
+**0.5.1 is on staging**, at https://staging.3d-printing-pal.pages.dev — the
+candidate is **0.5.1**.
+
+A job with no picture no longer leaves a picture-sized gap, so more of the board
+fits on a screen. To try: look at a column of jobs that have no photographs and
+check the cards are the height of their words. A job whose model has a picture
+should still show it.
 
 **0.1.1 never reached production on its own, and that was deliberate.** Its entire
 content was the link preview card, which 0.1.2 redrew; promoting it separately

@@ -9,6 +9,50 @@ triplet is `version.capability.iteration`. Releases do not have names.
 
 ---
 
+## 0.5.1 — ITERATION — 2026-08-22
+
+More jobs fit on a screen, because a job with no picture no longer leaves a
+picture-sized gap.
+
+### Fixed
+
+- A card with no picture was drawing an empty panel where one would go — 128
+  pixels of a 291-pixel card, nearly half of it, on every job that had not been
+  given a photograph. Four such jobs filled a phone screen and a half. The space
+  is now taken only where there is a picture in it.
+- The panel is still held open while a picture is loading, which is what it was
+  for: a board with photographs does not jump about as they arrive. What changed
+  is that a job with no picture at all stopped paying that cost forever.
+- Model rows in the catalog still show the panel, because there the picture sits
+  beside the name and its absence would leave the list ragged.
+
+### Still not right
+
+- A card does not say how long a job has been waiting, what it is worth, or
+  whether there is filament for it. Choosing what to print next is still a
+  judgement made from a name and a picture.
+- Only the name and the site can be read from an address. The picture and the
+  description cannot, and getting them would need a server this app does not have.
+- The Link box on a job is for adding an address, and it starts empty when you
+  reopen a job. The addresses a model has are listed under it in Models.
+- Undo lasts for as long as the app is open. Closing it, or reloading the page,
+  starts again with nothing to undo.
+- Restoring a backup cannot be undone. It replaces everything on purpose, and the
+  way back is the safety copy the app downloads immediately before it does so.
+- Changing a filter, the currency or the sort order is not a change undo tracks.
+- A picture has to be added by hand.
+- Filament counts as used the moment it is logged against a job, whichever column
+  that job is sitting in. That is the honest answer to how much is left on a
+  spool, but it means a job parked in research with grams already logged has spent
+  that filament as far as the inventory is concerned.
+- Costs and prices are plain numbers with a currency symbol you choose. There is
+  no per-currency formatting and no conversion.
+- An installed app on iPadOS will not always let a waiting update take over while
+  the app is open. If the version at the bottom of the screen is not the one you
+  expect, close the app fully and open it again.
+
+---
+
 ## 0.5.0 — CAPABILITY — 2026-08-22
 
 A request usually arrives as a link and nothing else. The link is now the first

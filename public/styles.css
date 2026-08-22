@@ -738,6 +738,12 @@ dialog.panel form { display: flex; flex-direction: column; min-height: 0; }
 .card-thumb { margin-top: 8px; }
 .card-thumb .thumb { aspect-ratio: 16 / 9; }
 
+/* No picture, no hole — AND no leftover margin. Collapsing the thumb alone would
+ * have left the 8px above it, which is the kind of remainder that reads as a
+ * rendering fault rather than a deliberate absence. */
+.thumb.is-none { display: none; }
+.card-thumb:has(> .thumb.is-none) { display: none; }
+
 /* The catalog row puts the picture beside the name rather than above it, so a
    long list stays scannable down the left edge. */
 .rowcard-head { display: flex; gap: 12px; align-items: flex-start; }

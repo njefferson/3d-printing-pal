@@ -206,7 +206,9 @@ function updateCard(node, job) {
   if (node._thumbId !== imageId) {
     node._thumbId = imageId;
     clear(p.thumb);
-    p.thumb.append(thumbFor(imageId, job.title || 'this job'));
+    // keepSpace false: a card with no picture takes no picture-sized hole. See
+    // the note over thumbFor for the measurement.
+    p.thumb.append(thumbFor(imageId, job.title || 'this job', { keepSpace: false }));
   }
 
   const bits = [];

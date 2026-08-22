@@ -21,15 +21,25 @@ import * as store from '../store.js';
 /**
  * A thumbnail element for a stored picture id.
  *
- * Always returns a node, even with no picture — the tiles keep one shape whether
- * or not there is an image, so a board of half-pictured cards does not jump
- * about as they load.
+ * Always returns a node. `keepSpace` decides what that node is when there is no
+ * picture, and the two answers are for two different questions:
+ *
+ *   TRUE — hold the space. Correct where the picture is one column of a row and
+ *   its absence would leave the text ragged, which is the catalog.
+ *
+ *   FALSE — take none. Correct on a board card, where the placeholder was
+ *   measured at 128px of a 291px card: 44% of every card that has no picture,
+ *   and four such cards filling 1.42 phone screens. The reasoning in the header
+ *   above — hold the shape so the board does not jump as blobs arrive — is about
+ *   a picture that is LOADING. A card with no imageId has nothing loading and
+ *   never will, so it was paying a loading cost forever. Reserving space is still
+ *   what happens when there IS an id, which is the case that reasoning is for.
  */
-export function thumbFor(imageId, name = '') {
+export function thumbFor(imageId, name = '', { keepSpace = true } = {}) {
   const box = el('div', { class: 'thumb' });
 
   if (!imageId) {
-    box.classList.add('is-empty');
+    box.classList.add(keepSpace ? 'is-empty' : 'is-none');
     // aria-hidden: the empty state is a visual placeholder holding the layout
     // steady. There is nothing here for a screen reader to be told about.
     box.setAttribute('aria-hidden', 'true');
@@ -46,13 +56,13 @@ export function thumbFor(imageId, name = '') {
   // image glyph reads as "this app is broken" rather than "this picture is".
   img.addEventListener('error', () => {
     img.remove();
-    box.classList.add('is-empty');
+    box.classList.add(keepSpace ? 'is-empty' : 'is-none');
     box.setAttribute('aria-hidden', 'true');
   });
 
   store.imageUrl(imageId).then((url) => {
     if (!url) {
-      box.classList.add('is-empty');
+      box.classList.add(keepSpace ? 'is-empty' : 'is-none');
       box.setAttribute('aria-hidden', 'true');
       return;
     }

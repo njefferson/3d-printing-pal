@@ -23,7 +23,7 @@
 // which is how a brand-new visitor gets told a new version is ready thirty
 // seconds into their first visit.
 
-const CACHE = 'print-tracker-0.5.0';
+const CACHE = 'print-tracker-0.5.1';
 
 const SHELL = [
   './',

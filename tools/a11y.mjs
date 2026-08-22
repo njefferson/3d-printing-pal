@@ -35,6 +35,7 @@
 // a floor, nothing there is measuring the product.
 
 import { chromium } from 'playwright-core';
+import { makePng } from './png.mjs';
 import { readFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
@@ -1239,8 +1240,24 @@ async function seed(page) {
   await page.fill('#model-f-tags', 'articulated, gift');
   await page.click('#model-f-addsource');
   await page.click('#model-f-addlisting');
+
+  // A REAL PICTURE, so the board measures a real thumbnail. It never did: this
+  // seed made a model with no picture, so every card the gate had ever looked at
+  // was an empty one, and the placeholder that took 44% of each of them was the
+  // only thing in the frame.
+  await page.setInputFiles('.pic-file', {
+    name: 'dragon-egg.png',
+    mimeType: 'image/png',
+    buffer: makePng(900, 600),
+  });
+  await page.waitForFunction(
+    () => /Ready —/.test(document.querySelector('.pic-status')?.textContent || ''),
+    null,
+    { timeout: 8000 },
+  );
+
   await page.click('#model-save');
-  await page.waitForTimeout(180);
+  await page.waitForTimeout(220);
 
   const jobs = [
     { title: 'Benchy', type: 'fun', printer: 'Prusa MK4', qty: '1', price: '' },
@@ -1292,6 +1309,56 @@ async function seed(page) {
     fail('seed', `expected 3 models — 1 entered directly plus 2 created by jobs named after models that did not exist, with "Dragon egg" matching the existing one — got ${counts.models}`);
   } else {
     pass('seed', 'a job names its model and the model appears: 1 entered + 2 made by jobs, with the repeated name matching rather than duplicating');
+  }
+
+  /* A CARD WITH NO PICTURE TAKES NO PICTURE-SIZED HOLE.
+   *
+   * Hub LESSONS §124: this suite asks whether a thing exists, is named, is
+   * reachable, contrasts and meets the target floor — and none of that asks how
+   * much room it takes. The empty placeholder measured 128px of a 291px card,
+   * 44% of every card without a picture, and every gate passed for four releases.
+   * It was found by rendering the board and looking at it.
+   *
+   * Asserted as a RELATIONSHIP rather than a number, because a number here would
+   * be a snapshot that the next font change invalidates: a card carrying a
+   * picture is taller than one that is not, and a card that is not shows no
+   * thumbnail at all. */
+  await showView(page, 'board');
+  // A thumbnail's bytes come out of IndexedDB asynchronously, so a measurement
+  // taken the instant the board renders reads a card whose picture has not
+  // arrived — which looks exactly like a card that has no picture. Waited for
+  // rather than slept through, and bounded: if it never arrives, the measurement
+  // below still runs and reports the numbers rather than this hanging.
+  await page.waitForFunction(() => {
+    const card = Array.from(document.querySelectorAll('.card'))
+      .find((c) => c.textContent.includes('Dragon egg'));
+    return Boolean(card && card.querySelector('.thumb img'));
+  }, null, { timeout: 4000 }).catch(() => {});
+
+  const shapes = await page.evaluate(() => {
+    const read = (needle) => {
+      const card = Array.from(document.querySelectorAll('.card'))
+        .find((c) => c.textContent.includes(needle));
+      if (!card) return null;
+      const thumb = card.querySelector('.thumb');
+      const shown = Boolean(thumb) && thumb.checkVisibility
+        ? thumb.checkVisibility()
+        : Boolean(thumb && thumb.getBoundingClientRect().height > 0);
+      return { height: Math.round(card.getBoundingClientRect().height), thumb: shown };
+    };
+    return { withPicture: read('Dragon egg'), without: read('Calibration cube') };
+  });
+
+  if (!shapes.withPicture || !shapes.without) {
+    fail('cards', 'could not find both a pictured and an unpictured card to compare');
+  } else if (shapes.without.thumb) {
+    fail('cards', `a job with no picture still draws a thumbnail, so its card is ${shapes.without.height}px against ${shapes.withPicture.height}px for one that has a picture — the hole is charged to every card that will never fill it`);
+  } else if (!shapes.withPicture.thumb) {
+    fail('cards', 'a job whose model has a picture is not showing it');
+  } else if (shapes.without.height >= shapes.withPicture.height) {
+    fail('cards', `an unpictured card is ${shapes.without.height}px and a pictured one ${shapes.withPicture.height}px — the picture is costing nothing, which means it is not being drawn`);
+  } else {
+    pass('cards', `a card without a picture is ${shapes.without.height}px against ${shapes.withPicture.height}px with one — the space is spent only where there is something in it`);
   }
 
   // The computed number, checked against arithmetic the gate does itself.
