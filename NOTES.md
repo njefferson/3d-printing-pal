@@ -449,38 +449,9 @@ the log and check whether the steps ran or were skipped.
 
 ### The staged candidate
 
-**0.5.0 is on staging**, at https://staging.3d-printing-pal.pages.dev — the
-candidate is **0.5.0**.
-
-A request arrives as a link, so the link is now the first box on a job. To try:
-paste a model page address into the Link box of a new job and check the name fills
-itself in, then save with only "who asked for it" added. The card should carry a
-button to the site. Then press Undo and check the job, the model and the link all
-go together.
-
-**Verified at `096d762`, the 0.5.0 release commit.** Its deploy steps RAN rather
-than skipped, and its log printed:
-
-    ✨ Deployment complete! Take a peek over at https://d4838341.3d-printing-pal.pages.dev
-    ✨ Deployment alias URL: https://staging.3d-printing-pal.pages.dev
-
-Its Gates run is green with all 22 gate steps and 4 security steps having
-**executed**, checked one by one rather than read off the run's conclusion.
-
-**THE PROMOTING SESSION RE-READS THE HEAD.** A promotion ships the branch head,
-and the head moves every time anything lands here — including the commit that
-records this. The SHA above is evidence about a release commit, not a standing
-claim about the branch.
-
-Three ways a run can fail to mean what it looks like, all three met on
-2026-08-22: a conclusion with steps that never ran, after an early failure
-skipped the rest; a conclusion of `cancelled`, from a push superseding its
-predecessor, which measures nothing and is not red either; and a green workflow
-that deployed nothing, which is what a fully-skipped deploy looks like.
-
-When this is promoted, the section says there is none — leaving a promoted
-candidate recorded here is how the next session concludes something is waiting
-when nothing is.
+**There is none right now.** `staging` and `main` are the same commit — 0.5.0 was
+promoted on 2026-08-22 — so https://staging.3d-printing-pal.pages.dev serves what
+production serves. The next candidate goes here.
 
 **0.1.1 never reached production on its own, and that was deliberate.** Its entire
 content was the link preview card, which 0.1.2 redrew; promoting it separately
@@ -536,6 +507,40 @@ stops arriving, and that trade is the owner's to make rather than a session's to
 slip in at the end of an unrelated change.
 
 ### Shipped to production
+
+**0.5.0 reached production on 2026-08-22**, at https://3d-printing-pal.pages.dev
+
+A request arrives as a link, so the link is the first box on a job. Promoted with
+`git push origin staging:main` on the owner's explicit say-so, as a clean
+fast-forward of two commits — ancestry checked with `git merge-base --is-ancestor`
+BEFORE pushing, and the remote read back afterwards rather than the push output
+believed. The head promoted, `71a0707`, is also the commit whose gates were read:
+22 gate steps and 4 security steps confirmed to have EXECUTED. The deploy's steps
+ran rather than skipped, and its log printed:
+
+    npx wrangler pages deploy public --project-name=3d-printing-pal --branch=main
+    ✨ Deployment complete! Take a peek over at https://e8996e58.3d-printing-pal.pages.dev
+
+**DRAGGING A PICTURE OUT OF A BROWSER INTO THIS APP ALREADY WORKS, and a session
+said it did not.** The claim was reasoned from `firstImage()` — which accepts only
+files — plus an assumption that a browser hands over a URL and not bytes when you
+drag a web image. The assumption is wrong. Measured with a drop probe on a real
+machine: the drop carries `file · image/webp` in `dataTransfer.files` alongside
+`text/uri-list`, so `firstImage` finds it and the existing path stores it. Written
+down because the shape of the error is expensive — a later session reading
+"dragging does not work" would build a feature that already exists.
+
+Two limits found the same way. Printables' carousel swallows the drag on its main
+image, so that site needs copy-and-paste or the image opened in its own tab; and a
+drag hands over the site's already-optimised file (112 KB webp) where a copy hands
+over a re-encoded bitmap (1.04 MB PNG), which makes no difference after the
+downscale but makes dragging the cheaper gesture.
+
+**And the fetch idea is closed.** Loading the picture from a model-page link was
+never blocked by CORS on images — it is blocked by not being able to read the PAGE
+to find the image address. Even granted a perfect fetch, the app could only work
+from an image address the reader pasted, which is more work than copying the image
+itself. Nothing to build, and the app's "nothing is fetched" stays true.
 
 **0.3.0, 0.4.0 and 0.4.1 reached production on 2026-08-22**, at
 https://3d-printing-pal.pages.dev
