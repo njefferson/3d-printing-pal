@@ -37,11 +37,19 @@ jobs:
       # The doctrine's canonical gates. Pinned to a commit that exists on the
       # hub's default branch: a cross-repo gate depends on the OTHER repo's
       # published history, not on anybody's working copy.
+      #
+      # ADDING A STEP THAT RUNS A HUB GATE MEANS MOVING THIS PIN IN THE SAME
+      # COMMIT. The third-person step was added against a pin from before that
+      # gate existed, so it could only ever say `Cannot find module` — and it
+      # failed having been watched passing locally, where the hub clone is at its
+      # own HEAD, which is the one place it proves nothing about CI. Every step
+      # after it was SKIPPED, and Deploy is a separate workflow, so the candidate
+      # deployed measured by three gates out of eighteen.
       - name: Check out the hub (canonical gates)
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: njefferson/noahjefferson
-          ref: 6da5c6e765538fed5dd702e9d9e40a5d80001fea
+          ref: 61a3f9a3408e7aa679a7400fc5daf662b41869f9
           path: .hub
           persist-credentials: false
 
@@ -158,7 +166,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: njefferson/noahjefferson
-          ref: 6da5c6e765538fed5dd702e9d9e40a5d80001fea
+          ref: 61a3f9a3408e7aa679a7400fc5daf662b41869f9
           path: .hub
           persist-credentials: false
 
