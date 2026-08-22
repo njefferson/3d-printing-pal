@@ -13,6 +13,18 @@ import { pictureField } from './picture.js';
 
 let editing = { job: null, spool: null, model: null };
 
+/**
+ * Whether the reader has typed in the job form's Model box themselves.
+ *
+ * The title fills that box while this is false and stops for good the moment they
+ * touch it — the same rule `offerFromUrl` follows further down, and for the same
+ * reason: a suggestion that overwrites what somebody typed destroys data at the
+ * moment they were looking elsewhere. Clearing the box counts as touching it, so
+ * "this job is not a print of a model" sticks rather than being refilled on the
+ * next keystroke of the title.
+ */
+let modelTouched = false;
+
 export function initForms() {
   registerPanel('dlg-job');
   registerPanel('dlg-spool');
@@ -27,6 +39,21 @@ export function initForms() {
 
   $('#job-f-type').addEventListener('change', syncRequesterVisibility);
   $('#job-f-addlink').addEventListener('click', () => addLinkRow());
+
+  // The title fills the Model box until the reader touches it. Most jobs here are
+  // a print OF the thing the job is named after, so the common case is no typing
+  // at all — and the one that is not is a box they clear once.
+  $('#job-f-title').addEventListener('input', () => {
+    if (modelTouched || editing.job) return;
+    $('#job-f-model').value = $('#job-f-title').value;
+    renderModelHint();
+  });
+  for (const event of ['input', 'change']) {
+    $('#job-f-model').addEventListener(event, () => {
+      modelTouched = true;
+      renderModelHint();
+    });
+  }
   $('#model-f-addsource').addEventListener('click', () => addSourceRow());
   $('#model-f-addlisting').addEventListener('click', () => addListingRow());
 
@@ -60,13 +87,21 @@ export function openJob(id, opener) {
   $('#job-f-notes').value = job?.notes || '';
   $('#job-delete').hidden = !job;
 
-  const modelSelect = $('#job-f-model');
-  clear(modelSelect);
-  modelSelect.append(el('option', { value: '' }, 'Not from a saved model'));
+  // The NAME of the linked model, not its id — the box is what the reader would
+  // say out loud, and an id in a text field is a thing they can accidentally
+  // destroy. A job whose model has since been deleted comes back empty, which is
+  // the truth about it.
+  const modelInput = $('#job-f-model');
+  const linked = job?.modelId ? store.state.models.find((m) => m.id === job.modelId) : null;
+  modelInput.value = linked?.name || '';
+  modelTouched = Boolean(modelInput.value);
+
+  const options = $('#job-f-model-options');
+  clear(options);
   for (const model of store.state.models) {
-    modelSelect.append(el('option', { value: model.id }, model.name || 'Unnamed model'));
+    if (model.name) options.append(el('option', { value: model.name }));
   }
-  modelSelect.value = job?.modelId || '';
+  renderModelHint();
 
   const links = $('#job-f-links');
   clear(links);
@@ -82,6 +117,33 @@ export function openJob(id, opener) {
 function syncRequesterVisibility() {
   const isRequest = $('#job-f-type').value === 'request';
   $('#job-f-requester-field').hidden = !isRequest;
+}
+
+// ------------------------------------------------------------- the model box
+
+/**
+ * Say which of the two things the save will do, BEFORE it does it.
+ *
+ * This is the whole defence against a typo becoming a second model, and it is why
+ * the box can be free text at all. It is always visible rather than appearing on
+ * a mismatch: a hint that only shows up when something is wrong teaches nobody
+ * what the field does, and a state that is usually absent is a state usually
+ * nothing measures.
+ */
+function renderModelHint() {
+  const typed = $('#job-f-model').value.trim();
+  const hint = $('#job-f-model-hint');
+  if (!typed) {
+    hint.textContent = 'Not from a saved model. Type a name and it is added to your models if it is not there already.';
+    return;
+  }
+  const found = store.modelNamed(typed);
+  // The WORDS carry it, not a colour. "Links to" and "will be added" are the two
+  // outcomes and they read differently; a colour variant would be a state that
+  // only appears sometimes, which is a state the gate never measures.
+  hint.textContent = found
+    ? `Links to ${found.name}, already in your models.`
+    : `${typed} will be added to your models.`;
 }
 
 function addLinkRow(link = null) {
@@ -119,12 +181,20 @@ function addLinkRow(link = null) {
 async function onSaveJob(event) {
   event.preventDefault();
   const links = Array.from($('#job-f-links').children).map((row) => row._read());
+
+  // Asked BEFORE the save, so the answer is about what was there a moment ago
+  // rather than about the model the save may have just made.
+  const typed = $('#job-f-model').value.trim();
+  const isNewModel = Boolean(typed) && !store.modelNamed(typed);
+
+  // A NAME, never an id — see the note above saveJob for why the store is what
+  // creates the model rather than this form.
   await store.saveJob({
     id: editing.job,
     title: $('#job-f-title').value,
     type: $('#job-f-type').value,
     requester: $('#job-f-type').value === 'request' ? $('#job-f-requester').value : '',
-    modelId: $('#job-f-model').value,
+    modelName: typed,
     printer: $('#job-f-printer').value,
     quantity: $('#job-f-quantity').value,
     priceCharged: $('#job-f-price').value,
@@ -133,7 +203,9 @@ async function onSaveJob(event) {
     spoolLinks: links,
   });
   close('dlg-job');
-  say('Job saved.');
+  // Named out loud. A record appearing in another view without being mentioned is
+  // how somebody discovers their catalog has doubled a week later.
+  say(isNewModel ? `Job saved, and ${typed} added to your models.` : 'Job saved.');
 }
 
 function onDeleteJob() {

@@ -107,7 +107,10 @@ const STATE_TEXT = {
   firstrun: ['#dlg-firstrun h2', '#dlg-firstrun p', '#dlg-firstrun li', '#dlg-firstrun .btn', '.panel-foot-note'],
   info: ['#dlg-info h2', '#dlg-info h3', '#dlg-info p', '#dlg-info li', '#dlg-info a', '#dlg-info .release-head'],
   diagnostic: ['#dlg-diagnostic h2', '#dlg-diagnostic p', '#dlg-diagnostic .diag-text'],
-  job: ['#dlg-job h2', '#dlg-job label', '#dlg-job legend', '#dlg-job .btn', '#dlg-job .btn-danger'],
+  // `.note` is the Model box's hint, which is ALWAYS on screen — that is what
+  // makes it registerable. It shares the class with #job-f-nospools, which is
+  // hidden once a spool exists and so is filtered out before measuring.
+  job: ['#dlg-job h2', '#dlg-job label', '#dlg-job legend', '#dlg-job .note', '#dlg-job .btn', '#dlg-job .btn-danger'],
   spool: ['#dlg-spool h2', '#dlg-spool label', '#dlg-spool .btn', '#dlg-spool .note'],
   model: ['#dlg-model h2', '#dlg-model label', '#dlg-model legend', '#dlg-model .btn'],
   move: ['#dlg-move h2', '#dlg-move p', '#dlg-move h3', '#dlg-move .btn'],
@@ -128,7 +131,7 @@ const STATE_NONTEXT = {
   // which is text, so its border carries no information a reader needs to
   // identify a component. It is drawn with --hairline, which the palette spec
   // exempts as decoration.
-  job: ['#dlg-job input[type="text"]', '#dlg-job select', '#dlg-job textarea', '#dlg-job .btn'],
+  job: ['#dlg-job input[type="text"]', '#dlg-job select', '#dlg-job textarea', '#dlg-job .btn', '#dlg-job input[list]'],
   spool: ['#dlg-spool input[type="text"]', '#dlg-spool input[type="number"]', '#dlg-spool .btn'],
   model: ['#dlg-model input[type="text"]', '#dlg-model .btn'],
   move: ['#dlg-move .btn'],
@@ -1211,7 +1214,18 @@ async function seed(page) {
   }));
   if (counts.cards !== 3) fail('seed', `expected 3 job cards after using the form, got ${counts.cards} — the job form does not work`);
   if (counts.spools !== 1) fail('seed', `expected 1 spool, got ${counts.spools} — the spool form does not work`);
-  if (counts.models !== 1) fail('seed', `expected 1 model, got ${counts.models} — the model form does not work`);
+
+  // THREE, AND THE ARITHMETIC IS THE CHECK. One model was entered directly. Three
+  // jobs followed, and the Model box fills from the title, so "Benchy" and
+  // "Calibration cube" each made one — while "Dragon egg" MATCHED the model
+  // already there rather than making a twin. 1 + 2 = 3, and a 4 means matching by
+  // name broke. A bare "expected 3" would go stale the moment the seed changed and
+  // would be a number nobody could check.
+  if (counts.models !== 3) {
+    fail('seed', `expected 3 models — 1 entered directly plus 2 created by jobs named after models that did not exist, with "Dragon egg" matching the existing one — got ${counts.models}`);
+  } else {
+    pass('seed', 'a job names its model and the model appears: 1 entered + 2 made by jobs, with the repeated name matching rather than duplicating');
+  }
 
   // The computed number, checked against arithmetic the gate does itself.
   await showView(page, 'inventory');

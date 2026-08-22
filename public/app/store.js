@@ -465,16 +465,80 @@ export function modelDeletionImpact(id) {
 
 // ---------------------------------------------------------------- jobs
 
+/**
+ * The model with this name, or null.
+ *
+ * Compared on a NORMALISED name — trimmed, inner runs of whitespace collapsed,
+ * case folded — because the reader typing a model's name into the job form is
+ * naming a thing they can see, not quoting a key. "benchy " and "Benchy" are the
+ * same model to them, and a match that says otherwise makes a second one.
+ *
+ * Nothing has ever held model names unique, so a tie is possible in data that
+ * already exists. The oldest wins, which at least makes the answer stable rather
+ * than dependent on the order records came back in.
+ */
+export function modelNamed(name) {
+  const wanted = normaliseName(name);
+  if (!wanted) return null;
+  const hits = state.models.filter((m) => normaliseName(m.name) === wanted);
+  if (hits.length < 2) return hits[0] || null;
+  return [...hits].sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)))[0];
+}
+
+function normaliseName(name) {
+  return String(name || '').trim().replace(/\s+/g, ' ').toLocaleLowerCase();
+}
+
+/**
+ * `input.modelName` is what the job form's Model box says — a NAME, never an id.
+ *
+ * A name that matches nothing becomes a model HERE, inside the same transaction
+ * and the same undo entry as the job. Doing it in the form instead is the defect
+ * this repo has already paid for once with pictures: the write lands outside the
+ * gesture, so undo puts the job back and leaves the model behind, and — worse
+ * than an orphaned picture — a job whose model was rolled back separately is a
+ * DANGLING REFERENCE, which `backup.js` refuses on import. The reader would find
+ * that out when they tried to restore.
+ *
+ * `input.modelId` is still honoured when no name is given, so nothing that sets
+ * the link directly had to change.
+ */
 export async function saveJob(input) {
   const existing = state.jobs.find((j) => j.id === input.id);
   const before = await capture({ jobs: [existing?.id].filter(Boolean) });
   const column = COLUMN_SAFE(input.column, COLUMN_IDS, 'research');
+
+  let modelId = input.modelId || '';
+  let createdModel = null;
+  if (input.modelName !== undefined) {
+    const named = normaliseName(input.modelName) ? modelNamed(input.modelName) : null;
+    if (named) {
+      modelId = named.id;
+    } else if (normaliseName(input.modelName)) {
+      createdModel = {
+        id: newId(),
+        name: String(input.modelName).trim(),
+        designer: '',
+        tags: [],
+        notes: '',
+        sources: [],
+        listings: [],
+        imageId: '',
+        createdAt: nowIso(),
+        updatedAt: nowIso(),
+      };
+      modelId = createdModel.id;
+    } else {
+      modelId = '';
+    }
+  }
+
   const record = {
     id: input.id || newId(),
     title: (input.title || '').trim(),
     type: COLUMN_SAFE(input.type, TYPE_IDS, 'fun'),
     requester: (input.requester || '').trim(),
-    modelId: input.modelId || '',
+    modelId,
     printer: (input.printer || '').trim(),
     quantity: Math.max(1, Math.round(num(input.quantity) || 1)),
     priceCharged: num(input.priceCharged),
@@ -488,11 +552,26 @@ export async function saveJob(input) {
     deliveredAt: existing?.deliveredAt || (column === 'delivered' ? nowIso() : null),
     updatedAt: nowIso(),
   };
-  await db.put('jobs', record);
+  // ONE TRANSACTION whether or not a model is being made, so there is no state in
+  // which the job points at a model that is not there yet.
+  const stores = createdModel ? ['jobs', 'models'] : ['jobs'];
+  await db.writeMany(stores, (handles) => {
+    handles.jobs.put(record);
+    if (createdModel) handles.models.put(createdModel);
+  });
   upsert(state.jobs, record);
-  remember(existing ? `editing ${record.title || 'a job'}` : `adding ${record.title || 'a job'}`,
-           existing ? before : { jobs: [{ id: record.id, record: null }] });
-  announce('jobs');
+  if (createdModel) upsert(state.models, createdModel);
+
+  // The entry is built ONCE rather than chosen between two branches. It used to
+  // be a ternary, and a ternary is where a new store gets added to the branch the
+  // author was looking at and not to the other one.
+  const entry = existing ? { ...before } : { jobs: [{ id: record.id, record: null }] };
+  if (createdModel) entry.models = [{ id: createdModel.id, record: null }];
+  remember(existing ? `editing ${record.title || 'a job'}` : `adding ${record.title || 'a job'}`, entry);
+
+  // Both, because a new model changes the models view and the inventory's model
+  // column as well as the board.
+  announce(createdModel ? 'models' : 'jobs');
   return record;
 }
 

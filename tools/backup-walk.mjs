@@ -233,9 +233,15 @@ async function main() {
   await page.waitForSelector('#version-stamp');
   await seed(page);
 
+  // TWO MODELS, AND THE ARITHMETIC IS THE CHECK. "Dragon egg" was entered
+  // directly. Then two jobs, and the Model box fills from the title — so "Benchy"
+  // made a model and "Dragon egg" MATCHED the one already there. 1 + 1 = 2, and a
+  // 3 means matching by name broke and the catalog is quietly doubling.
   const seeded = await counts(page);
-  if (seeded.jobs !== 2 || seeded.spools !== 1 || seeded.models !== 1) {
-    fail(`seeding through the forms produced ${JSON.stringify(seeded)}, expected 2 jobs, 1 spool, 1 model`);
+  if (seeded.jobs !== 2 || seeded.spools !== 1 || seeded.models !== 2) {
+    fail(`seeding through the forms produced ${JSON.stringify(seeded)}, expected 2 jobs, 1 spool, and 2 models — "Dragon egg" entered directly, "Benchy" made by its job, and the second "Dragon egg" matching rather than duplicating`);
+  } else {
+    pass('seeding gives 2 models: one entered, one made by a job, and a repeated name matched rather than duplicated');
   }
 
   // ---------------------------------------------------------------- export
@@ -513,6 +519,107 @@ async function main() {
   else if (!emptied) fail('the undo strip is still offering an undo after every change was undone');
   else pass('the undo strip goes away when there is nothing left to undo');
 
+  // ------------------------------------------- a model made by adding a job
+  //
+  // The job form's Model box takes a NAME, and a name that matches nothing makes
+  // a model. The dangerous half is not the making, it is the UNDOING: the model
+  // write has to be inside the job's transaction and inside its undo entry, or
+  // undo puts the job back and leaves the model, or removes the model and leaves
+  // a job pointing at nothing — and a job pointing at a missing model is exactly
+  // what `backup.js` REFUSES on import. The reader would find that out on the day
+  // they needed the backup.
+  //
+  // So this is checked the way the restore is: export, act, undo, export, compare.
+  const beforeModelFromJob = await counts(page);
+  const baseline = await exportThroughTheButton(page);
+
+  await page.click('#tab-board');
+  await page.waitForTimeout(200);
+  await page.click('#job-new');
+  await page.fill('#job-f-title', 'Widget Stand');
+
+  // The title fills the box, so the common case costs no typing at all.
+  const mirrored = await page.evaluate(() => ({
+    value: document.getElementById('job-f-model').value,
+    hint: document.getElementById('job-f-model-hint').textContent,
+  }));
+  if (mirrored.value !== 'Widget Stand') {
+    fail(`typing a job title left the Model box as "${mirrored.value}" — the reader has to type the name twice`);
+  } else if (!/will be added/.test(mirrored.hint)) {
+    fail(`the Model box says "${mirrored.hint}" for a name that is not in the models — it has to say what saving will do BEFORE it does it`);
+  } else {
+    pass(`the job title fills the Model box, and it says: "${mirrored.hint}"`);
+  }
+
+  await page.click('#job-save');
+  await page.waitForTimeout(320);
+
+  const afterCreate = await counts(page);
+  if (afterCreate.models !== beforeModelFromJob.models + 1) {
+    fail(`adding a job that named a new model produced ${afterCreate.models} models, expected ${beforeModelFromJob.models + 1}`);
+  } else {
+    pass('adding a job that named an unknown model created exactly one model');
+  }
+
+  const linked = await page.evaluate(() => {
+    document.getElementById('tab-models').click();
+    return Array.from(document.querySelectorAll('#models-list .rowcard'))
+      .some((c) => c.textContent.includes('Widget Stand'));
+  });
+  if (!linked) fail('the model created by adding a job does not appear in Models');
+  else pass('the model created by adding a job is in the catalog, not only on the job');
+
+  // A SECOND job naming the same model in different case and spacing must MATCH
+  // rather than make a twin. This is the whole reason the box carries a hint.
+  await page.click('#tab-board');
+  await page.waitForTimeout(200);
+  await page.click('#job-new');
+  await page.fill('#job-f-title', 'Another run');
+  await page.fill('#job-f-model', '  widget   stand ');
+  const rematch = await page.evaluate(() => document.getElementById('job-f-model-hint').textContent);
+  await page.click('#job-save');
+  await page.waitForTimeout(320);
+
+  const afterSecond = await counts(page);
+  if (afterSecond.models !== afterCreate.models) {
+    fail(`"  widget   stand " made a second model — ${afterSecond.models} where there were ${afterCreate.models}. Case and spacing are not a different model.`);
+  } else if (!/Links to Widget Stand/.test(rematch)) {
+    fail(`the Model box said "${rematch}" for a name that differs only in case and spacing`);
+  } else {
+    pass(`a name differing only in case and spacing links rather than duplicates: "${rematch}"`);
+  }
+
+  // Both jobs and the one model, undone.
+  for (let i = 0; i < 2; i += 1) {
+    const hidden = await page.evaluate(() => document.getElementById('undo-strip').hidden);
+    if (hidden) { fail(`undo ran out after ${i} of the 2 jobs that named models`); break; }
+    await page.click('#undo-do');
+    await page.waitForTimeout(320);
+  }
+
+  const undoneCounts = await counts(page);
+  if (JSON.stringify(undoneCounts) !== JSON.stringify(beforeModelFromJob)) {
+    fail(`undoing two jobs left ${JSON.stringify(undoneCounts)}, expected ${JSON.stringify(beforeModelFromJob)} — a model made by a job was not taken back with it`);
+  }
+
+  const afterJobUndo = await exportThroughTheButton(page);
+  if (JSON.stringify(strip(JSON.parse(afterJobUndo.text))) !== JSON.stringify(strip(JSON.parse(baseline.text)))) {
+    fail('undoing a job that created a model did NOT return the data to what it was');
+  } else {
+    pass('a job that creates a model is one gesture: undo takes both back, byte for byte');
+  }
+
+  // The failure this is really guarding: a model rolled back while the job that
+  // pointed at it survives. That file imports nowhere.
+  const settled = JSON.parse(afterJobUndo.text);
+  const modelIds = new Set(settled.models.map((m) => m.id));
+  const orphans = settled.jobs.filter((j) => j.modelId && !modelIds.has(j.modelId));
+  if (orphans.length) {
+    fail(`${orphans.length} job(s) point at a model that is not in the export — this backup would be refused on import`);
+  } else {
+    pass('no job points at a missing model, so the export still restores');
+  }
+
   // ---------------------------------------- the deliveredAt interpretation
   // The requirement is "a computed total of price-charged across its delivered
   // jobs". Read as "current column is delivered", that total silently drops the
@@ -531,7 +638,10 @@ async function main() {
   await page.fill('#job-f-title', 'Gift box run');
   await page.selectOption('#job-f-type', 'request');
   await page.fill('#job-f-requester', 'Ada Lovelace');
-  await page.selectOption('#job-f-model', { label: 'Gift box' });
+  // By NAME, and typed over whatever the title mirrored in. This existing model
+  // must be MATCHED rather than duplicated — the assertion below reads the
+  // model's own total, so a second "Gift box" would show £0.00 and fail.
+  await page.fill('#job-f-model', 'Gift box');
   await page.fill('#job-f-price', '18.00');
   await page.selectOption('#job-f-column', 'delivered');
   await page.click('#job-save');

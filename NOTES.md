@@ -65,19 +65,22 @@ drag also has a non-drag path — the Move button on each card — which is what
 keyboard and assistive technology use. Both are declared in `INTERACTIONS.json`
 and checked.
 
-**No undo, deliberately, for now.**
-The doctrine wants one gesture to be one undo step. This release does not have it.
-Destructive actions ask first and name exactly what they will unlink, and export
-is the way back. Recorded here as owed, not as done.
+**Undo is a snapshot of what was there, and it is memory only.**
+Shipped in 0.3.0 — one gesture is one entry, cascades included. The reasoning, and
+why the inverse-operation shape was rejected, is under *Undo (0.3.0)* below. This
+paragraph said "no undo, deliberately, for now" until 0.4.0, three days after undo
+shipped, which is what a settled-decision list does when a decision is unsettled
+and nothing goes back to close it.
 
 ---
 
 ## What it cannot do now
 
-- No undo stack.
 - No per-currency formatting or conversion — a symbol you choose, and plain numbers.
-- No reordering of cards within a column by the Move button (it appends to the end);
-  drag inserts at the drop position.
+- Undo does not survive closing the app or reloading the page, and an import clears
+  it. Yesterday's deletion comes back from a backup, not from the strip.
+- Restoring a backup cannot itself be undone; the way back is the safety copy taken
+  immediately before it.
 - No printing or PDF output.
 - No multi-device sync, by design rather than by omission.
 - No files attached to a model — pictures and links only.
@@ -117,6 +120,49 @@ capability, with the rejected ones and the reason each was rejected.
   doubles every control when they do.
 - **Media-query thresholds stay in `px`.** `rem` inside a media query resolves
   against the initial root font size, not the reader's.
+
+---
+
+## A job can make its model (0.4.0)
+
+**The Model box takes a NAME, not an id.** It was a `<select>` over models that
+already existed, which made entering a model a *prerequisite* for recording a
+job — leave the form, go to Models, add it, come back. The name is now enough.
+
+**The store creates the model, not the form**, in the same transaction and the
+same undo entry as the job. This is the picture defect from 0.3.0 in a worse key:
+an orphaned picture wastes bytes, but a job whose model was rolled back
+separately is a **dangling reference, which `backup.js` refuses on import** — the
+reader would discover it on the day they needed the backup. `saveJob` uses
+`db.writeMany(['jobs','models'])` when it creates one, so there is no instant in
+which the job points at a model that is not there.
+
+**It can never rename a model, and that is the shape rather than a rule.**
+`saveJob` only ever finds a model by the typed name or makes a new one; there is
+no path from the job form that writes a name onto an existing model. Editing the
+box re-points the job. Renaming happens in Models, where the rest of the model is.
+
+**Matching is on a normalised name** — trimmed, inner whitespace collapsed, case
+folded — because somebody typing a model's name is naming a thing they can see,
+not quoting a key. Nothing has ever held model names unique, so ties are possible
+in existing data; the oldest wins, which makes the answer stable rather than
+dependent on read order.
+
+**The title fills the box until the reader touches it**, the same rule
+`offerFromUrl` follows — a suggestion that overwrites what somebody typed destroys
+data at the moment they were looking elsewhere. Clearing counts as touching, so
+"not from a model" sticks.
+
+**The always-visible hint is what lets the box be free text at all.** It says
+which of the two things saving will do before it does it. A hint that appeared
+only on a mismatch would teach nobody what the field does, and would be a state
+that is usually absent — which is a state nothing measures.
+
+**Both walks assert the ARITHMETIC of their seed, not a count.** The a11y seed
+makes 3 models (1 entered + 2 from job titles, with the repeated name matching)
+and the backup walk 2. A four in either means matching by name broke and the
+catalog is quietly doubling; a bare "expected 3" would be a number nobody could
+check (hub LESSONS §119).
 
 ---
 
@@ -299,29 +345,27 @@ the log and check whether the steps ran or were skipped.
 
 ### The staged candidate
 
-**0.3.0 is on staging**, at https://staging.3d-printing-pal.pages.dev
+**0.3.0 and 0.4.0 are both on staging**, at https://staging.3d-printing-pal.pages.dev
 
-Deployed from `9c67483`. Its deploy steps RAN rather than skipped, and the log
-printed:
+Neither has been promoted, and they go up together the way 0.1.1 and 0.1.2 did —
+0.4.0 builds on 0.3.0's undo, so there is no order in which the second ships
+without the first.
 
-    ✨ Deployment complete! Take a peek over at https://9e65514b.3d-printing-pal.pages.dev
-    ✨ Deployment alias URL: https://staging.3d-printing-pal.pages.dev
+**0.3.0 — undo, and reordering a column without a drag.** Delete a spool that
+several jobs draw on and press Undo: the spool and all of its links come back
+together rather than one at a time. Add a picture to a model, save, then Undo, and
+the picture goes with it. Open Move on a card and put it before another card in
+the same column. The strip under the tabs should name the last change every time,
+and should stay put rather than disappearing while it is being read.
 
-Its Gates run is green with all eighteen gate steps having **executed** — checked
-step by step rather than read off the run's conclusion, because the previous
-commit's run also had a conclusion and fifteen of its steps never ran.
+**0.4.0 — a job can make its model.** The Model box takes a typed name and the box
+fills from the job's title, so the ordinary case is no typing at all. Add a job
+called something that is not in Models and check it appears there. Add another job
+with the same name in different capitals and check a second one does NOT appear.
+Then press Undo and check the job and its model both go.
 
-Undo, and reordering a column without a drag. The two go together on purpose:
-reordering by button needed a way back for a press that put a card in the wrong
-place, and undo needed something worth undoing to be measured against.
-
-What to try on the device, because none of it can be confirmed from a session:
-delete a spool that several jobs draw on and press Undo — the spool and all of
-its links come back together, not one at a time. Add a picture to a model, save,
-then Undo, and the picture goes with it. Open Move on a card and put it before
-another card in the same column. The strip under the tabs should name the last
-change every time, and should stay put rather than disappearing while it is being
-read.
+None of that can be confirmed from a session — this sandbox reaches no external
+site, and a browser walk proves the code, not the device.
 
 **0.1.1 never reached production on its own, and that was deliberate.** Its entire
 content was the link preview card, which 0.1.2 redrew; promoting it separately

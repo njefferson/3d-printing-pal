@@ -7,6 +7,33 @@
 
 export const RELEASES = [
   {
+    "version": "0.4.0",
+    "kind": "CAPABILITY",
+    "date": "2026-08-22",
+    "summary": "A model no longer has to exist before a job can name it. Adding the job adds the model.",
+    "added": [
+      "The Model box on a job is a name you type rather than a list you pick from. If the name is not in your models yet, saving the job adds it — no leaving the form, adding a model, and coming back.",
+      "The box fills itself in from the job's title, so a job named after the thing being printed needs no typing at all. Type over it or clear it whenever the two are not the same.",
+      "Under the box it says which of the two things saving will do — \"Links to Benchy, already in your models\" or \"Benchy will be added to your models\" — before you save rather than after. A name that differs only in capitals or spacing counts as the same model, so a stray space does not make a second one.",
+      "Undo takes back both together. A job that added a model, undone, leaves neither.",
+      "The names you already have are offered as suggestions as you type."
+    ],
+    "fixed": [
+      "A job could only be attached to a model that had already been entered, which made adding a model a prerequisite for recording work rather than something to do when there was a reason to."
+    ],
+    "broken": [
+      "The Model box never renames anything. Editing it points the job at a different model, or makes one; a model is renamed in Models, where the rest of its details are. That is on purpose, because a box on a job that could rename a model would quietly rewrite it everywhere.",
+      "A model added this way has only a name. Designer, tags, links and listings are filled in on the model itself when there is something to put there.",
+      "Undo lasts for as long as the app is open. Closing it, or reloading the page, starts again with nothing to undo — something deleted yesterday comes back from a backup, not from here.",
+      "Restoring a backup cannot be undone. It replaces everything on purpose, and the way back is the safety copy the app downloads immediately before it does so.",
+      "Changing a filter, the currency or the sort order is not a change undo tracks. It covers jobs, spools and models — the things a wrong press loses.",
+      "A picture has to be added by hand. Dropping in an address cannot pull the photo from the page, because a browser is not allowed to read another site's pages.",
+      "Filament counts as used the moment it is logged against a job, whichever column that job is sitting in. That is the honest answer to how much is left on a spool, but it means a job parked in research with grams already logged has spent that filament as far as the inventory is concerned.",
+      "Costs and prices are plain numbers with a currency symbol you choose. There is no per-currency formatting and no conversion.",
+      "An installed app on iPadOS will not always let a waiting update take over while the app is open. If the version at the bottom of the screen is not the one you expect, close the app fully and open it again."
+    ]
+  },
+  {
     "version": "0.3.0",
     "kind": "CAPABILITY",
     "date": "2026-08-22",
