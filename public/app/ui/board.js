@@ -28,10 +28,12 @@ import { openPanel, close, registerPanel, say } from './panels.js';
 
 const cardNodes = new Map();
 let onEdit = () => {};
+let onOpenModel = () => {};
 let moveTargetId = null;
 
-export function initBoard({ onEditJob }) {
+export function initBoard({ onEditJob, onOpenModel: openModelFor }) {
   onEdit = onEditJob;
+  onOpenModel = openModelFor;
   registerPanel('dlg-move', { onClose: () => { moveTargetId = null; } });
 
   const board = $('#board');
@@ -159,6 +161,12 @@ function buildCard(job) {
   // when the model has no link, or the job has no model.
   const sourceLink = el('a', { class: 'btn card-source', rel: 'noopener noreferrer', target: '_blank' });
   sourceLink.hidden = true;
+  // WHICH MODEL, AND A WAY INTO IT. The card showed a model's picture without
+  // ever naming it, so the only route from a job to the thing it prints was the
+  // Models tab and a hunt. This says which and opens it. Hidden when the job has
+  // no model, like the source link beside it.
+  const modelBtn = el('button', { type: 'button', class: 'btn card-model' });
+  modelBtn.hidden = true;
 
   const thumb = el('div', { class: 'card-thumb' });
 
@@ -168,13 +176,17 @@ function buildCard(job) {
     el('div', { class: 'card-top' }, el('div', { class: 'card-topmain' }, badge, title), grip),
     thumb,
     meta,
-    el('div', { class: 'card-actions' }, moveBtn, editBtn, sourceLink),
+    el('div', { class: 'card-actions' }, moveBtn, editBtn, modelBtn, sourceLink),
   );
 
-  node._parts = { grip, title, badge, meta, moveBtn, editBtn, thumb, sourceLink };
+  node._parts = { grip, title, badge, meta, moveBtn, editBtn, thumb, sourceLink, modelBtn };
 
   moveBtn.addEventListener('click', () => openMove(job.id, moveBtn));
   editBtn.addEventListener('click', () => onEdit(node.dataset.jobId));
+  modelBtn.addEventListener('click', () => {
+    const current = store.state.jobs.find((j) => j.id === node.dataset.jobId);
+    if (current?.modelId) onOpenModel(current.modelId, modelBtn);
+  });
 
   // The grip is draggable, but it is also a real button: pressing it with a
   // keyboard opens the same move list, so the grip is never a dead control for
@@ -217,6 +229,23 @@ function updateCard(node, job) {
   if (job.type === 'request' && job.requester) bits.push(`For: ${job.requester}`);
   clear(p.meta);
   for (const bit of bits) p.meta.append(el('span', { text: bit }));
+
+  /* Named on the card rather than only implied by its picture — but NOT when the
+   * name is the job's own title, which is now the ordinary case, because the Model
+   * box fills itself from the title. Printing the same words twice cost three
+   * lines of a card and told the reader nothing; the button still says what it
+   * opens, and the accessible name carries the model's name either way so anyone
+   * who cannot see the title above it still hears which model this is. */
+  if (model) {
+    const name = model.name || 'unnamed';
+    const same = normalise(name) === normalise(job.title);
+    p.modelBtn.hidden = false;
+    p.modelBtn.textContent = same ? 'Open the model' : `Model: ${name}`;
+    p.modelBtn.setAttribute('aria-label', same ? `Open the model ${name}` : `Model: ${name} — open it`);
+  } else {
+    p.modelBtn.hidden = true;
+    p.modelBtn.textContent = '';
+  }
 
   // The first source the model carries. `http(s)` only, checked here rather than
   // trusted from the record, because an imported file is somebody else's bytes.
@@ -325,6 +354,12 @@ function nextSiblingOf(job, siblings) {
 
 function labelFor(id) {
   return COLUMNS.find((c) => c.id === id)?.label || id;
+}
+
+/** Trimmed, inner whitespace collapsed, case folded — the same comparison the
+ *  store uses to decide whether a typed name is a model it already has. */
+function normalise(text) {
+  return String(text || '').trim().replace(/\s+/g, ' ').toLocaleLowerCase();
 }
 
 /** Only http(s) reaches an href. A `javascript:` source row is a stored hazard. */

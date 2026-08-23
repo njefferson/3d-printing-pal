@@ -81,7 +81,7 @@ async function seed(page) {
   ]) {
     await page.click('#job-new');
     await page.fill('#job-f-title', job.title);
-    await page.selectOption('#job-f-type', job.type);
+    await page.check(`input[name="job-type"][value="${job.type}"]`);
     if (job.type === 'request') await page.fill('#job-f-requester', 'Ada Lovelace');
     await page.fill('#job-f-printer', 'Prusa MK4');
     if (job.price) await page.fill('#job-f-price', job.price);
@@ -654,7 +654,7 @@ async function main() {
     pass(`one paste fills the name and says what happens: "${filled.hint}"`);
   }
 
-  await page.selectOption('#job-f-type', 'request');
+  await page.check('input[name="job-type"][value="request"]');
   await page.fill('#job-f-requester', 'John');
   await page.click('#job-save');
   await page.waitForTimeout(340);
@@ -756,7 +756,7 @@ async function main() {
   await page.click('#tab-board');
   await page.click('#job-new');
   await page.fill('#job-f-title', 'Gift box run');
-  await page.selectOption('#job-f-type', 'request');
+  await page.check('input[name="job-type"][value="request"]');
   await page.fill('#job-f-requester', 'Ada Lovelace');
   // By NAME, and typed over whatever the title mirrored in. This existing model
   // must be MATCHED rather than duplicated — the assertion below reads the

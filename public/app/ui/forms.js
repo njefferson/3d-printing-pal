@@ -37,6 +37,7 @@ export function initForms() {
   const materials = $('#materials');
   for (const material of MATERIALS) materials.append(el('option', { value: material }));
 
+  // `change` bubbles from a radio, so the fieldset hears all three.
   $('#job-f-type').addEventListener('change', syncRequesterVisibility);
   $('#job-f-addlink').addEventListener('click', () => addLinkRow());
 
@@ -87,7 +88,7 @@ export function openJob(id, opener) {
 
   $('#job-title').textContent = job ? 'Edit job' : 'Add job';
   $('#job-f-title').value = job?.title || '';
-  $('#job-f-type').value = job?.type || 'fun';
+  setJobType(job?.type || 'fun');
   $('#job-f-requester').value = job?.requester || '';
   $('#job-f-printer').value = job?.printer || '';
   $('#job-f-quantity').value = job?.quantity ?? 1;
@@ -129,9 +130,21 @@ export function openJob(id, opener) {
   $('#job-f-title').focus();
 }
 
+/* The type is three radios rather than a select, so it has no `.value` of its
+ * own. One reader and one writer here, so no call site has to know the shape —
+ * which is what let the select become radios without touching anything else. */
+function jobType() {
+  return document.querySelector('input[name="job-type"]:checked')?.value || 'fun';
+}
+
+function setJobType(value) {
+  const wanted = document.querySelector(`input[name="job-type"][value="${value}"]`)
+    || document.querySelector('input[name="job-type"][value="fun"]');
+  if (wanted) wanted.checked = true;
+}
+
 function syncRequesterVisibility() {
-  const isRequest = $('#job-f-type').value === 'request';
-  $('#job-f-requester-field').hidden = !isRequest;
+  $('#job-f-requester-field').hidden = jobType() !== 'request';
 }
 
 // ------------------------------------------------------------- the model box
@@ -261,8 +274,8 @@ async function onSaveJob(event) {
   await store.saveJob({
     id: editing.job,
     title: $('#job-f-title').value,
-    type: $('#job-f-type').value,
-    requester: $('#job-f-type').value === 'request' ? $('#job-f-requester').value : '',
+    type: jobType(),
+    requester: jobType() === 'request' ? $('#job-f-requester').value : '',
     modelName,
     sourceUrl: $('#job-f-link').value,
     printer: $('#job-f-printer').value,

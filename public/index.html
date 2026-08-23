@@ -314,14 +314,36 @@
         <input type="text" id="job-f-title" required autocomplete="off">
       </div>
 
-      <div class="field">
-        <label for="job-f-type">Type</label>
-        <select id="job-f-type">
-          <option value="request">Request — somebody asked for it</option>
-          <option value="wanted">Wanted — you want one</option>
-          <option value="fun">Fun — just printing it</option>
-        </select>
-      </div>
+      <!-- THREE RADIOS, NOT A DROPDOWN. One of three, all worth seeing at once, and
+           on a touch device a <select> is two gestures and a picker wheel that
+           covers half the screen. These are one tap and the choice is readable
+           without making it.
+
+           A real <fieldset>/<legend> and real radios: the grouping and the
+           one-of-many semantics come from the elements, so nothing has to be
+           reconstructed with ARIA, and arrow keys move between them for free.
+           They are drawn like the board's filter chips because that is already
+           this app's word for "a small choice you press". -->
+      <fieldset class="fieldset field-type" id="job-f-type">
+        <legend>Type</legend>
+        <div class="typeset">
+          <label class="typeopt">
+            <input type="radio" name="job-type" value="request">
+            <span class="typeopt-label">Request</span>
+            <span class="typeopt-note">somebody asked</span>
+          </label>
+          <label class="typeopt">
+            <input type="radio" name="job-type" value="wanted">
+            <span class="typeopt-label">Wanted</span>
+            <span class="typeopt-note">you want one</span>
+          </label>
+          <label class="typeopt">
+            <input type="radio" name="job-type" value="fun">
+            <span class="typeopt-label">Fun</span>
+            <span class="typeopt-note">just printing it</span>
+          </label>
+        </div>
+      </fieldset>
 
       <div class="field" id="job-f-requester-field">
         <label for="job-f-requester">Who asked for it</label>

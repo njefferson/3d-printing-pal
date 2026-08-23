@@ -116,6 +116,15 @@ jobs:
         run: node .hub/scripts/check-textsize.mjs public/styles.css public/index.html
 
       # ------------------------------------------------------------ this repo's
+      # FIRST, because it is the one that says whether the rest of this list is
+      # the rest of the list. The gates below are named steps rather than one
+      # `npm run check`, so that a red run says WHICH gate — and the cost of that
+      # is two lists with nothing holding them together. `shell` and `fromurl`
+      # were written, planted red, and added only to the chain: both passed
+      # locally and neither had ever run here.
+      - name: Every gate runs both locally and here
+        run: npm run --silent parity
+
       - name: Patch notes — one source, no drift
         run: npm run --silent notes:check
 
@@ -124,6 +133,21 @@ jobs:
 
       - name: Interactions — every drag has a non-drag path
         run: npm run --silent interactions
+
+      # The markup the app boots from, before any of it runs.
+      - name: App shell — the served page is the one the app expects
+        run: npm run --silent shell
+
+      # Nine real model addresses, each with the name it must produce. No browser.
+      - name: A pasted address becomes the right name
+        run: npm run --silent fromurl
+
+      # status.html is served by this deploy and is not the app, so nothing else
+      # here measures it: the a11y gate derives its surfaces from index.html, and
+      # palette-check reads the palette file rather than status.css, which is a
+      # hand copy of it.
+      - name: Status page — contrast, landmarks, and never cached
+        run: npm run --silent status
 
       # icon.svg at the root is the one source; public/icon.svg is generated from
       # it. This compares them and needs no browser, so unlike the render itself

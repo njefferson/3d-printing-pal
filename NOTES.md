@@ -426,14 +426,15 @@ share sheet, home-screen install, and the iPadOS behaviour below.
 
 ## The status page (Doctrine §7i)
 
-This work has run across several releases, so it carries a live status artifact:
+This work has run across several releases, so it carries a live status page. It
+ships inside `public/` and deploys with the app:
 
-    https://claude.ai/code/artifact/825e4c39-f855-4ff1-b515-fd65f8544b4e
+    https://3d-printing-pal.pages.dev/status.html
 
-**Redeploy that SAME URL at each stage — never publish a new one.** A fresh link
-per update is a new thing to lose, which is the problem the page solves. From a
-conversation that did not publish it, pass the URL back as `url`; from one that
-did, republishing the same file path keeps it.
+**It used to be a published artifact and is not any more.** Every update to that
+asked for permission again, so a page whose whole value is that it is always
+current became a thing that had to be re-approved before it could be. It is now a
+file in this repo, updated by editing it and pushing.
 
 **Hand the link over in every reply that reports progress.** Not once at
 creation — every time. Being asked for it is the signal this was skipped.
@@ -442,6 +443,35 @@ It has to carry the version on staging, the version in production, and the last
 SHA verified green; what is waiting on THE OWNER marked apart from what is waiting on
 the work; and what was found and NOT fixed alongside what was checked and found
 not to be a defect. A page that only lists wins is an advertisement.
+
+**It is in the deploy but not in the app, and that took two pieces.** It is absent
+from the service worker's `SHELL`, which is the obvious half and is not enough on
+its own: the fetch handler caches everything it successfully fetches, so one visit
+would have pinned it inside the release cache and served that copy until a release
+rotated the name. A page claiming to be always current would then have been stale
+for exactly as long as nobody shipped. `sw.js` names both files in `LIVE` and
+returns without responding, leaving them to the network. `tools/update-walk.mjs`
+reads it twice against a real worker and asserts the cache kept none of it — with
+the app's own `styles.css` as the control, because if nothing were cached the test
+would pass while proving nothing.
+
+**Nothing was measuring it, and it looked covered.** `tools/a11y.mjs` derives its
+surfaces from `index.html`, and `palette-check` reads `palettes/3d-printing-pal.json`
+rather than any stylesheet — so `status.css`, which is a hand copy of those tokens,
+was checked by nothing at all. `tools/status-check.mjs` is that gate: contrast over
+every gradient stop actually behind the text, bullet contrast for SC 1.4.11, axe,
+that the stylesheet APPLIED rather than merely arrived, and no console errors under
+the deployed headers — in both themes at two widths. It found the page had no
+`main` landmark and five sections outside any landmark.
+
+**The contrast helper is imported, not copied.** A second one was written for this
+gate and it compared dark text against an assumed-black body, because the body's
+background is a gradient and a gradient has no `backgroundColor` — it reported
+1.32:1 in light mode and clean in dark, and both numbers were invented. Axe had
+said as much by reporting `color-contrast` as `incomplete` rather than passing it.
+`backdrops()` in `tools/page-helpers.mjs` is the code that gets this right; it
+lives in its own file because importing it from `a11y.mjs` runs that whole gate as
+a side effect of wanting one string.
 
 ---
 
@@ -460,8 +490,12 @@ these.
   load-bearing ones, because *cannot* is what stops the next session building the
   thing. It still said the Move button could not reorder within a column.
 - **The staged candidate** and **Shipped to production**, below.
-- The **Found and not fixed** section of the live status page, whose address is
-  recorded above.
+- **`public/status.html`** — the live status page, at
+  https://3d-printing-pal.pages.dev/status.html. Hand-maintained and deployed with
+  the app, so it is exactly the kind of file a release leaves behind. It replaced a
+  document that had to be re-sent and re-approved every time it changed; the point
+  of a live page is that there is ONE address that is always current, which is only
+  true if it is actually updated.
 
 Both stale entries were found by a later feature happening to touch the same file.
 Nothing looked for them and nothing would have, and the next thing that would have
@@ -479,13 +513,16 @@ the log and check whether the steps ran or were skipped.
 
 ### The staged candidate
 
-**0.5.1 is on staging**, at https://staging.3d-printing-pal.pages.dev — the
-candidate is **0.5.1**.
+**0.6.0 is on staging**, at https://staging.3d-printing-pal.pages.dev — the
+candidate is **0.6.0**.
 
-A job with no picture no longer leaves a picture-sized gap, so more of the board
-fits on a screen. To try: look at a column of jobs that have no photographs and
-check the cards are the height of their words. A job whose model has a picture
-should still show it.
+The model a job prints is named on its card and opens from there, and the job type
+is three buttons instead of a dropdown. To try: press the model button on a card
+and check it lands on the right model with the Models tab showing; open a job and
+check the three type buttons read well under a thumb.
+
+**0.5.1 reached production on 2026-08-22** — a job with no picture no longer
+leaves a picture-sized gap.
 
 **Verified at `191e8de`.** Its deploy steps RAN rather than skipped, and its log
 printed:
@@ -531,6 +568,34 @@ against a pin from before that file existed and could only ever print
 **Move the pin in the same commit as the step, and verify the file is present at
 the new SHA** (`git cat-file -e <sha>:<file>` in the hub clone). The remedy is
 written beside the pin too. Hub LESSONS §117.
+
+### A gate can be written, planted red, and never run on a runner
+
+`npm run check` is one `&&` chain in `package.json`; `gates.yml` runs the same
+gates as separate NAMED STEPS, deliberately, because a run that reports one red X
+cannot be read by step and reading by step is what this repo learned the hard way.
+The cost of that is two lists, and nothing was comparing them.
+
+`shell` and `fromurl` were added to the chain and never to the workflow. Both were
+written, both were planted red, both passed locally, and **neither had ever run in
+CI** — `fromurl` for a release and `shell` for considerably longer. Nothing was
+wrong with either gate. They simply were not there, and a green Gates run said so
+in exactly the way it says everything else.
+
+This is worse than a missing gate, because the chain passing locally reads as
+coverage. It is the same shape as the deploy that never ran: the evidence that
+something happened is a green thing that never looked.
+
+`tools/gates-parity.mjs` compares the two lists in both directions and knows the
+two spellings CI uses — `npm run --silent <name>`, and a hub gate invoked directly
+as `node .hub/<file>.mjs` where the chain spells it `../noahjefferson/`.
+Exemptions are a declared list with a reason each, not a pattern. It asserts its
+OWN presence on both sides, so removing it from either is caught from the other.
+
+It went red on six real items the first time it ran, including one exemption that
+was wrong: `guard` looked like a CI-only gate and is not — CI invokes
+`branch-guard.mjs` directly rather than through npm, and the chain does not run it
+at all.
 
 ### A red gate does not stop a deploy — known, and not yet fixed
 

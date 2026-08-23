@@ -47,7 +47,11 @@ async function start() {
   wireOpeners();
   initConfirm();
   initForms();
-  initBoard({ onEditJob: (id) => openJob(id, document.activeElement) });
+  initBoard({
+    onEditJob: (id) => openJob(id, document.activeElement),
+    // Straight from the card to the model, without the Models tab and a hunt.
+    onOpenModel: (id, opener) => { showView('models'); openModel(id, opener); },
+  });
   initInventory({ onEditSpool: (id) => openSpool(id, document.activeElement) });
   initModels({ onEditModel: (id) => openModel(id, document.activeElement) });
   initBackup({ onImported: renderAll });

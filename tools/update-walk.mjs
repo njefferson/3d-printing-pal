@@ -201,6 +201,40 @@ async function main() {
   if (quietWhenCurrent) fail(`the update strip is showing with nothing waiting: "${quietWhenCurrent.text}"`);
   else pass('nothing is shown while the running copy is the current one');
 
+  // ---- 2b. the status page is LIVE, not cached ----------------------------
+  //
+  // Keeping it out of SHELL is not enough and looks like it is: the fetch handler
+  // caches everything it successfully fetches, so a single visit would pin that
+  // page inside the release cache and serve it from there until the next release
+  // rotated the name. A page whose whole claim is "one address, always current"
+  // would then be stale for exactly as long as nobody shipped.
+  //
+  // Read in a SECOND tab so the walk's own page keeps the state the rest of this
+  // depends on. Same origin, so the same worker sees it.
+  const side = await context.newPage();
+  const statusUrl = new URL('status.html', url).href;
+  await side.goto(statusUrl, { waitUntil: 'networkidle' });
+  await side.goto(statusUrl, { waitUntil: 'networkidle' });
+  await side.close();
+
+  const cached = await page.evaluate(async () => {
+    const out = [];
+    for (const name of await caches.keys()) {
+      const cache = await caches.open(name);
+      for (const request of await cache.keys()) out.push(new URL(request.url).pathname);
+    }
+    return out;
+  });
+  const live = cached.filter((path) => path.startsWith('/status'));
+  // The control: if the app itself is not in there either, this proves nothing.
+  if (!cached.includes('/styles.css')) {
+    fail('the app itself is not in the cache, so nothing can be concluded about what is kept out of it');
+  } else if (live.length) {
+    fail(`the worker cached ${live.join(' and ')} — the status page would be served from a release cache and go stale`);
+  } else {
+    pass('the status page was read twice and the worker kept none of it, while the app itself is cached');
+  }
+
   // ---- 3. a real second worker -------------------------------------------
   overrides['/sw.js'] = { body: swAtTag(WALK_TAGS[1]), type: 'text/javascript; charset=utf-8' };
   await page.evaluate(async () => { (await navigator.serviceWorker.getRegistration())?.update(); });

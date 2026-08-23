@@ -61,6 +61,7 @@ const VIEWPORTS = [
 
 const failures = [];
 const exemptions = [];
+const viaLabels = new Set();
 const passes = [];
 
 function fail(where, message) {
@@ -101,6 +102,7 @@ const STATE_TEXT = {
     '.badge-fun',
     '.card-grip',
     '.card-source',
+    '.card-model',
   ],
   inventory: [...BASE_TEXT, '.rowcard-title', '.rowcard-sub', '.remaining', '.note'],
   models: [...BASE_TEXT, '.rowcard-title', '.rowcard-sub', '.remaining'],
@@ -112,7 +114,8 @@ const STATE_TEXT = {
   // `.note` is the Model box's hint, which is ALWAYS on screen — that is what
   // makes it registerable. It shares the class with #job-f-nospools, which is
   // hidden once a spool exists and so is filtered out before measuring.
-  job: ['#dlg-job h2', '#dlg-job label', '#dlg-job legend', '#dlg-job .note', '#dlg-job .btn'],
+  job: ['#dlg-job h2', '#dlg-job label', '#dlg-job legend', '#dlg-job .note', '#dlg-job .btn',
+        '#dlg-job .typeopt-label', '#dlg-job .typeopt-note'],
   // The EDIT form, which is a different surface from the add form by exactly one
   // control: Delete. That button was registered against the add form and matched
   // for the wrong reason — `.btn` sets `display: inline-flex`, which outbid the UA
@@ -123,7 +126,8 @@ const STATE_TEXT = {
   // The same form with the Model box holding a name that is not in the models, so
   // the save-this-as-a-model tick is on screen. It is hidden in every other state,
   // which is exactly why it needs one of its own.
-  'job-newmodel': ['#dlg-job h2', '#dlg-job label', '#dlg-job legend', '#dlg-job .note', '#dlg-job .btn'],
+  'job-newmodel': ['#dlg-job h2', '#dlg-job label', '#dlg-job legend', '#dlg-job .note', '#dlg-job .btn',
+                   '#dlg-job .typeopt-label', '#dlg-job .typeopt-note'],
   spool: ['#dlg-spool h2', '#dlg-spool label', '#dlg-spool .btn', '#dlg-spool .note'],
   model: ['#dlg-model h2', '#dlg-model label', '#dlg-model legend', '#dlg-model .btn'],
   move: ['#dlg-move h2', '#dlg-move p', '#dlg-move h3', '#dlg-move .btn'],
@@ -132,7 +136,7 @@ const STATE_TEXT = {
 };
 
 const STATE_NONTEXT = {
-  board: ['.btn', '.iconbtn', '.chip', '.card', '.column', '.card-grip', '.column-toggle', '.card-source'],
+  board: ['.btn', '.iconbtn', '.chip', '.card', '.column', '.card-grip', '.column-toggle', '.card-source', '.card-model'],
   inventory: ['.btn', '.rowcard', 'select', 'input[type="checkbox"]', '.bar'],
   models: ['.btn', '.rowcard'],
   'update-stuck': ['.strip', '.btn'],
@@ -144,7 +148,7 @@ const STATE_NONTEXT = {
   // which is text, so its border carries no information a reader needs to
   // identify a component. It is drawn with --hairline, which the palette spec
   // exempts as decoration.
-  job: ['#dlg-job input[type="text"]', '#dlg-job input[type="url"]', '#dlg-job select', '#dlg-job textarea', '#dlg-job .btn', '#dlg-job input[list]'],
+  job: ['#dlg-job input[type="text"]', '#dlg-job input[type="url"]', '#dlg-job select', '#dlg-job textarea', '#dlg-job .btn', '#dlg-job input[list]', '#dlg-job .typeopt'],
   'job-newmodel': ['#dlg-job input[type="text"]', '#dlg-job select', '#dlg-job textarea', '#dlg-job .btn', '#dlg-job input[type="checkbox"]'],
   'job-edit': ['#dlg-job input[type="text"]', '#dlg-job select', '#dlg-job .btn', '#dlg-job .btn-danger'],
   spool: ['#dlg-spool input[type="text"]', '#dlg-spool input[type="number"]', '#dlg-spool .btn'],
@@ -341,129 +345,11 @@ async function closeEverything(page) {
 
 // ---------------------------------------------------------- in-page checks
 //
-// Everything below runs inside the page. Contrast is computed rather than taken
-// from axe, which reports color-contrast as `incomplete` (not a violation) on
-// transformed content — a green axe run over such content proves nothing.
-
-const PAGE_HELPERS = `
-function parseColor(value) {
-  const m = String(value).match(/rgba?\\(([^)]+)\\)/);
-  if (!m) return null;
-  const parts = m[1].split(/[,\\s/]+/).filter(Boolean).map(Number);
-  return { r: parts[0], g: parts[1], b: parts[2], a: parts.length > 3 ? parts[3] : 1 };
-}
-
-function lum(c) {
-  const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
-  return 0.2126 * f(c.r) + 0.7152 * f(c.g) + 0.0722 * f(c.b);
-}
-
-function ratio(a, b) {
-  const la = lum(a), lb = lum(b);
-  return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
-}
-
-function over(fg, bg) {
-  if (fg.a >= 1) return fg;
-  return {
-    r: fg.r * fg.a + bg.r * (1 - fg.a),
-    g: fg.g * fg.a + bg.g * (1 - fg.a),
-    b: fg.b * fg.a + bg.b * (1 - fg.a),
-    a: 1,
-  };
-}
-
-/* Every opaque background an element could actually be drawn over, including
-   every colour stop of any gradient in the ancestor chain. The worst is used.
-   Anything below full alpha is NOT opaque and the walk continues — measuring
-   against a translucent layer gives a number that is wrong in a direction
-   nobody notices. If nothing opaque is found the caller REFUSES TO GUESS. */
-function backdrops(el) {
-  const found = [];
-  let node = el;
-  while (node && node !== document.documentElement.parentNode) {
-    const cs = getComputedStyle(node);
-    const bg = parseColor(cs.backgroundColor);
-    const image = cs.backgroundImage || '';
-    for (const stop of image.matchAll(/rgba?\\([^)]+\\)/g)) {
-      const c = parseColor(stop[0]);
-      if (c && c.a > 0.95) found.push(c);
-    }
-    if (bg && bg.a >= 1) { found.push(bg); return found; }
-    if (bg && bg.a > 0) found.push(bg);
-    node = node.parentElement;
-  }
-  return found;
-}
-
-function visible(el) {
-  const r = el.getBoundingClientRect();
-  if (r.width <= 0 || r.height <= 0) return false;
-  const cs = getComputedStyle(el);
-  return cs.visibility !== 'hidden' && cs.display !== 'none';
-}
-
-/* A rect clipped by every scrolling ancestor. A control inside a scroll
-   container has a bounding rect that runs past the container, which produces
-   spacing failures against neighbours it can never actually touch. */
-function clippedRect(el) {
-  let r = el.getBoundingClientRect();
-  let node = el.parentElement;
-  while (node) {
-    const cs = getComputedStyle(node);
-    if (cs.overflow !== 'visible' || cs.overflowX !== 'visible' || cs.overflowY !== 'visible') {
-      const c = node.getBoundingClientRect();
-      const left = Math.max(r.left, c.left), right = Math.min(r.right, c.right);
-      const top = Math.max(r.top, c.top), bottom = Math.min(r.bottom, c.bottom);
-      r = { left, right, top, bottom, width: Math.max(0, right - left), height: Math.max(0, bottom - top) };
-    }
-    node = node.parentElement;
-  }
-  return r;
-}
-
-function accessibleName(el) {
-  const labelledby = el.getAttribute('aria-labelledby');
-  if (labelledby) {
-    const parts = labelledby.split(/\\s+/).map((id) => document.getElementById(id)?.textContent || '').join(' ');
-    if (parts.trim()) return parts.trim();
-  }
-  const aria = el.getAttribute('aria-label');
-  if (aria && aria.trim()) return aria.trim();
-  if (el.id) {
-    const label = document.querySelector('label[for="' + CSS.escape(el.id) + '"]');
-    if (label) return label.textContent.trim();
-  }
-  const closestLabel = el.closest('label');
-  if (closestLabel) return closestLabel.textContent.trim();
-  const text = (el.innerText || el.textContent || '').trim();
-  if (text) return text;
-  const title = el.getAttribute('title');
-  return title ? title.trim() : '';
-}
-
-/* Only text a sighted reader can actually see: aria-hidden subtrees and
-   .sr-only text are not visible words for SC 2.5.3 to be about. */
-function visibleWords(el) {
-  const clone = el.cloneNode(true);
-  for (const hidden of clone.querySelectorAll('[aria-hidden="true"], .sr-only')) hidden.remove();
-  return (clone.textContent || '').replace(/\\s+/g, ' ').trim();
-}
-
-/* The root of a modal is the open dialog when there is one: everything behind it
-   is inert, and sweeping the whole document produces dozens of imaginary
-   collisions with controls nobody can reach. */
-function auditRoot() {
-  /* :modal returns dialogs in the top layer, in stacking order, so the LAST is
-     the one actually on top. Taking the first open dialog in DOM order audited
-     the panel underneath a stacked confirmation and reported every selector in
-     the real top panel as matching nothing. */
-  let stack = [];
-  try { stack = Array.from(document.querySelectorAll('dialog:modal')); } catch { stack = []; }
-  if (!stack.length) stack = Array.from(document.querySelectorAll('dialog[open]'));
-  return stack.length ? stack[stack.length - 1] : document.body;
-}
-`;
+// The code that runs inside the page lives in tools/page-helpers.mjs, because
+// tools/status-check.mjs needs the same contrast machinery and importing it from
+// HERE would run this whole gate — main() is called at module load. See that
+// file for why contrast is computed rather than taken from axe.
+import { PAGE_HELPERS } from './page-helpers.mjs';
 
 async function measureState(page, state, theme, viewport) {
   const where = `${state.name}/${theme}/${viewport.name}`;
@@ -490,7 +376,7 @@ async function measureState(page, state, theme, viewport) {
       // eslint-disable-next-line no-eval
       eval(helpers);
 
-      const out = { text: [], nonText: [], targets: [], spacing: [], structure: [], exempt: [], names: [] };
+      const out = { text: [], nonText: [], targets: [], spacing: [], structure: [], exempt: [], viaLabel: [], names: [] };
       const root = auditRoot();
 
       // Text contrast, per registered selector. Matching nothing FAILS.
@@ -599,7 +485,24 @@ async function measureState(page, state, theme, viewport) {
       const measured = [];
       for (const el of interactive) {
         const cs = getComputedStyle(el);
-        const r = clippedRect(el);
+
+        /* A CONTROL INSIDE ITS OWN <label> IS PRESSED BY PRESSING THE LABEL, so
+         * the label is the target and the label is what gets measured. That is a
+         * fact about the DOM rather than a waiver, and it is narrow: `.field-check`
+         * puts its checkbox BESIDE a `<label for>` rather than inside one, so it
+         * is unaffected and still has to be its own 44px square. Every use is
+         * printed, so this can never become an invisible hole.
+         *
+         * Without it the gate reported three 18px radios in a chip-shaped control
+         * whose pressable area is the 44px pill around each of them — a failure
+         * about the wrong element, which is the kind that gets "fixed" by making
+         * the visible design worse. */
+        const wrapper = el.closest('label');
+        const viaLabel = Boolean(wrapper) && wrapper !== el;
+        const box = viaLabel ? wrapper : el;
+        if (viaLabel) out.viaLabel.push(`${describe(el)} inside ${describe(wrapper)}`);
+
+        const r = clippedRect(box);
         const label = (el.tagName === 'BUTTON' || el.tagName === 'A' ? visibleWords(el) : '') || '';
         const aria = el.getAttribute('aria-label');
 
@@ -608,7 +511,7 @@ async function measureState(page, state, theme, viewport) {
         // zero width and is still a 44px control the moment it scrolls in —
         // measuring size against the clip reports every off-screen control as
         // 0x44 and buries the real failures.
-        const own = el.getBoundingClientRect();
+        const own = box.getBoundingClientRect();
 
         // SC 2.5.8's inline-in-a-sentence exception, applied and PRINTED.
         const inline = cs.display === 'inline';
@@ -737,6 +640,9 @@ async function measureState(page, state, theme, viewport) {
     else if (VERBOSE) pass(where, `non-text ${row.selector} ${row.got}:1`);
   }
   for (const t of result.targets) fail(where, `touch target ${t.w}x${t.h}px is under ${MIN_TARGET}px: ${t.el}`);
+  // Printed rather than silent, on the same principle as the SC 2.5.8 exemptions:
+  // a measurement taken on something other than the element named has to say so.
+  for (const v of result.viaLabel || []) viaLabels.add(`${where}: ${v}`);
   for (const s of result.spacing) fail(where, `targets ${s.gap}px apart, under our ${MIN_SPACING}px floor: ${s.a} and ${s.b}`);
   for (const s of result.structure) fail(where, s);
   for (const d of result.duplicateNames) {
@@ -1189,6 +1095,50 @@ async function checkDiagnosticPrivacy(page) {
   if (!failures.some((f) => f.startsWith(where))) pass(where, 'leads with a diagnosis, carries maxTouchPoints and cache state, contains nothing the reader wrote');
 }
 
+/**
+ * The model button goes somewhere, and somewhere RIGHT.
+ *
+ * A control that exists, is named, contrasts and meets the target floor can still
+ * be wired to nothing — every one of those questions is about the button and none
+ * is about what pressing it does. This presses it and reads where it landed.
+ */
+async function checkModelRoute(page) {
+  await closeEverything(page);
+  await showView(page, 'board');
+
+  const named = await page.evaluate(() => {
+    const button = document.querySelector('.card .card-model');
+    if (!button || button.hidden) return null;
+    return { text: button.textContent, name: button.getAttribute('aria-label') || '' };
+  });
+  if (!named) {
+    fail('model-route', 'no card offers a way into the model it prints, so the only route is the Models tab and a hunt');
+    return;
+  }
+
+  await press(page, '.card .card-model');
+  await page.waitForTimeout(220);
+
+  const landed = await page.evaluate(() => ({
+    open: document.getElementById('dlg-model').open,
+    name: document.getElementById('model-f-name').value,
+    view: document.querySelector('.tab[aria-current="page"]')?.textContent,
+  }));
+
+  if (!landed.open) {
+    fail('model-route', `pressing "${named.text}" did not open the model`);
+  } else if (!named.name.includes(landed.name)) {
+    fail('model-route', `pressing "${named.text}" opened "${landed.name}", which its accessible name "${named.name}" does not mention`);
+  } else if (!named.name.includes(named.text.trim())) {
+    fail('model-route', `the button reads "${named.text}" and answers to "${named.name}", which does not contain it (SC 2.5.3)`);
+  } else if (landed.view !== 'Models') {
+    fail('model-route', `the model opened over the ${landed.view} tab, so closing it leaves the reader somewhere they did not choose`);
+  } else {
+    pass('model-route', `"${named.text.trim()}" opens ${landed.name} on the Models tab, from the board`);
+  }
+  await closeEverything(page);
+}
+
 async function checkInteractionSelectors(page) {
   const where = 'interactions/live';
   const spec = JSON.parse(readFileSync(join(ROOT, 'INTERACTIONS.json'), 'utf8'));
@@ -1269,7 +1219,7 @@ async function seed(page) {
   for (const job of jobs) {
     await press(page, '#job-new');
     await page.fill('#job-f-title', job.title);
-    await page.selectOption('#job-f-type', job.type);
+    await page.check(`input[name="job-type"][value="${job.type}"]`);
     if (job.type === 'request') await page.fill('#job-f-requester', 'Ada Lovelace');
     await page.fill('#job-f-printer', job.printer);
     await page.fill('#job-f-quantity', job.qty);
@@ -1413,6 +1363,7 @@ async function main() {
 
   await seed(page);
   await checkPressing(page);
+  await checkModelRoute(page);
   await checkInteractionSelectors(page);
   await checkInfoSurface(page);
   await checkDiagnosticPrivacy(page);
@@ -1449,6 +1400,10 @@ async function main() {
   // ---------------------------------------------------------------- report
   if (VERBOSE) {
     for (const p of passes) console.log(`  ok   ${p}`);
+  }
+  if (viaLabels.size) {
+    console.log(`\nMEASURED ON THE LABEL (${viaLabels.size}) — a control inside its own <label> is pressed by pressing the label`);
+    for (const v of [...viaLabels].sort()) console.log(`  ${v}`);
   }
   if (exemptions.length) {
     console.log(`\nEXEMPTED (${exemptions.length}) — SC 2.5.8 inline-in-a-sentence, reported, never silent`);

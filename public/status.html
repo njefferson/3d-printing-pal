@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>print-tracker — where it stands</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#1a1a1a" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#c4bcab" media="(prefers-color-scheme: light)">
+<link rel="icon" type="image/svg+xml" href="./icon.svg">
+<link rel="stylesheet" href="./status.css">
+</head>
+<body>
+
+<!--
+  A LIVE PAGE RATHER THAN A DOCUMENT SENT OVER, because the point of it is that
+  there is ONE address that is always current. It ships with the app but is not
+  part of the app: nothing links to it, the service worker does not precache it,
+  and it carries no script.
+
+  IT IS HAND-MAINTAINED, which makes it exactly the kind of file that goes stale
+  the moment a release forgets it. It is named in NOTES.md under "What a release
+  has to go back and close", beside the other lists with the same hazard.
+-->
+
+<div class="page">
+
+  <header>
+    <p class="eyebrow">print-tracker · status</p>
+    <h1>Where it stands</h1>
+    <p class="lede">One page that stays current, at one address. Everything here was read from a
+      run log or a git remote, not inferred from a command exiting quietly.</p>
+    <p class="lede"><b>0.6.0 is on staging. 0.5.1 is live.</b></p>
+  </header>
+
+  <main>
+
+  <section aria-label="Where each version is right now">
+    <div class="now">
+      <div class="now-row">
+        <span class="now-label">In production</span>
+        <span class="now-value">0.5.1 — <a href="https://3d-printing-pal.pages.dev">3d-printing-pal.pages.dev</a></span>
+        <span class="now-sub">Promoted 2026-08-22 as a clean fast-forward, with ancestry checked
+          before the push and the remote read back after. The deploy ran with
+          <code>--branch=main</code>.</span>
+      </div>
+      <div class="now-row">
+        <span class="now-label">On staging</span>
+        <span class="now-value">0.6.0 — <a href="https://staging.3d-printing-pal.pages.dev">staging.3d-printing-pal.pages.dev</a></span>
+        <span class="now-sub">The model a job prints is named on its card and opens from there, and
+          the job type is three buttons instead of a dropdown. Nothing is promoted until you
+          say.</span>
+      </div>
+      <div class="now-row">
+        <span class="now-label">How a run is read</span>
+        <span class="now-value">By step, not by conclusion</span>
+        <span class="now-sub">Three ways a run can fail to mean what it looks like have all turned
+          up here: a conclusion with steps that never ran after an early failure; a conclusion of
+          <code>cancelled</code> from a push that superseded it, which measures nothing and is not
+          red either; and a green workflow that deployed nothing, which is what a fully-skipped
+          deploy looks like.</span>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-waiting">
+    <h2 id="h-waiting">Waiting on you</h2>
+    <p class="note">None of it is blocked on more work.</p>
+    <div class="card attention">
+      <ul class="list-yours">
+        <li><span><b>Try 0.6.0 on staging.</b> Open a job from a card and check the type buttons
+          read well under your thumb, then press the model button on a card and check it lands on
+          the right model.</span></li>
+        <li><span><b>Say whether to promote it.</b> Nothing reaches production without that.</span></li>
+        <li><span><b>Optionally delete <code>claude/print-tracker-app-em2f40</code>.</b> It is
+          stale. A session cannot delete a remote branch — GitHub → Branches → bin icon.</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-built">
+    <h2 id="h-built">What is built</h2>
+    <div class="card">
+      <ul class="list-done">
+        <li><span><b>The app.</b> Job kanban, filament inventory, model catalog, all in the browser
+          on your device. Remaining weight is computed on every read and never stored, so there is
+          no field that can drift.</span></li>
+        <li><span><b>Data safety.</b> Export is one timestamped file. Import replaces everything,
+          takes a safety copy first — to a download <em>and</em> to the database, because a
+          download can fail silently — and the clear-and-refill is a single transaction.</span></li>
+        <li><span><b>Undo.</b> One press reverses a whole change including everything it cascaded
+          into: delete a spool four jobs drew on and all five records come back together.</span></li>
+        <li><span><b>Reordering without dragging.</b> The Move panel sets a card's place inside its
+          column as well as which column it is in.</span></li>
+        <li><span><b>A request arrives as a link.</b> Paste the address someone sent and the name
+          fills itself in, the model fills in from the name, and the address is kept with the
+          model. Cards carry a button to the site.</span></li>
+        <li><span><b>Room on the board.</b> A job with no picture no longer leaves a
+          picture-sized gap.</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-open">
+    <h2 id="h-open">Found and not fixed</h2>
+    <p class="note">A page that only lists wins is an advertisement.</p>
+    <div class="card">
+      <ul class="list-open">
+        <li><span><b>A red gate does not stop a deploy.</b> Gates and Deploy are separate workflows
+          with no dependency, so a build whose gates fail still deploys. The fix couples a deploy
+          to a gate, which is exactly how a release silently stops arriving — so that trade is
+          yours to make.</span></li>
+        <li><span><b>Two devices cannot both write.</b> Import replaces everything, so passing one
+          file back and forth loses whatever the other device added. A phone that only ever
+          CAPTURES and a computer that owns everything is the shape that works, and it needs an
+          add-only import that does not exist yet.</span></li>
+        <li><span><b>A card does not say how long something has been waiting</b>, what it is worth,
+          or whether there is filament for it. Picking what to print next is still a judgement made
+          from a name and a picture.</span></li>
+        <li><span><b>Undo lasts only while the app is open.</b> Closing it or reloading starts
+          again with nothing to undo, and restoring a backup clears it.</span></li>
+        <li><span><b>A picture has to be added by hand.</b> A pasted address gives the name and the
+          site and cannot give the photo: a browser may not read another site's pages, so that
+          needs a server — which would end "nothing is fetched".</span></li>
+        <li><span><b>iPadOS will not always let a waiting update take over</b> while the app is
+          open. Closing it fully and reopening does it.</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-checked">
+    <h2 id="h-checked">Checked, and not a defect</h2>
+    <p class="note">Things that look like gaps and are decisions.</p>
+    <div class="card">
+      <ul class="list-done">
+        <li><span><b>Dragging a picture out of a browser into the app works.</b> A session said it
+          did not; a drop probe on a real machine showed the browser hands over the file. Printables
+          is the exception — its carousel swallows the drag, so that site wants copy-and-paste.</span></li>
+        <li><span><b>The address is kept on the model, not the job.</b> The model is the thing that
+          exists on somebody else's site; the job is one instance of printing it. A copy per job
+          would be one address written down many times, drifting apart the moment one was
+          corrected.</span></li>
+        <li><span><b>The Model box on a job never renames a model.</b> Editing it points the job at
+          a different model, or makes one. Renaming happens in Models.</span></li>
+        <li><span><b>Pictures are copied in, never hotlinked.</b> Pointing at the original would
+          tell that site every time your board is drawn, break when their CDN moved, and vanish
+          offline.</span></li>
+        <li><span><b>Remaining weight has no field anywhere.</b> It is recomputed from the jobs on
+          every read, which is why nothing can drift it.</span></li>
+      </ul>
+    </div>
+  </section>
+
+  </main>
+
+  <footer>
+    <p>Hand-maintained, and named in the repo's release checklist so a release does not leave it
+      behind. Not linked from the app and not indexed.</p>
+  </footer>
+
+</div>
+
+</body>
+</html>

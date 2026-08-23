@@ -23,7 +23,12 @@
 // which is how a brand-new visitor gets told a new version is ready thirty
 // seconds into their first visit.
 
-const CACHE = 'print-tracker-0.5.1';
+const CACHE = 'print-tracker-0.6.0';
+
+// Files that ship with the app and must never be cached by it. They are not in
+// SHELL either — being absent from the precache is not enough on its own, because
+// the fetch handler caches anything it successfully fetches.
+const LIVE = ['/status.html', '/status.css'];
 
 const SHELL = [
   './',
@@ -92,6 +97,14 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
+
+  // The status page is deliberately NOT the app: one address that is always
+  // current. Everything below caches whatever it fetches, so leaving this to the
+  // handler would freeze that page at whichever copy happened to be read first
+  // and keep serving it until a release rotated the cache name — which is the one
+  // behaviour it exists to not have. Returning without responding lets the
+  // browser fetch it normally.
+  if (LIVE.some((name) => url.pathname.endsWith(name))) return;
 
   event.respondWith(
     // Scoped to THIS worker's own cache rather than every cache on the origin, so

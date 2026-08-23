@@ -9,6 +9,57 @@ triplet is `version.capability.iteration`. Releases do not have names.
 
 ---
 
+## 0.6.0 — CAPABILITY — 2026-08-22
+
+The model a job prints is named on its card and opens from there, and choosing a
+job's type is one tap instead of a dropdown.
+
+### New
+
+- Every card says which model it prints, and pressing that opens the model — no
+  going to the Models tab and hunting for it. When the model has the same name as
+  the job, which is the ordinary case, the button just says "Open the model"
+  rather than repeating the title back at you.
+- Type is three buttons — Request, Wanted, Fun — instead of a dropdown. All three
+  are readable without opening anything, and picking one is a single tap rather
+  than a tap, a picker wheel and a tap.
+
+### Fixed
+
+- Web address and type controls were being drawn as full-width text boxes, because
+  the rule that sizes boxes you type into did not know that a radio button draws
+  itself. The type buttons looked broken for exactly one release before shipping.
+
+### Still not right
+
+- A card does not say how long a job has been waiting, what it is worth, or
+  whether there is filament for it. Choosing what to print next is still a
+  judgement made from a name and a picture.
+- Only the name and the site can be read from an address. The picture and the
+  description cannot, and getting them would need a server this app does not have.
+- Two devices cannot both make changes. Restoring a backup replaces everything, so
+  passing one file between a computer and a phone loses whatever the other one
+  added. One device has to be the only one that writes.
+- The Link box on a job is for adding an address, and it starts empty when you
+  reopen a job. The addresses a model has are listed under it in Models.
+- Undo lasts for as long as the app is open. Closing it, or reloading the page,
+  starts again with nothing to undo.
+- Restoring a backup cannot be undone. The way back is the safety copy the app
+  downloads immediately before it does so.
+- Changing a filter, the currency or the sort order is not a change undo tracks.
+- A picture has to be added by hand.
+- Filament counts as used the moment it is logged against a job, whichever column
+  that job is sitting in. That is the honest answer to how much is left on a
+  spool, but it means a job parked in research with grams already logged has spent
+  that filament as far as the inventory is concerned.
+- Costs and prices are plain numbers with a currency symbol you choose. There is
+  no per-currency formatting and no conversion.
+- An installed app on iPadOS will not always let a waiting update take over while
+  the app is open. If the version at the bottom of the screen is not the one you
+  expect, close the app fully and open it again.
+
+---
+
 ## 0.5.1 — ITERATION — 2026-08-22
 
 More jobs fit on a screen, because a job with no picture no longer leaves a
