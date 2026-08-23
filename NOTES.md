@@ -922,15 +922,27 @@ the log and check whether the steps ran or were skipped.
 
 ### The staged candidate
 
-**0.8.0 is the staged candidate**, at https://staging.3d-printing-pal.pages.dev —
-Ordered is a fourth job type and the one money belongs to, and the printer is no
-longer asked for on a job that is still Research.
+**There is no staged candidate.** `staging` and `main` point at the same commit,
+whatever that commit currently is.
 
 **This paragraph is reset on every promotion, and a gate now checks that it was.**
 Leaving a promoted candidate recorded here is how the next session concludes
 something is waiting when nothing is — so `tools/branch-state-check.mjs` reads
 this section's OPENING paragraph against `public/sw.js` in the tree and at
 `origin/main`, on every commit.
+
+**0.8.0 reached production on 2026-08-23** — Ordered is a fourth job type and the
+one money belongs to; the printer is no longer asked for on a Research job; and a
+saved type filter can no longer hide a type that did not exist when it was
+written. Promoted at `1d71a08` as a clean fast-forward, ancestry checked with
+`git merge-base --is-ancestor` BEFORE the push and the remote read back after. All
+28 gate steps and 5 security steps had executed and passed on that exact commit,
+read one at a time; the production deploy's six steps ran, its command carried
+`--branch=main`, and its log printed:
+
+    ✨ Success! Uploaded 0 files (39 already uploaded) (0.31 sec)
+    ✨ Uploading _headers
+    ✨ Deployment complete! Take a peek over at https://5cdcde18.3d-printing-pal.pages.dev
 
 **0.7.2 reached production on 2026-08-23** — undo moved into the app's own bar and
 the strip across the page was deleted. Promoted at `a03f721` as a clean

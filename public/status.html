@@ -30,7 +30,7 @@
     <h1>Where it stands</h1>
     <p class="lede">One page that stays current, at one address. Everything here was read from a
       run log or a git remote, not inferred from a command exiting quietly.</p>
-    <p class="lede"><b>0.7.2 is live. 0.8.0 is on staging, waiting for you to pass it.</b></p>
+    <p class="lede"><b>0.8.0 is live. Nothing is waiting on staging.</b></p>
   </header>
 
   <main>
@@ -39,20 +39,20 @@
     <div class="now">
       <div class="now-row">
         <span class="now-label">In production</span>
-        <span class="now-value">0.7.2 — <a href="https://3d-printing-pal.pages.dev">3d-printing-pal.pages.dev</a></span>
-        <span class="now-sub">Promoted 2026-08-23 at <code>a03f721</code> as a clean fast-forward of
-          two commits, with ancestry checked before the push and the remote read back after. All
-          28 gate steps and 5 security steps had run and passed on that exact commit, read one at a
-          time rather than taken from the run's conclusion; the production deploy's steps ran
-          rather than skipped.</span>
+        <span class="now-value">0.8.0 — <a href="https://3d-printing-pal.pages.dev">3d-printing-pal.pages.dev</a></span>
+        <span class="now-sub">Promoted 2026-08-23 at <code>1d71a08</code> as a clean fast-forward,
+          with ancestry checked before the push and the remote read back after. All 28 gate steps
+          and 5 security steps had run and passed on that exact commit, read one at a time rather
+          than taken from the run's conclusion; the production deploy's six steps ran rather than
+          skipped.</span>
       </div>
       <div class="now-row">
         <span class="now-label">On staging</span>
-        <span class="now-value">0.8.0 — <a href="https://staging.3d-printing-pal.pages.dev">staging.3d-printing-pal.pages.dev</a></span>
-        <span class="now-sub">Ordered is a fourth job type and the one money belongs to, and the
-          printer is no longer asked for on a job that is still Research. These two lines are held
-          to the release triplet by a commit guard, because on 23 August they said the opposite of
-          what was true and nothing failed.</span>
+        <span class="now-value">Nothing waiting — <a href="https://staging.3d-printing-pal.pages.dev">staging.3d-printing-pal.pages.dev</a></span>
+        <span class="now-sub">Staging and production point at the same commit, so there is no
+          candidate. These two lines are held to the release triplet by a commit guard, and the
+          record commit is promoted with the release rather than left for the next one — otherwise
+          this page describes the state before the promotion it is announcing.</span>
       </div>
       <div class="now-row">
         <span class="now-label">How a run is read</span>
@@ -74,12 +74,13 @@
     <p class="note">None of it is blocked on more work.</p>
     <div class="card attention">
       <ul class="list-yours">
-        <li><span><b>Pass 0.8.0 on staging, or say what is still wrong with it.</b>
-          <b>Ordered</b> is a fourth type beside Asked, Gift and Fun — it asks who it is for and
-          what you charged, and the card shows both. The other three no longer ask about money at
-          all. The printer box is gone until a job leaves Research, and the printers you already
-          use are offered as a list. <b>Nothing was migrated</b> — an Asked job that had a price is
-          still Asked, and choosing Ordered on it brings the money back.</span></li>
+        <li><span><b>Nothing.</b> 0.8.0 is live. What is below is a record rather than a
+          queue.</span></li>
+        <li><span><b>Ordered is a fourth job type</b> beside Asked, Gift and Fun — it asks who it is
+          for and what you charged, and the card shows both. The other three no longer ask about
+          money at all. The printer box is gone until a job leaves Research, and the printers you
+          already use are offered as a list. <b>Nothing was migrated</b> — an Asked job that had a
+          price is still Asked, and choosing Ordered on it brings the money back.</span></li>
         <li><span><b>Undo moved into the top bar</b>, beside the (i), and the band that used to sit
           under the tabs is gone. It is there from the moment the app opens — greyed out until
           there is something to take back — so you can see the app has an undo before you need one.
