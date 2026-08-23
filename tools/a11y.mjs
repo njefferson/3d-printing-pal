@@ -1373,6 +1373,64 @@ async function checkNameMirror(page) {
  * So this asserts the FILL differs, which is the cue that survives all three, and
  * that `aria-pressed` still carries the state to anything not looking at pixels.
  */
+/**
+ * The orientation names every job type the app actually has.
+ *
+ * WHY THIS IS A GATE. 0.8.0 added a fourth type and left this text saying "Asked,
+ * Gift and Fun" and "any of the three" — the app's own welcome telling a reader
+ * there were three categories while the form offered four. It shipped, and it was
+ * found by reading the panel rather than by anything failing.
+ *
+ * Prose cannot be held to code in general. This much can: every label in TYPES is
+ * a word that must appear in the text that explains the types, and a number-word
+ * that contradicts the count is a sentence nobody updated. It is the cheap half of
+ * a real problem, and the cheap half is what caught nothing before.
+ */
+async function checkOrientationTypes(page) {
+  const where = 'orientation';
+  await closeEverything(page);
+  await press(page, '#info-open');
+  await page.waitForTimeout(200);
+
+  const seen = await page.evaluate(async () => {
+    const mod = await import('/app/derive.js');
+    const block = document.getElementById('info-orientation');
+    return {
+      labels: mod.TYPES.map((t) => t.label),
+      count: mod.TYPES.length,
+      present: Boolean(block),
+      text: block ? block.textContent.replace(/\s+/g, ' ') : '',
+    };
+  });
+
+  if (!seen.present) {
+    fail(where, 'there is no orientation block — the welcome and the (i) panel share one, and it is gone');
+    await closeEverything(page);
+    return;
+  }
+
+  const missing = seen.labels.filter((label) => !new RegExp(`\\b${label}\\b`).test(seen.text));
+  // The words that would have made the 0.8.0 sentence wrong. Only the ones BELOW
+  // the real count matter: "four" reads fine in a four-type app, "three" does not.
+  // NOT BEFORE A HYPHEN. The first run of this check failed on "press the
+  // three-dot menu" in the install instructions — a compound, not a count of
+  // anything. A gate that cries wolf on honest prose teaches people to route
+  // around it, so the pattern narrows rather than the rule loosening.
+  const stale = ['one', 'two', 'three', 'four', 'five']
+    .slice(0, Math.max(0, seen.count - 1))
+    .filter((word) => new RegExp(`\\b(the|any of the|all) ${word}\\b(?!-)`, 'i').test(seen.text));
+
+  if (missing.length) {
+    fail(where, `the welcome never names ${missing.join(' or ')} — the app offers ${seen.count} job types and its own orientation describes fewer`);
+  } else if (stale.length) {
+    fail(where, `the welcome says "the ${stale[0]}" of something while there are ${seen.count} job types — a count that was true before the last type was added`);
+  } else {
+    pass(where, `the welcome names all ${seen.count} job types: ${seen.labels.join(', ')}`);
+  }
+
+  await closeEverything(page);
+}
+
 async function checkChips(page) {
   await closeEverything(page);
   await showView(page, 'board');
@@ -1826,6 +1884,7 @@ async function main() {
   await checkJobTypes(page);
   await checkPrinterField(page);
   await checkChips(page);
+  await checkOrientationTypes(page);
   await checkInteractionSelectors(page);
   await checkInfoSurface(page);
   await checkDiagnosticPrivacy(page);

@@ -23,7 +23,7 @@
 // which is how a brand-new visitor gets told a new version is ready thirty
 // seconds into their first visit.
 
-const CACHE = 'print-tracker-0.8.1';
+const CACHE = 'print-tracker-1.0.0';
 
 // Files that ship with the app and must never be cached by it. They are not in
 // SHELL either — being absent from the precache is not enough on its own, because

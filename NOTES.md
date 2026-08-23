@@ -125,6 +125,52 @@ capability, with the rejected ones and the reason each was rejected.
 
 ---
 
+## The welcome is for a stranger now (1.0.0)
+
+**This app has an audience beyond its author, and that is what 1.0.0 means here.**
+The doctrine leaves the VERSION slot to the owner, and the owner's own test for it
+was documentation a newcomer can start from.
+
+**The architecture did not change, because §7e already had it right.** One block —
+`#info-orientation` — is shown as the welcome on first run and then MOVED, never
+copied, into the (i) panel. There is one text to keep true rather than two that
+drift, and `returnOrientation` in `info.js` puts it back when the welcome closes.
+
+**What changed is who it is addressed to.** It used to open with what the app is
+and then explain job types to somebody who already knew what a job type was here.
+It now runs in the order a newcomer needs: what it is; the one fact that will lose
+their data if nobody tells them; what it will not do; how to keep it; and only
+then the two things about this app that cannot be guessed from any other app.
+
+**NOT A MANUAL, DELIBERATELY, and that is written into the release notes as a
+defect report route.** Everything in the welcome earns its place by being
+unguessable or expensive to learn the hard way. Anything the app cannot explain
+where the reader is standing is a defect in that screen rather than a missing
+chapter — so "it sent me looking for documentation" is a bug report.
+
+## The app's own explanation of itself was wrong for a day (1.0.0)
+
+0.8.0 added Ordered and left the welcome saying **"Asked, Gift and Fun"**, that
+they answer "one question — who is it for, and did they ask", and that the filters
+hide "any of the three". The form offered four types while the app's own
+orientation described three. Nothing failed; it was found by reading the panel.
+
+**Prose cannot be held to code in general. This much can.** `checkOrientationTypes`
+asserts that every label in `TYPES` appears in the orientation text, and that no
+count word below the real number follows "the", "any of the" or "all". Both halves
+were planted red against the exact 0.8.0 wording.
+
+**Its first run failed on the install instructions** — "press the three-dot menu"
+matched the count pattern. That is a false positive on honest prose, which is the
+thing that teaches people to route around a gate, so the pattern narrowed to
+exclude a hyphen rather than the rule loosening. Same reasoning the privacy gate
+is built on.
+
+**The general shape: a release that changes what the app IS has to change what the
+app SAYS it is, and only one of those two is in the diff you are looking at.**
+
+---
+
 ## The filter chips light up rather than carrying a tick (0.8.1)
 
 A tick is unambiguous and asks the reader to READ a mark. A lit button is seen.
@@ -946,8 +992,9 @@ the log and check whether the steps ran or were skipped.
 
 ### The staged candidate
 
-**0.8.1 is the staged candidate**, at https://staging.3d-printing-pal.pages.dev —
-the filter chips light up in their own type's colour rather than carrying a tick.
+**1.0.0 is the staged candidate**, at https://staging.3d-printing-pal.pages.dev —
+the welcome is written for a stranger, the app is going on the hub, and 0.8.1's
+lit filter chips ride along with it.
 
 **This paragraph is reset on every promotion, and a gate now checks that it was.**
 Leaving a promoted candidate recorded here is how the next session concludes

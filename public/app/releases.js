@@ -7,6 +7,23 @@
 
 export const RELEASES = [
   {
+    "version": "1.0.0",
+    "kind": "VERSION",
+    "date": "2026-08-23",
+    "summary": "The first release meant for somebody other than its author.",
+    "added": [
+      "A welcome written for a stranger. The first thing a new reader sees now says what this is, that their data lives in this browser and nowhere else, what it will not do, how to put it on a home screen, and the two facts about it that are not guessable from any other app. It is the same text that lives under the <b>i</b> button afterwards — one copy, so there is nothing to keep in step.",
+      "It is on the hub. print-tracker is listed with the other free apps rather than being a link somebody had to be given."
+    ],
+    "fixed": [
+      "The welcome knows there are four job types. It still described three, and said the filters hide \"any of the three\", from the release that added Ordered until this one. The app's own explanation of itself was wrong for a day.",
+      "Nothing will let that happen quietly again. The build now fails if the welcome does not name every job type the app offers, or if it counts them wrong."
+    ],
+    "broken": [
+      "There is no manual, and there is not going to be one. Anything the app cannot explain where you are standing is a defect in that screen. If something sends you looking for documentation, that is worth reporting as a bug."
+    ]
+  },
+  {
     "version": "0.8.1",
     "kind": "ITERATION",
     "date": "2026-08-23",

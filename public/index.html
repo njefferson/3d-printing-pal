@@ -227,40 +227,68 @@
   </div>
 
   <div class="panel-body">
+    <!-- THE GREETING, AND IT IS THE SAME COPY AS THE (i)'s FIRST SECTIONS.
+         Doctrine §7e: shown on first run, then MOVED — never duplicated — into the
+         information panel, so there is one text to keep true rather than two that
+         drift. `returnOrientation` in info.js puts it back when the welcome closes.
+
+         WRITTEN FOR A STRANGER from 1.0.0. Until then it addressed a reader who
+         already knew what this was, because there was only one of those. The order
+         is what a newcomer needs in the order they need it: what it is, the one
+         thing that will lose their data if nobody tells them, what it will not do,
+         how to keep it, and only then the two facts about this app that are not
+         guessable from any other app.
+
+         NOT A MANUAL. Everything here earns its place by being either unguessable
+         or costly to learn the hard way. The rest of the app explains itself at
+         the point of use, and anything that does not is a defect in that screen
+         rather than a missing chapter here. -->
     <div id="info-orientation">
       <h3>What this is</h3>
-      <p>A place to keep your 3D printing straight: what you are printing and who for, how much filament is left, and which models have earned their keep. It runs entirely on this device.</p>
+      <p>A place to keep your 3D printing straight: what you are printing and who for, how much
+        filament is left, and which models have earned their keep. It is a board of jobs, a
+        shelf of spools and a catalogue of models, and it runs entirely on this device.</p>
+
+      <h3>Your data lives in this browser, and nowhere else</h3>
+      <p>There is no account and no server. Nothing you type leaves the device, nobody else can
+        see it — including whoever made this — and there is nothing to sign up for.</p>
+      <p><b>That also means it is not backed up.</b> Clearing this site's data, or deleting the
+        browser, takes everything with it. Use <em>Export</em> in the information panel now and
+        then and keep the file somewhere you trust. It is one file, and importing it puts
+        everything back exactly as it was.</p>
 
       <h3>What it is not</h3>
       <ul>
-        <li>It is not a slicer and it does not talk to your printer. The printer field is just a note to yourself.</li>
-        <li>It is not tied to any brand, so nothing here breaks when you change machines.</li>
-        <li>There is no account, no sync and no server. Nothing you type is sent anywhere, and nobody else can see it — including whoever made this.</li>
-        <li>It is not a backup. The data lives in this browser's storage, and clearing site data for this site removes it. Export a copy somewhere safe.</li>
+        <li>It is not a slicer and it never talks to your printer. The printer box is a note to
+          yourself about which machine a job is on.</li>
+        <li>It is not tied to any brand. Nothing here breaks when you change machines.</li>
+        <li>It is not a shop or an invoice book. It records what you charged; it does not send
+          anybody a bill.</li>
       </ul>
 
-      <!-- Here because the form can say what each choice does but not why the
-           three exist, and a reader who wonders that has nowhere else to look. It
-           says plainly that two of them are interchangeable rather than implying a
-           rule they have to work out. -->
-      <h3>Asked, Gift and Fun</h3>
-      <p>They answer one question — who is it for, and did they ask. <b>Asked</b> means somebody
-        asked you for it and is waiting on it. <b>Gift</b> means it is for somebody else who did
-        not ask, and may not know. Both of those carry the person's name, and the card shows it.
-        <b>Fun</b> is for you. The filters above the board hide any of the three, which is how
-        you look at just the things people are waiting on.</p>
-
-      <h3>How the filament number works</h3>
-      <p>A spool's remaining weight is never typed in. It is the spool's total minus every gram you have logged against a job, worked out fresh each time you look. Log the grams on the job, and the inventory follows.</p>
-
       <h3>Put it on your home screen</h3>
+      <p>Worth doing first — it opens like any other app afterwards, and works with no signal.</p>
       <ul>
         <li><strong>iPhone and iPad, in Safari:</strong> press Share, then <em>Add to Home Screen</em>.</li>
         <li><strong>Android, in Chrome:</strong> press the three-dot menu, then <em>Add to Home screen</em> or <em>Install app</em>.</li>
         <li><strong>Windows or macOS, in Chrome or Edge:</strong> open the three-dot menu, then <em>Cast, save and share</em> or <em>Apps</em>, then <em>Install this page as an app</em>.</li>
         <li><strong>macOS, in Safari:</strong> open the File menu, then <em>Add to Dock</em>.</li>
       </ul>
-      <p>Once it is there it opens like any other app and works with no signal.</p>
+
+      <h3>Two things that are not guessable</h3>
+      <p><b>A spool's remaining weight is never typed in.</b> It is the spool's total minus every
+        gram you have logged against a job, worked out fresh each time you look — so it cannot
+        drift, and there is no number to correct. Log the grams on the job and the shelf follows.</p>
+      <p><b>Every job answers one question: who is it for, and are they paying?</b>
+        <b>Ordered</b> is a print somebody is paying for — it asks who for and what you charged.
+        <b>Asked</b> is the same favour with no money in it. <b>Gift</b> is for somebody who did
+        not ask and may not know. <b>Fun</b> is yours. The buttons above the board light up for
+        the kinds you are looking at, so you can see only what people are waiting on.</p>
+
+      <h3>If you get stuck</h3>
+      <p>This welcome stays under the <b>i</b> button at the top, along with what changed in each
+        release, your safety copies, and how to report a problem. Nothing here is a one-time
+        message you have to finish reading now.</p>
     </div>
 
     <h3>What changed</h3>
