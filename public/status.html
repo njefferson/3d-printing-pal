@@ -30,7 +30,7 @@
     <h1>Where it stands</h1>
     <p class="lede">One page that stays current, at one address. Everything here was read from a
       run log or a git remote, not inferred from a command exiting quietly.</p>
-    <p class="lede"><b>1.0.1 is live. 1.0.2 is on staging, waiting for you to pass it.</b></p>
+    <p class="lede"><b>1.0.2 is live, and there is nothing waiting on staging.</b></p>
   </header>
 
   <main>
@@ -39,20 +39,21 @@
     <div class="now">
       <div class="now-row">
         <span class="now-label">In production</span>
-        <span class="now-value">1.0.1 — <a href="https://3d-printing-pal.pages.dev">3d-printing-pal.pages.dev</a></span>
-        <span class="now-sub">Promoted 2026-08-23 at <code>cd36645</code> as a clean fast-forward of
-          four commits, carrying 0.8.1's lit chips, 1.0.0's welcome and 1.0.1's filter fix. Ancestry
-          checked before the push and the remote read back after. All 28 gate steps and 5 security
-          steps had run and passed on that exact commit, read one at a time rather than taken from
-          the run's conclusion; the production deploy's six steps ran rather than skipped.</span>
+        <span class="now-value">1.0.2 — <a href="https://3d-printing-pal.pages.dev">3d-printing-pal.pages.dev</a></span>
+        <span class="now-sub">Promoted 2026-08-23 at <code>97fecf4</code> as a clean fast-forward,
+          carrying the filled filter chip. Ancestry checked before the push and the remote read back
+          after. All 28 gate steps and 5 security steps ran and passed on that exact commit, read
+          one at a time rather than taken from the run's conclusion; the production deploy's six
+          steps ran rather than skipped, and its log named the deployment it made.</span>
       </div>
       <div class="now-row">
         <span class="now-label">On staging</span>
-        <span class="now-value">1.0.2 — <a href="https://staging.3d-printing-pal.pages.dev">staging.3d-printing-pal.pages.dev</a></span>
-        <span class="now-sub">A lit filter chip is filled with its accent rather than tinted, so the
-          state is a change in brightness rather than in hue. These two lines are held to the
-          release triplet by a commit guard, and the record commit is promoted with the release
-          rather than left for the next one.</span>
+        <span class="now-value">Nothing — <a href="https://staging.3d-printing-pal.pages.dev">staging.3d-printing-pal.pages.dev</a> is the same build as production</span>
+        <span class="now-sub">Nothing is waiting to be passed. These two lines are held to the
+          release triplet by a commit guard — including this state, where a candidate that has just
+          been promoted is the easiest thing in the file to leave behind, and reads as one still
+          waiting. The record commit is promoted with the release rather than left for the next
+          one.</span>
       </div>
       <div class="now-row">
         <span class="now-label">How a run is read</span>
@@ -74,16 +75,15 @@
     <p class="note">None of it is blocked on more work.</p>
     <div class="card attention">
       <ul class="list-yours">
-        <li><span><b>Pass 1.0.2 on staging.</b> The filter buttons are filled with their type's
-          colour when they are on, rather than keeping the same background and changing only the
-          words. Worth a look at arm's length, and worth squinting at: the difference is brightness
-          now rather than colour, so it should hold up with the colours ignored entirely.</span></li>
+        <li><span><b>The filled chips are live now.</b> The filter buttons take their type's colour
+          as a background when they are on, rather than keeping the same background and changing
+          only the words. Worth a look at arm's length, and worth squinting at: the difference is
+          brightness now rather than colour, so it should hold up with the colours ignored
+          entirely.</span></li>
         <li><span><b>Worth one look as a stranger would see it.</b> Open the app in a private
           window and the welcome arrives cold — what it is, that the data lives in that browser and
           nowhere else, how to install it, and the two things that are not guessable. That is what
-          somebody following the hub link now gets.</span></li>
-        <li><span><b>Then the hub tile goes up.</b> It is written and waiting; it points at
-          production, so it lands when this is promoted.</span></li>
+          somebody following the hub link gets.</span></li>
         <li><span><b>Ordered is a fourth job type</b> beside Asked, Gift and Fun — it asks who it is
           for and what you charged, and the card shows both. The other three no longer ask about
           money at all. The printer box is gone until a job leaves Research, and the printers you

@@ -1071,15 +1071,31 @@ the log and check whether the steps ran or were skipped.
 
 ### The staged candidate
 
-**1.0.2 is the staged candidate**, at https://staging.3d-printing-pal.pages.dev —
-a lit filter chip is filled with its accent rather than tinted, so the state is a
-change in brightness rather than in hue.
+**There is no staged candidate.** Staging and production carry the same build;
+nothing is waiting to be passed.
 
 **This paragraph is reset on every promotion, and a gate now checks that it was.**
 Leaving a promoted candidate recorded here is how the next session concludes
 something is waiting when nothing is — so `tools/branch-state-check.mjs` reads
 this section's OPENING paragraph against `public/sw.js` in the tree and at
 `origin/main`, on every commit.
+
+**1.0.2 reached production on 2026-08-23.** A lit filter chip is filled with its
+accent rather than tinted. Promoted at `97fecf4` as a clean fast-forward of two
+commits, ancestry checked with `git merge-base --is-ancestor` BEFORE the push and
+the remote read back after; `origin/main:public/sw.js` carries the 1.0.2 triplet.
+All 28 gate steps and 5 security steps executed and passed on that exact commit,
+read one at a time rather than taken from the run's conclusion; the production
+deploy's six steps ran, and its log printed:
+
+    ✨ Uploading _headers
+    ✨ Deployment complete! Take a peek over at https://1f3a7422.3d-printing-pal.pages.dev
+
+**The published address could not be fetched from this session** — the network
+proxy refuses `pages.dev` with a 403 on the CONNECT tunnel. So the evidence that
+1.0.2 is serving is the deploy log for that exact commit and the triplet in
+`origin/main:public/sw.js`, not a request to the site. That is worth naming rather
+than leaving the reader to assume the stronger check was made.
 
 **1.0.0, 1.0.1 and 0.8.1 reached production on 2026-08-23** — the first release
 meant for somebody other than its author. The welcome is written for a stranger,
