@@ -21,7 +21,7 @@
 // changes; nodes are moved between columns rather than recreated.
 
 import { $, el, clear } from '../dom.js';
-import { COLUMNS, TYPES, sortForBoard } from '../derive.js';
+import { COLUMNS, TYPES, TYPES_WITH_RECIPIENT, sortForBoard } from '../derive.js';
 import * as store from '../store.js';
 import { thumbFor } from './thumb.js';
 import { openPanel, close, registerPanel, say } from './panels.js';
@@ -245,7 +245,7 @@ function updateCard(node, job) {
   const bits = [];
   if (job.printer) bits.push(`Printer: ${job.printer}`);
   bits.push(`Quantity: ${job.quantity}`);
-  if (job.type === 'request' && job.requester) bits.push(`For: ${job.requester}`);
+  if (TYPES_WITH_RECIPIENT.includes(job.type) && job.requester) bits.push(`For: ${job.requester}`);
   clear(p.meta);
   for (const bit of bits) p.meta.append(el('span', { text: bit }));
 

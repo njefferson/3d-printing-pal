@@ -1255,6 +1255,98 @@ async function checkNameMirror(page) {
   await closeEverything(page);
 }
 
+/**
+ * The three job types explain themselves, and every list of them agrees.
+ *
+ * THE LEGEND MUST BE A QUESTION. It said "Type", which is not one, so three words
+ * sat under it as categories with rules a reader had to invent.
+ *
+ * AND THE AXIS HAS TO BE REAL. Under the old wording `wanted` and `fun` behaved
+ * identically — same everything, a different word and colour on a badge — so
+ * choosing between them was a decision with no consequence, which is exactly what
+ * it felt like. `wanted` is now "Gift": for someone else who did not ask, and it
+ * carries their name like `request` does. That is what makes it a category rather
+ * than a shade, so the check is BEHAVIOURAL: every type that claims a recipient
+ * must actually show the field, and the one that does not must not.
+ *
+ * THE LABELS LIVE IN THREE PLACES. `derive.js` names them for the badge; the form
+ * names them again; the filter chips a third time. The first version of this check
+ * compared the form against the chips — both in index.html — and passed happily
+ * while derive.js said something else entirely, which is the badge and the filter
+ * disagreeing about the same job. It now reads derive.js FROM THE PAGE, so all
+ * three are held to each other.
+ */
+async function checkJobTypes(page) {
+  await closeEverything(page);
+  await showView(page, 'board');
+  await press(page, '#job-new');
+  await page.waitForTimeout(200);
+
+  // The module the app itself imports, rather than a second reading of the file.
+  const types = await page.evaluate(async () => {
+    const mod = await import('/app/derive.js');
+    return mod.TYPES.map((t) => ({ id: t.id, label: t.label, hasRecipient: Boolean(t.hasRecipient) }));
+  });
+
+  const seen = await page.evaluate(() => ({
+    legend: document.querySelector('#job-f-type legend')?.textContent?.trim() || '',
+    options: [...document.querySelectorAll('#job-f-type .typeopt')].map((label) => ({
+      value: label.querySelector('input')?.value || '',
+      label: label.querySelector('.typeopt-label')?.textContent?.trim() || '',
+      note: label.querySelector('.typeopt-note')?.textContent?.trim() || '',
+    })),
+    chips: [...document.querySelectorAll('.chips .chip')].map((chip) => ({
+      value: chip.dataset.type,
+      label: chip.querySelector('.chip-label')?.textContent?.trim() || '',
+    })),
+  }));
+
+  if (!seen.legend.endsWith('?')) {
+    fail('job-types', `the type fieldset is headed "${seen.legend}", which is not a question — three words under a noun read as categories with rules to work out`);
+  } else {
+    pass('job-types', `the three types answer a question: "${seen.legend}"`);
+  }
+
+  const silent = seen.options.filter((o) => !o.note);
+  if (silent.length) {
+    fail('job-types', `${silent.map((o) => o.label).join(' and ')} say nothing about what choosing them does`);
+  } else {
+    pass('job-types', `all ${seen.options.length} types say what choosing them does`);
+  }
+
+  // Three lists, one word each.
+  let agree = true;
+  for (const type of types) {
+    const option = seen.options.find((o) => o.value === type.id);
+    const chip = seen.chips.find((c) => c.value === type.id);
+    if (!option) { fail('job-types', `the app has a type \`${type.id}\` the form does not offer`); agree = false; }
+    else if (option.label !== type.label) { fail('job-types', `\`${type.id}\` is "${type.label}" on the badge and "${option.label}" on the form`); agree = false; }
+    if (!chip) { fail('job-types', `the app has a type \`${type.id}\` the filter cannot show`); agree = false; }
+    else if (chip.label !== type.label) { fail('job-types', `\`${type.id}\` is "${type.label}" on the badge and "${chip.label}" in the filter`); agree = false; }
+  }
+  if (agree) pass('job-types', `the badge, the form and the filter use one word for each of the ${types.length} types`);
+
+  // BEHAVIOURAL. A type that claims somebody to give it to has to ask who.
+  for (const type of types) {
+    const option = seen.options.find((o) => o.value === type.id);
+    if (!option) continue;
+    await page.check(`input[name="job-type"][value="${type.id}"]`);
+    await page.waitForTimeout(120);
+    const asks = await page.isVisible('#job-f-requester-field');
+    if (type.hasRecipient && !asks) {
+      fail('job-types', `"${type.label}" is for somebody else and never asks who, so it is a label with nothing behind it`);
+    } else if (!type.hasRecipient && asks) {
+      fail('job-types', `"${type.label}" is not for anybody else and asks who it is for anyway`);
+    } else if (type.hasRecipient && !/who|name/i.test(option.note)) {
+      fail('job-types', `"${type.label}" asks who it is for and its note does not mention it: "${option.note}"`);
+    } else {
+      pass('job-types', `"${type.label}" ${type.hasRecipient ? 'asks who it is for, and says so' : 'is for you, and asks nobody'}`);
+    }
+  }
+
+  await closeEverything(page);
+}
+
 async function checkInteractionSelectors(page) {
   const where = 'interactions/live';
   const spec = JSON.parse(readFileSync(join(ROOT, 'INTERACTIONS.json'), 'utf8'));
@@ -1482,6 +1574,7 @@ async function main() {
   await checkModelRoute(page);
   await checkJobFromModel(page);
   await checkNameMirror(page);
+  await checkJobTypes(page);
   await checkInteractionSelectors(page);
   await checkInfoSurface(page);
   await checkDiagnosticPrivacy(page);

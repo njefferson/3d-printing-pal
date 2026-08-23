@@ -31,11 +31,33 @@ export const COLUMNS = [
 
 export const COLUMN_IDS = COLUMNS.map((c) => c.id);
 
+/* The LABEL is what a reader sees; the ID is what is stored. They are separate so
+ * the words can be corrected without rewriting anybody's records — `request` is
+ * shown as "Asked" because that is the word people actually use for it, and no
+ * job needed touching to do it.
+ *
+ * THE AXIS IS WHO IT IS FOR, AND WHETHER THEY ASKED. That is what makes three
+ * categories rather than two-and-a-shade:
+ *
+ *   request — someone else, and they asked. They are waiting on it.
+ *   wanted  — someone else, and they did NOT ask. A gift; they may not know.
+ *   fun     — you.
+ *
+ * `wanted` used to be labelled "Wanted" with no stated meaning, and it and `fun`
+ * were then identical in every respect the app acted on — same behaviour, a
+ * different word and colour on a badge. Which made choosing between them a
+ * decision with no consequence, and that is exactly what it felt like. Naming it
+ * "Gift" is not a relabel: it is the category finally having a recipient, which is
+ * what `hasRecipient` below is for.
+ */
 export const TYPES = [
-  { id: 'request', label: 'Request' },
-  { id: 'wanted', label: 'Wanted' },
-  { id: 'fun', label: 'Fun' },
+  { id: 'request', label: 'Asked', hasRecipient: true },
+  { id: 'wanted', label: 'Gift', hasRecipient: true },
+  { id: 'fun', label: 'Fun', hasRecipient: false },
 ];
+
+/** The types that are for somebody else, so the job carries their name. */
+export const TYPES_WITH_RECIPIENT = TYPES.filter((t) => t.hasRecipient).map((t) => t.id);
 
 export const TYPE_IDS = TYPES.map((t) => t.id);
 

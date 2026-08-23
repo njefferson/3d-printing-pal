@@ -125,6 +125,53 @@ capability, with the rejected ones and the reason each was rejected.
 
 ---
 
+## The middle job type had no meaning until it was given one (0.7.1)
+
+**"Asked, Wanted and Fun" was confusing, and better wording was not the fix.** The
+type drove exactly one thing with a consequence — `request` turned on the
+Requester field and put "For: <name>" on the card. `wanted` and `fun` were
+identical in every respect the app acted on: same behaviour, a different word and
+colour on a badge, a different filter chip. So the reader was being asked to make
+a distinction the app then ignored, every single time they added a job. That is
+what it felt like, and it was accurate.
+
+**The axis was always who it is for, and whether they asked.** With that said out
+loud there are three real categories rather than two-and-a-shade:
+
+- `request` — **Asked.** Somebody asked and is waiting on it.
+- `wanted` — **Gift.** For somebody else who did NOT ask, and may not know.
+- `fun` — **Fun.** For you.
+
+**`wanted` becoming "Gift" is not a relabel; it is the category getting a
+recipient.** It now asks who it is for and the card shows it, exactly as Asked
+does — which is the whole difference between a category and a coloured word.
+`hasRecipient` on `TYPES` is the fact, and `TYPES_WITH_RECIPIENT` is what the form
+and the card read, because the version that spelled it `=== 'request'` in three
+places is why adding the second one meant finding all three.
+
+**THE ID DID NOT MOVE.** `wanted` is still `wanted` in every record, so nothing was
+migrated and no export changed. Labels are display; ids are data, and keeping them
+apart is what let a confusing word be corrected for free.
+
+**THE FIRST VERSION OF THE GATE HAD THE HOLE IT WAS WRITTEN TO CLOSE.** Renaming
+`Request` to `Asked` meant editing two files, so a check was added that the two
+lists agree — and it compared the FORM's label against the CHIP's label, both of
+which live in `index.html`. The badge's word comes from `derive.js` and was never
+compared to anything. Planted red by making derive.js disagree, it passed.
+
+It now reads `derive.js` **from the page**, with a dynamic `import()`, so the badge,
+the form and the filter are held to each other rather than two of them to
+themselves. The lesson is the general one: a check comparing two copies has to
+compare the copy that is actually SERVED, and "two places" was itself the wrong
+count — there were three.
+
+**And the type check is behavioural rather than textual.** Every type that claims a
+recipient must actually show the field, and the one that does not must not.
+Otherwise "Gift" is a word with nothing behind it, which is precisely the state the
+old "Wanted" was in.
+
+---
+
 ## One screen does the whole job (0.7.0)
 
 Five reports arrived in one sitting and four of them were the SAME DEFECT wearing

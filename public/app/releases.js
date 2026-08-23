@@ -7,6 +7,21 @@
 
 export const RELEASES = [
   {
+    "version": "0.7.1",
+    "kind": "ITERATION",
+    "date": "2026-08-23",
+    "summary": "The three job types say what they are for, and the middle one is a gift.",
+    "added": [
+      "Wanted is now Gift, and it carries a name. It always meant something and the app never asked what: a print for somebody else who did not ask for it. So it now asks who it is for, exactly as Asked does, and the card says so. Choosing it used to change nothing at all."
+    ],
+    "fixed": [
+      "Asked, Gift and Fun make sense now. They sat under a heading that said only \"Type\", which is not a question, so they read as three categories with rules to work out. The heading is now the question they answer — why is it on the board — and each one says what choosing it does. Nothing about your existing jobs changed; anything that was Wanted is now Gift and can be given a name whenever you open it.",
+      "Request is called Asked, which is the word people use for it.",
+      "\"Who asked for it\" is now \"Who it is for\", because a gift has somebody it is for and nobody asked."
+    ],
+    "broken": []
+  },
+  {
     "version": "0.7.0",
     "kind": "CAPABILITY",
     "date": "2026-08-23",

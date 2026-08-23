@@ -5,7 +5,7 @@
 // on it — and the app, not the reader, is the one that knows.
 
 import { $, el, clear, grams } from '../dom.js';
-import { COLUMNS, MATERIALS, remainingFor, num } from '../derive.js';
+import { COLUMNS, MATERIALS, TYPES_WITH_RECIPIENT, remainingFor, num } from '../derive.js';
 import * as store from '../store.js';
 import { readUrl } from '../fromurl.js';
 import { openPanel, close, registerPanel, confirmThen, say } from './panels.js';
@@ -236,7 +236,10 @@ function setJobType(value) {
 }
 
 function syncRequesterVisibility() {
-  $('#job-f-requester-field').hidden = jobType() !== 'request';
+  // Driven by the LIST rather than by `=== 'request'`. A gift has a recipient too,
+  // and the version of this that named one id is why adding the second one meant
+  // finding every place that had made the same assumption.
+  $('#job-f-requester-field').hidden = !TYPES_WITH_RECIPIENT.includes(jobType());
 }
 
 // ------------------------------------------------------------- the model box
@@ -383,7 +386,7 @@ async function onSaveJob(event) {
     id: editing.job,
     title: $('#job-f-title').value,
     type: jobType(),
-    requester: jobType() === 'request' ? $('#job-f-requester').value : '',
+    requester: TYPES_WITH_RECIPIENT.includes(jobType()) ? $('#job-f-requester').value : '',
     modelName,
     sourceUrl: $('#job-f-link').value,
     printer: $('#job-f-printer').value,

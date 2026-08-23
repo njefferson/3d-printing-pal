@@ -109,10 +109,10 @@
 
     <div class="chips" role="group" aria-label="Filter by job type">
       <button type="button" class="chip" data-type="request" aria-pressed="true">
-        <span class="chip-tick" aria-hidden="true">✓</span><span class="chip-label">Request</span>
+        <span class="chip-tick" aria-hidden="true">✓</span><span class="chip-label">Asked</span>
       </button>
       <button type="button" class="chip" data-type="wanted" aria-pressed="true">
-        <span class="chip-tick" aria-hidden="true">✓</span><span class="chip-label">Wanted</span>
+        <span class="chip-tick" aria-hidden="true">✓</span><span class="chip-label">Gift</span>
       </button>
       <button type="button" class="chip" data-type="fun" aria-pressed="true">
         <span class="chip-tick" aria-hidden="true">✓</span><span class="chip-label">Fun</span>
@@ -228,6 +228,17 @@
         <li>It is not a backup. The data lives in this browser's storage, and clearing site data for this site removes it. Export a copy somewhere safe.</li>
       </ul>
 
+      <!-- Here because the form can say what each choice does but not why the
+           three exist, and a reader who wonders that has nowhere else to look. It
+           says plainly that two of them are interchangeable rather than implying a
+           rule they have to work out. -->
+      <h3>Asked, Gift and Fun</h3>
+      <p>They answer one question — who is it for, and did they ask. <b>Asked</b> means somebody
+        asked you for it and is waiting on it. <b>Gift</b> means it is for somebody else who did
+        not ask, and may not know. Both of those carry the person's name, and the card shows it.
+        <b>Fun</b> is for you. The filters above the board hide any of the three, which is how
+        you look at just the things people are waiting on.</p>
+
       <h3>How the filament number works</h3>
       <p>A spool's remaining weight is never typed in. It is the spool's total minus every gram you have logged against a job, worked out fresh each time you look. Log the grams on the job, and the inventory follows.</p>
 
@@ -333,29 +344,37 @@
            reconstructed with ARIA, and arrow keys move between them for free.
            They are drawn like the board's filter chips because that is already
            this app's word for "a small choice you press". -->
+      <!-- THE LEGEND IS THE QUESTION, because "Type" is not one. Three words with
+           no question above them are three categories a reader has to invent the
+           rules for.
+           AND THE AXIS IS REAL NOW. Under the old wording `wanted` and `fun` did
+           the same nothing, so choosing between them was a decision with no
+           consequence — which is exactly what it felt like. `wanted` is a GIFT: for
+           someone who did not ask, and it carries their name like `request` does.
+           That is what makes it a category rather than a shade. -->
       <fieldset class="fieldset field-type" id="job-f-type">
-        <legend>Type</legend>
+        <legend>Why is it on the board?</legend>
         <div class="typeset">
           <label class="typeopt">
             <input type="radio" name="job-type" value="request">
-            <span class="typeopt-label">Request</span>
-            <span class="typeopt-note">somebody asked</span>
+            <span class="typeopt-label">Asked</span>
+            <span class="typeopt-note">someone asked you for it — the card will show who</span>
           </label>
           <label class="typeopt">
             <input type="radio" name="job-type" value="wanted">
-            <span class="typeopt-label">Wanted</span>
-            <span class="typeopt-note">you want one</span>
+            <span class="typeopt-label">Gift</span>
+            <span class="typeopt-note">for someone else, who did not ask — the card will show who</span>
           </label>
           <label class="typeopt">
             <input type="radio" name="job-type" value="fun">
             <span class="typeopt-label">Fun</span>
-            <span class="typeopt-note">just printing it</span>
+            <span class="typeopt-note">for you</span>
           </label>
         </div>
       </fieldset>
 
       <div class="field" id="job-f-requester-field">
-        <label for="job-f-requester">Who asked for it</label>
+        <label for="job-f-requester">Who it is for</label>
         <input type="text" id="job-f-requester" autocomplete="off">
       </div>
 
