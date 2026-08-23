@@ -513,28 +513,40 @@ the log and check whether the steps ran or were skipped.
 
 ### The staged candidate
 
-**0.6.0 is on staging**, at https://staging.3d-printing-pal.pages.dev — the
-candidate is **0.6.0**.
+**There is no staged candidate.** `staging` and `main` are the same commit,
+`caa3f6e`. Leaving a promoted candidate recorded here is how the next session
+concludes something is waiting when nothing is.
 
-The model a job prints is named on its card and opens from there, and the job type
-is three buttons instead of a dropdown. To try: press the model button on a card
-and check it lands on the right model with the Models tab showing; open a job and
-check the three type buttons read well under a thumb.
+**0.6.0 reached production on 2026-08-23** — the model a job prints is named on
+its card and opens from there, and the job type is three buttons instead of a
+dropdown. Promoted at `caa3f6e` as a clean fast-forward of two commits, with the
+ancestry checked using `git merge-base --is-ancestor` BEFORE the push rather than
+inferred after, and the remote read back rather than the push output believed.
 
-**Verified at `fd7f256`.** All 21 gate steps and 5 security steps **executed** and
+**Verified at `caa3f6e`.** All 21 gate steps and 5 security steps **executed** and
 passed, read one by one rather than taken from the run's conclusion — nothing
-skipped. The Deploy workflow for that same commit ran its `Deploy to Cloudflare
-Pages` step rather than stepping over it.
+skipped. The production deploy's eight steps all ran, its command carried
+`--branch=main`, and its log printed:
 
-Three of those steps had never run in CI before this commit: `App shell`,
+    ✨ Success! Uploaded 0 files (35 already uploaded) (0.28 sec)
+    ✨ Uploading _headers
+    ✨ Deployment complete! Take a peek over at https://a9036a15.3d-printing-pal.pages.dev
+
+**`Uploaded 0 files` is not a skipped deploy**, and it is worth knowing before it
+is met at a bad moment. It is Cloudflare's content-addressed store recognising the
+identical tree from the staging deploy of the same commit — every promotion that
+is a clean fast-forward will say it. The deployment still happened, which is what
+the `🌎 Deploying...` line and the address after it are. A genuinely skipped deploy
+has no wrangler group in the log at all, which is the distinction §53 is about.
+
+Three of those steps had never run in CI before this release: `App shell`,
 `A pasted address becomes the right name` and the new `Status page`. The first two
 were not new gates — they had been in the local chain for a release and longer,
 passing on a laptop and nowhere else. See "A gate can be written, planted red, and
 never run on a runner", below.
 
 **0.5.1 reached production on 2026-08-22** — a job with no picture no longer
-leaves a picture-sized gap. **Production is at `f2c057d`** until 0.6.0 is
-promoted.
+leaves a picture-sized gap. It is the release 0.6.0 replaced.
 
 **0.1.1 never reached production on its own, and that was deliberate.** Its entire
 content was the link preview card, which 0.1.2 redrew; promoting it separately
