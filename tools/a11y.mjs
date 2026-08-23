@@ -1456,6 +1456,49 @@ async function checkChips(page) {
   await page.click('.chip');
   await page.waitForTimeout(160);
 
+  // EVERY CHIP OFF IS ALLOWED, and the board says so in words.
+  //
+  // Refusing the last one was a guard against a confusion this app does not have:
+  // there are two empty messages, and the filtered one names the filters. All the
+  // guard achieved was refusing an ordinary act — clear the lot, then pick the one
+  // thing you want — and a chip that will not turn off is indistinguishable from a
+  // press that did not register.
+  const allOff = await page.evaluate(async () => {
+    for (const chip of document.querySelectorAll('.chip')) {
+      if (chip.getAttribute('aria-pressed') === 'true') chip.click();
+    }
+    await new Promise((r) => setTimeout(r, 200));
+    const lit = [...document.querySelectorAll('.chip')].filter((c) => c.getAttribute('aria-pressed') === 'true');
+    const filtered = document.getElementById('board-filtered');
+    const empty = document.getElementById('board-empty');
+    return {
+      lit: lit.length,
+      cards: document.querySelectorAll('.card').length,
+      saysFiltered: filtered && !filtered.hidden,
+      saysEmpty: empty && !empty.hidden,
+      words: filtered ? filtered.textContent.trim() : '',
+    };
+  });
+  // Put them all back before anything else measures the board.
+  await page.evaluate(async () => {
+    for (const chip of document.querySelectorAll('.chip')) {
+      if (chip.getAttribute('aria-pressed') === 'false') chip.click();
+    }
+    await new Promise((r) => setTimeout(r, 200));
+  });
+
+  if (allOff.lit !== 0) {
+    fail('chips', `${allOff.lit} chip(s) refused to switch off — a control that will not act looks exactly like a press that did not register`);
+  } else if (allOff.cards !== 0) {
+    fail('chips', `every chip is off and ${allOff.cards} card(s) are still on the board`);
+  } else if (!allOff.saysFiltered) {
+    fail('chips', 'every chip is off, the board is empty, and nothing says why — which is the confusion that refusing the last chip was guarding against');
+  } else if (allOff.saysEmpty) {
+    fail('chips', `the board says there are no jobs when there are — the filtered message and the empty message are both showing`);
+  } else {
+    pass('chips', `every chip can be switched off, and the board says "${allOff.words}"`);
+  }
+
   if (on.pressed !== 'true' || off.pressed !== 'false') {
     fail('chips', `pressing a chip took aria-pressed from "${on.pressed}" to "${off.pressed}" — the state is not being carried to anything that cannot see it`);
   } else if (on.background === off.background) {

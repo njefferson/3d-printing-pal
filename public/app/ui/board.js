@@ -45,12 +45,22 @@ export function initBoard({ onEditJob, onOpenModel: openModelFor }) {
       const active = new Set(store.state.prefs.typeFilter);
       if (active.has(type)) active.delete(type);
       else active.add(type);
-      // Never let the reader filter everything away with no way to tell an empty
-      // board from a hidden one — the last chip cannot be switched off.
-      if (active.size === 0) {
-        say('At least one job type has to stay shown.');
-        return;
-      }
+      /* THE LAST CHIP CAN BE SWITCHED OFF, and refusing that was a guard against a
+       * confusion this app does not have.
+       *
+       * It was written to stop a reader filtering everything away "with no way to
+       * tell an empty board from a hidden one" — but the board has TWO empty
+       * messages and always did. `#board-empty` says there are no jobs;
+       * `#board-filtered` says every job is hidden by the filters above. The
+       * distinction the guard protected was already being made, in words, ten
+       * lines further down this file.
+       *
+       * So all it did was refuse an ordinary act — clear the lot, then pick the
+       * one thing you want to look at — and make the reader work out which chip
+       * the app would not let go of. 0.8.1 made that worse in a way nothing
+       * measured: a chip that will not turn off looks exactly like a chip that
+       * did not register the press.
+       */
       // The known-types list travels with every write, so turning a chip OFF is
       // recorded as a decision about a type that existed rather than as an absence.
       store.savePrefs({ typeFilter: [...active], typeFilterKnown: [...TYPE_IDS] });

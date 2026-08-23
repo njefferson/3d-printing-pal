@@ -96,9 +96,18 @@ export async function load() {
   state.imageIds = imageIds;
   const prefs = await db.readMeta('prefs', null);
   if (prefs) state.prefs = { ...state.prefs, ...prefs };
-  // A filter that has lost every option would show an empty board with no way to
-  // tell an empty board from a hidden one.
-  if (!Array.isArray(state.prefs.typeFilter) || state.prefs.typeFilter.length === 0) {
+  /* ONLY A CORRUPT FILTER IS REPAIRED, never an empty one.
+   *
+   * An empty array is what "show me none of them" legitimately looks like, and
+   * from 1.0.1 that is a choice the reader is allowed to make — the board says
+   * `Every job is hidden by the filters above` when they do. Resetting it here
+   * would silently undo that choice on the next launch, which is a worse defect
+   * than the one the reset was guarding: a setting that quietly reverts is a
+   * setting the reader cannot trust, and they get no message about it either.
+   *
+   * A non-array is different. That is a damaged preference rather than a
+   * decision, and there is nothing to honour in it. */
+  if (!Array.isArray(state.prefs.typeFilter)) {
     state.prefs.typeFilter = [...TYPE_IDS];
   }
 

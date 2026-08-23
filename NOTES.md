@@ -125,6 +125,39 @@ capability, with the rejected ones and the reason each was rejected.
 
 ---
 
+## The last filter chip could not be switched off, and the guard was pointless (1.0.1)
+
+Turning every type off was refused, with `At least one job type has to stay shown.`
+The comment above it said why: never let the reader filter everything away "with
+no way to tell an empty board from a hidden one".
+
+**That reason was false when it was written.** The board has TWO empty messages and
+always did — `#board-empty` says there are no jobs, `#board-filtered` says every
+job is hidden by the filters above. The distinction the guard existed to protect
+was already being made, in words, ten lines further down the same file.
+
+**So all it did was refuse an ordinary act.** Clear the lot, then turn on the one
+thing you want to look at, is how anybody uses a filter. The guard forced the
+other order and left the reader working out which chip the app would not release.
+
+**0.8.1 made it worse in a way nothing measured.** A chip that will not turn off is
+indistinguishable from a press that did not register — and the lit state that
+replaced the tick made every other press visibly land, so the one that did not
+reads as a fault in the app rather than a rule.
+
+**The load-time reset went too, and for a stronger reason.** An empty
+`typeFilter` was overwritten with every type on the next launch, so the choice was
+undone silently between sessions. A setting that reverts on its own is worse than
+one that is refused: the refusal at least says something. A non-array is still
+repaired, because that is damage rather than a decision.
+
+**The general shape: a guard is a claim that something bad happens without it, and
+that claim can be checked.** This one named a confusion the app had already solved
+in the same file. Before writing a rule that refuses the reader an action, look for
+the thing that would have made the outcome legible — it is often already there.
+
+---
+
 ## The welcome is for a stranger now (1.0.0)
 
 **This app has an audience beyond its author, and that is what 1.0.0 means here.**
@@ -992,9 +1025,9 @@ the log and check whether the steps ran or were skipped.
 
 ### The staged candidate
 
-**1.0.0 is the staged candidate**, at https://staging.3d-printing-pal.pages.dev —
-the welcome is written for a stranger, the app is going on the hub, and 0.8.1's
-lit filter chips ride along with it.
+**1.0.1 is the staged candidate**, at https://staging.3d-printing-pal.pages.dev —
+every filter chip can be switched off now, including the last one. 1.0.0's welcome
+for a stranger and 0.8.1's lit chips ride along with it.
 
 **This paragraph is reset on every promotion, and a gate now checks that it was.**
 Leaving a promoted candidate recorded here is how the next session concludes

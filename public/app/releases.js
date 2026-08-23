@@ -7,6 +7,19 @@
 
 export const RELEASES = [
   {
+    "version": "1.0.1",
+    "kind": "ITERATION",
+    "date": "2026-08-23",
+    "summary": "Every filter button can be switched off, including the last one.",
+    "added": [],
+    "fixed": [
+      "The board no longer insists you keep one type showing. Turning the last filter off was refused, so clearing them all and then picking the single thing you wanted to look at did not work — you had to do it the other way round, and work out which button the app would not let go of.",
+      "It was guarding a confusion this app does not have. The board already tells you which kind of empty it is: <em>No jobs yet</em> when there are none, and <em>Every job is hidden by the filters above</em> when there are. The second message has been there the whole time.",
+      "Turning them all off now survives a reload. It used to be quietly undone the next time you opened the app, which is worse than refusing it outright — a setting that reverts on its own is one you cannot trust."
+    ],
+    "broken": []
+  },
+  {
     "version": "1.0.0",
     "kind": "VERSION",
     "date": "2026-08-23",
