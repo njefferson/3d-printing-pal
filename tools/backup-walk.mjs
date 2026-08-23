@@ -75,15 +75,29 @@ async function seed(page) {
   await page.waitForTimeout(220);
 
   await page.click('#tab-board');
+  /* THE TYPE DECIDES WHICH BOXES EXIST, from 0.8.0: only `ordered` carries a
+   * price, and the printer is absent until a job leaves Research. Filling a hidden
+   * input throws, so this seed sets the column first and asks the app which types
+   * take a recipient rather than naming one. Anything priced here has to be an
+   * ORDERED job or the money never reaches the record being round-tripped. */
+  const withRecipient = await page.evaluate(async () => {
+    const mod = await import('/app/derive.js');
+    return mod.TYPES_WITH_RECIPIENT;
+  });
   for (const job of [
-    { title: 'Benchy', type: 'fun' },
-    { title: 'Dragon egg', type: 'request', grams: '240', price: '18.00' },
+    // BOTH IN ONE COLUMN. The reorder check further down needs two cards sharing a
+    // column to have anything to reorder — split them and the Move panel offers no
+    // "Put before" button, the check fails, and the panel it left open blocks the
+    // next click, so the run dies somewhere else entirely.
+    { title: 'Benchy', type: 'fun', column: 'printing', printer: '' },
+    { title: 'Dragon egg', type: 'ordered', column: 'printing', printer: 'Prusa MK4', grams: '240', price: '18.00' },
   ]) {
     await page.click('#job-new');
     await page.fill('#job-f-title', job.title);
     await page.check(`input[name="job-type"][value="${job.type}"]`);
-    if (job.type === 'request') await page.fill('#job-f-requester', 'Ada Lovelace');
-    await page.fill('#job-f-printer', 'Prusa MK4');
+    if (withRecipient.includes(job.type)) await page.fill('#job-f-requester', 'Ada Lovelace');
+    await page.selectOption('#job-f-column', job.column);
+    if (job.printer) await page.fill('#job-f-printer', job.printer);
     if (job.price) await page.fill('#job-f-price', job.price);
     if (job.grams) {
       await page.click('#job-f-addlink');
@@ -837,7 +851,11 @@ async function main() {
   await page.click('#tab-board');
   await page.click('#job-new');
   await page.fill('#job-f-title', 'Gift box run');
-  await page.check('input[name="job-type"][value="request"]');
+  // ORDERED, because that is the type money is attached to from 0.8.0 and this
+  // check is about a model's earnings. As `request` the price box is not on the
+  // form at all and the job would save with nothing charged, so the assertion
+  // below would read £0.00 and blame the wrong thing.
+  await page.check('input[name="job-type"][value="ordered"]');
   await page.fill('#job-f-requester', 'Ada Lovelace');
   // By NAME, and typed over whatever the title mirrored in. This existing model
   // must be MATCHED rather than duplicated — the assertion below reads the

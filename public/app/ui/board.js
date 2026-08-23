@@ -20,8 +20,8 @@
 // the second press goes to <body>. Cards are reused by id and only their text
 // changes; nodes are moved between columns rather than recreated.
 
-import { $, el, clear } from '../dom.js';
-import { COLUMNS, TYPES, TYPES_WITH_RECIPIENT, sortForBoard } from '../derive.js';
+import { $, el, clear, money } from '../dom.js';
+import { COLUMNS, TYPES, TYPE_IDS, TYPES_WITH_RECIPIENT, TYPES_WITH_PRICE, num, sortForBoard } from '../derive.js';
 import * as store from '../store.js';
 import { thumbFor } from './thumb.js';
 import { openPanel, close, registerPanel, say } from './panels.js';
@@ -51,7 +51,9 @@ export function initBoard({ onEditJob, onOpenModel: openModelFor }) {
         say('At least one job type has to stay shown.');
         return;
       }
-      store.savePrefs({ typeFilter: [...active] });
+      // The known-types list travels with every write, so turning a chip OFF is
+      // recorded as a decision about a type that existed rather than as an absence.
+      store.savePrefs({ typeFilter: [...active], typeFilterKnown: [...TYPE_IDS] });
     });
   }
 
@@ -242,10 +244,21 @@ function updateCard(node, job) {
   p.mark.textContent = initial ? initial.toUpperCase() : '·';
   p.mark.hidden = Boolean(imageId);
 
+  /* WHAT THIS JOB ACTUALLY HAS, and nothing else. Every line here is conditional
+   * except the quantity, because a card that prints "Printer: —" or "For: —" is
+   * spending its scarcest thing — a line of a tile on a phone — to say that a
+   * field is empty.
+   *
+   * The price is gated on the TYPE rather than on the number being present, which
+   * is the same rule the form follows. A stray price on a Gift is a record from
+   * before 0.8.0 and is not the card's job to surface. */
   const bits = [];
   if (job.printer) bits.push(`Printer: ${job.printer}`);
   bits.push(`Quantity: ${job.quantity}`);
   if (TYPES_WITH_RECIPIENT.includes(job.type) && job.requester) bits.push(`For: ${job.requester}`);
+  if (TYPES_WITH_PRICE.includes(job.type) && num(job.priceCharged) > 0) {
+    bits.push(money(job.priceCharged, store.state.prefs.currency));
+  }
   clear(p.meta);
   for (const bit of bits) p.meta.append(el('span', { text: bit }));
 

@@ -7,6 +7,25 @@
 
 export const RELEASES = [
   {
+    "version": "0.8.0",
+    "kind": "CAPABILITY",
+    "date": "2026-08-23",
+    "summary": "Ordered is a fourth job type, and it is the one money belongs to.",
+    "added": [
+      "Ordered, beside Asked, Gift and Fun. It is for a print somebody is paying for: it asks who it is for and what you charged, and the card shows both. The other three no longer ask about money at all, because they never had any.",
+      "Price only appears where there is a price. It used to sit on every job, which meant three categories out of four carried a box that is never filled in. A form of boxes that do not apply is how you learn to skip past the ones that do."
+    ],
+    "fixed": [
+      "The printer is no longer asked for on a job that is still Research. Nothing is on a machine yet, so there is nothing to answer. The box appears once the job moves to Staged or beyond.",
+      "The printers you already use are offered as a list. Two machines of the same make are told apart by whatever you called them, not by the make — so the second time is a choice rather than typing the same name again. The list is read from the jobs on the board; there is no separate list of printers to keep up to date.",
+      "A new job type cannot be hidden by a filter that predates it. The type filter remembers which chips are on, and a saved answer from before Ordered existed would have filed every Ordered job out of sight on the release that introduced them. It now knows the difference between a chip you turned off and one that did not exist yet."
+    ],
+    "broken": [
+      "Nothing was migrated. A job that was Asked and had a price on it is still Asked, and its price is no longer shown. Open it and choose Ordered to bring the money back — the app will not reclassify your jobs by guessing.",
+      "Changing a job away from Ordered clears its price, the same way changing it away from Asked or Gift clears who it is for. Undo puts it straight back."
+    ]
+  },
+  {
     "version": "0.7.2",
     "kind": "ITERATION",
     "date": "2026-08-23",

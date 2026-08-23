@@ -39,6 +39,7 @@
   --text-3: #c1c1c1;
 
   --primary: #9fc2f5;
+  --ordered: #7fd8e0;
   --wanted: #f0c674;
   --fun: #8fd6a4;
   --danger: #f2aecd;
@@ -64,6 +65,7 @@
     --text-3: #4a4436;
 
     --primary: #17458f;
+    --ordered: #063036;
     --wanted: #63400a;
     --fun: #14532d;
     --danger: #7a1548;
@@ -368,6 +370,24 @@ a { color: var(--primary); }
   border: 1px solid currentColor;
   margin-bottom: 6px;
 }
+/* FIVE ACCENTS ON A WHEEL THAT WAS ALREADY FULL: four job types plus danger.
+ *
+ * `ordered` is cyan because the pairs that matter are BADGE against BADGE — the
+ * four words a reader tells apart on the board — and danger is a button colour in
+ * a different place entirely.
+ *
+ * MEASURED RATHER THAN CHOSEN. Violet put Asked and Ordered 2.4 apart for a deutan
+ * reader, which is the two most similar categories made hardest to tell apart.
+ * Pink sat 5.2 from danger. Orange failed a hard contrast floor outright in the
+ * light theme. Cyan leaves no badge pair as the tightest in either theme.
+ *
+ * The light value is #063036 rather than the mid-teal tried first, which measured
+ * 4.16 as text on the page and failed. Every day accent here is a dark ink on
+ * cream; a mid-tone is the wrong family as well as the wrong number.
+ *
+ * It still collides with danger under protan, and that is accepted and stated:
+ * every badge carries its WORD, so no meaning here rests on colour alone. */
+.badge-ordered { color: var(--ordered); }
 .badge-request { color: var(--primary); }
 .badge-wanted { color: var(--wanted); }
 .badge-fun { color: var(--fun); }

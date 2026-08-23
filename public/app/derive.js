@@ -36,10 +36,10 @@ export const COLUMN_IDS = COLUMNS.map((c) => c.id);
  * shown as "Asked" because that is the word people actually use for it, and no
  * job needed touching to do it.
  *
- * THE AXIS IS WHO IT IS FOR, AND WHETHER THEY ASKED. That is what makes three
- * categories rather than two-and-a-shade:
+ * THE AXIS IS WHO IT IS FOR, WHETHER THEY ASKED, AND WHETHER THEY ARE PAYING:
  *
- *   request — someone else, and they asked. They are waiting on it.
+ *   ordered — someone else, they asked, and money is involved. A job of work.
+ *   request — someone else, and they asked. A favour; nothing is charged.
  *   wanted  — someone else, and they did NOT ask. A gift; they may not know.
  *   fun     — you.
  *
@@ -49,15 +49,29 @@ export const COLUMN_IDS = COLUMNS.map((c) => c.id);
  * decision with no consequence, and that is exactly what it felt like. Naming it
  * "Gift" is not a relabel: it is the category finally having a recipient, which is
  * what `hasRecipient` below is for.
+ *
+ * `ordered` is the same move again, one axis over. Price charged was on EVERY job
+ * from the beginning, which meant three of the four categories carried a money box
+ * that is never filled in — and a form full of boxes that do not apply is how a
+ * reader learns to skim the ones that do. Money is a property of a category, not
+ * of a job, so it is declared here beside the recipient.
+ *
+ * A FLAG PER FACT, NEVER A LIST OF IDS. `=== 'request'` in three places is what
+ * made adding the second recipient a hunt; the same mistake with money would be
+ * worse, because the wrong answer there is a number rather than a blank.
  */
 export const TYPES = [
-  { id: 'request', label: 'Asked', hasRecipient: true },
-  { id: 'wanted', label: 'Gift', hasRecipient: true },
-  { id: 'fun', label: 'Fun', hasRecipient: false },
+  { id: 'ordered', label: 'Ordered', hasRecipient: true, hasPrice: true },
+  { id: 'request', label: 'Asked', hasRecipient: true, hasPrice: false },
+  { id: 'wanted', label: 'Gift', hasRecipient: true, hasPrice: false },
+  { id: 'fun', label: 'Fun', hasRecipient: false, hasPrice: false },
 ];
 
 /** The types that are for somebody else, so the job carries their name. */
 export const TYPES_WITH_RECIPIENT = TYPES.filter((t) => t.hasRecipient).map((t) => t.id);
+
+/** The types that money is attached to, so the job carries a price. */
+export const TYPES_WITH_PRICE = TYPES.filter((t) => t.hasPrice).map((t) => t.id);
 
 export const TYPE_IDS = TYPES.map((t) => t.id);
 

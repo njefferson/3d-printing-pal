@@ -125,6 +125,100 @@ capability, with the rejected ones and the reason each was rejected.
 
 ---
 
+## Ordered is where the money lives, and the other three stopped asking (0.8.0)
+
+**Price charged sat on EVERY job from the first release**, so three categories in
+four carried a money box that is never filled in. A form of boxes that do not
+apply is how a reader learns to skim the ones that do — the same defect 0.7.1
+fixed one axis over, where a category with no consequence taught them the type
+did not matter either.
+
+**The axis is now three questions rather than two:** who it is for, whether they
+asked, and whether they are paying.
+
+- `ordered` — **Ordered.** They asked and money is involved. A job of work.
+- `request` — **Asked.** They asked and nothing is charged. A favour.
+- `wanted` — **Gift.** For somebody else who did not ask.
+- `fun` — **Fun.** For you.
+
+**A FLAG PER FACT, NEVER A LIST OF IDS.** `hasPrice` sits beside `hasRecipient` on
+`TYPES`, and `TYPES_WITH_PRICE` is what the form and the card read. The version of
+this that spelled `=== 'request'` in three places is why adding the second
+recipient meant finding all three; the same mistake about money would have been
+worse, because the wrong answer there is a NUMBER rather than a blank.
+
+**NOTHING WAS MIGRATED.** A job that was Asked with a price on it is still Asked,
+and its price is no longer shown. Reclassifying by guessing — "it had money, so it
+must have been an order" — would rewrite the reader's own record of what happened,
+and the one thing worse than a wrong category is a wrong category nobody chose.
+
+**Switching a type away from Ordered CLEARS the price**, exactly as switching away
+from Asked clears the recipient. The alternative is a value the form does not show
+and the app still holds, which survives into the export and into a model's
+earnings with nothing on screen to explain it. Undo puts it back in one press.
+
+## The printer was a question a research job cannot answer (0.8.0)
+
+Two complaints, one field. It was asked on every job, and most jobs did not have
+one yet — a print in Research is not on a machine by definition.
+
+**The box is gone until the job leaves Research**, driven by the COLUMN rather
+than the type. A printer is a fact about a print that exists; every type can end
+up on a machine, so it is the wrong question to ask of the category and the right
+one to ask of the state.
+
+**And the printers already used are offered as a list**, read from the jobs, with
+no printers table anywhere. A second record of which machines exist is a second
+thing that can disagree, and renaming one would then need a migration — the same
+rule remaining weight follows. Two machines of the same make are told apart by
+whatever they were called, never by the make, so the list is the only thing that
+can help and the app cannot invent the names.
+
+## A saved filter cannot tell a new type from a rejected one (0.8.0)
+
+**The nastiest thing in this release, and it would have shipped silently.** The
+board's type filter is stored as the list of types to SHOW. A reader whose prefs
+said `['request','wanted','fun']` has an answer that predates `ordered` — so every
+Ordered job would have been filtered off their board, on the release that
+introduced them, with the chips looking untouched.
+
+**It cannot be fixed by unioning**, because "not in the list" is also exactly what
+a chip the reader turned OFF looks like. The two states are identical in the
+stored array and opposite in meaning, so the array cannot answer the question.
+
+`typeFilterKnown` is the missing fact: the types that EXISTED when the filter was
+last written. Anything current and unknown is new, and new is on. Turning a chip
+off then writes a `known` containing it, so it stays off. Absent entirely means
+prefs written before 0.8.0, where the same rule gives the right answer for the
+same reason.
+
+**The general shape: a stored preference that enumerates the things it applies to
+is a snapshot of a vocabulary, and the vocabulary moves.** Store what it knew, or
+store the exceptions rather than the selections.
+
+## Five accents on a wheel that was already full (0.8.0)
+
+Four job types plus danger, and every candidate for the fifth collided with
+something. Measured rather than chosen, with `palette-check.mjs` doing the
+measuring:
+
+- **Violet** put Asked and Ordered 2.4 apart for a deutan reader — the two most
+  similar categories made the hardest to tell apart.
+- **Pink** sat 5.2 from danger.
+- **Orange** failed a hard contrast floor outright in the light theme.
+- **Cyan** leaves no badge pair as the tightest in either theme, and its
+  collisions are with `danger`, which is a button colour and never a badge.
+
+The light value is `#063036` rather than the mid-teal tried first, which measured
+4.16 as text on the page and failed. Every day accent here is a dark ink on cream;
+a mid-tone was the wrong family as well as the wrong number.
+
+**The remaining note is accepted and stated:** a protan reader cannot separate
+Ordered from danger. Every badge carries its WORD, so nothing here rests on colour
+alone — which is the condition the gate's own note asks for.
+
+---
+
 ## The middle job type had no meaning until it was given one (0.7.1)
 
 **"Asked, Wanted and Fun" was confusing, and better wording was not the fix.** The
@@ -828,8 +922,9 @@ the log and check whether the steps ran or were skipped.
 
 ### The staged candidate
 
-**There is no staged candidate.** `staging` and `main` point at the same commit,
-whatever that commit currently is.
+**0.8.0 is the staged candidate**, at https://staging.3d-printing-pal.pages.dev —
+Ordered is a fourth job type and the one money belongs to, and the printer is no
+longer asked for on a job that is still Research.
 
 **This paragraph is reset on every promotion, and a gate now checks that it was.**
 Leaving a promoted candidate recorded here is how the next session concludes

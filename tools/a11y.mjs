@@ -97,6 +97,7 @@ const STATE_TEXT = {
     '.column-toggle',
     '.card-title',
     '.card-meta span',
+    '.badge-ordered',
     '.badge-request',
     '.badge-wanted',
     '.badge-fun',
@@ -1353,6 +1354,50 @@ async function checkNameMirror(page) {
  * disagreeing about the same job. It now reads derive.js FROM THE PAGE, so all
  * three are held to each other.
  */
+/**
+ * The printer box: absent in Research, and a list of what this board already uses.
+ *
+ * BOTH HALVES ARE THE POINT. Hiding it in Research is what stops the form asking a
+ * question a research job has no answer to; the list is what stops the same
+ * printer being typed on every job after that. Neither is visible to a contrast or
+ * a target check, so without this they are two behaviours nothing measures.
+ */
+async function checkPrinterField(page) {
+  await closeEverything(page);
+  await showView(page, 'board');
+  await press(page, '#job-new');
+  await page.waitForTimeout(160);
+
+  await page.selectOption('#job-f-column', 'research');
+  await page.waitForTimeout(100);
+  if (await page.isVisible('#job-f-printer-field')) {
+    fail('printer', 'a Research job is asked which printer it is on, which is a question with no answer');
+  } else {
+    pass('printer', 'Research does not ask which printer');
+  }
+
+  await page.selectOption('#job-f-column', 'printing');
+  await page.waitForTimeout(100);
+  if (!(await page.isVisible('#job-f-printer-field'))) {
+    fail('printer', 'a job that is printing cannot say which printer it is on');
+  } else {
+    pass('printer', 'a printing job can say which printer');
+  }
+
+  // READ FROM THE JOBS, so this asserts the derivation rather than the markup: the
+  // seed typed "Prusa MK4" on one job and nothing anywhere holds a list of
+  // printers, so its presence here means the options were built from the board.
+  const options = await page.evaluate(() =>
+    [...document.querySelectorAll('#job-f-printer-options option')].map((o) => o.value));
+  if (!options.includes('Prusa MK4')) {
+    fail('printer', `the printer list offers ${JSON.stringify(options)} and not the printer the seed typed — it is not being read from the jobs`);
+  } else {
+    pass('printer', `the printer list is built from the board: ${JSON.stringify(options)}`);
+  }
+
+  await closeEverything(page);
+}
+
 async function checkJobTypes(page) {
   await closeEverything(page);
   await showView(page, 'board');
@@ -1362,7 +1407,12 @@ async function checkJobTypes(page) {
   // The module the app itself imports, rather than a second reading of the file.
   const types = await page.evaluate(async () => {
     const mod = await import('/app/derive.js');
-    return mod.TYPES.map((t) => ({ id: t.id, label: t.label, hasRecipient: Boolean(t.hasRecipient) }));
+    return mod.TYPES.map((t) => ({
+      id: t.id,
+      label: t.label,
+      hasRecipient: Boolean(t.hasRecipient),
+      hasPrice: Boolean(t.hasPrice),
+    }));
   });
 
   const seen = await page.evaluate(() => ({
@@ -1379,9 +1429,9 @@ async function checkJobTypes(page) {
   }));
 
   if (!seen.legend.endsWith('?')) {
-    fail('job-types', `the type fieldset is headed "${seen.legend}", which is not a question — three words under a noun read as categories with rules to work out`);
+    fail('job-types', `the type fieldset is headed "${seen.legend}", which is not a question — words under a noun read as categories with rules to work out`);
   } else {
-    pass('job-types', `the three types answer a question: "${seen.legend}"`);
+    pass('job-types', `the ${seen.options.length} types answer a question: "${seen.legend}"`);
   }
 
   const silent = seen.options.filter((o) => !o.note);
@@ -1403,6 +1453,26 @@ async function checkJobTypes(page) {
   }
   if (agree) pass('job-types', `the badge, the form and the filter use one word for each of the ${types.length} types`);
 
+  /* THE SHAPE OF THE TABLE ITSELF, before any per-type behaviour.
+   *
+   * Every check below compares a flag against the form, so they all agree with
+   * each other when a flag is simply GONE: set `hasPrice: false` on every type and
+   * the money box disappears from the app while this gate stays green, because
+   * nothing is inconsistent — it is only absent. That is the same defect as a
+   * category with nothing behind it, one level up, and it is what a plant found.
+   *
+   * So the table is asserted to have both answers present. A recipient and a price
+   * are each a real division of the types, or they are decoration. */
+  const charging = types.filter((t) => t.hasPrice);
+  const receiving = types.filter((t) => t.hasRecipient);
+  if (!charging.length || charging.length === types.length) {
+    fail('job-types', `${charging.length} of ${types.length} types carry a price — money has to divide the types or it is not a property of one`);
+  } else if (!receiving.length || receiving.length === types.length) {
+    fail('job-types', `${receiving.length} of ${types.length} types carry a recipient — that has to divide the types or it is not a property of one`);
+  } else {
+    pass('job-types', `the table divides: ${charging.length} of ${types.length} charge, ${receiving.length} of ${types.length} are for somebody else`);
+  }
+
   // BEHAVIOURAL. A type that claims somebody to give it to has to ask who.
   for (const type of types) {
     const option = seen.options.find((o) => o.value === type.id);
@@ -1418,6 +1488,21 @@ async function checkJobTypes(page) {
       fail('job-types', `"${type.label}" asks who it is for and its note does not mention it: "${option.note}"`);
     } else {
       pass('job-types', `"${type.label}" ${type.hasRecipient ? 'asks who it is for, and says so' : 'is for you, and asks nobody'}`);
+    }
+
+    /* THE SAME QUESTION ABOUT MONEY, and it is a separate one. `hasPrice` was
+     * added because price charged sat on every job from the first release, so
+     * three categories in four carried a money box that is never filled in — and
+     * a form full of boxes that do not apply teaches a reader to skim the ones
+     * that do. A flag nothing checks goes back to being decoration, which is
+     * exactly what the type itself was before 0.7.1. */
+    const charges = await page.isVisible('#job-f-price-field');
+    if (type.hasPrice && !charges) {
+      fail('job-types', `"${type.label}" is the type money is attached to and never asks for a price`);
+    } else if (!type.hasPrice && charges) {
+      fail('job-types', `"${type.label}" has no money attached and asks what was charged anyway`);
+    } else {
+      pass('job-types', `"${type.label}" ${type.hasPrice ? 'asks what was charged' : 'asks for no money'}`);
     }
   }
 
@@ -1494,21 +1579,56 @@ async function seed(page) {
   await page.click('#model-save');
   await page.waitForTimeout(220);
 
+  /* ONE JOB OF EVERY TYPE, because each badge is registered for contrast and a
+   * registry selector matching nothing is a FAILURE — so this list and the badge
+   * registrations hold each other up, the same way the link on Benchy holds up
+   * `.card-source`.
+   *
+   * THREE STAY IN RESEARCH WITH NO PRINTER, deliberately, and for two reasons.
+   * The printer box is absent until a job leaves Research, so a seed that gave
+   * every job a printer would never exercise the case the field was made
+   * conditional for — and filling a hidden input throws, which is the loud half.
+   * The quiet half is a card with a printer line that could never have been empty.
+   *
+   * Three rather than one because the reordering checks MOVE cards out of Research
+   * and need some left to move; setting this to one emptied the column and three
+   * assertions reported that they could not run. A seed is a fixture for every
+   * check downstream of it, not only for the one being written. */
   const jobs = [
-    { title: 'Benchy', type: 'fun', printer: 'Prusa MK4', qty: '1', price: '' },
-    { title: 'Calibration cube', type: 'wanted', printer: 'Prusa MK4', qty: '2', price: '' },
-    { title: 'Dragon egg', type: 'request', printer: 'Bambu P1S', qty: '3', price: '18.00' },
+    { title: 'Benchy', type: 'fun', column: 'research', printer: '', qty: '1', price: '' },
+    { title: 'Calibration cube', type: 'wanted', column: 'research', printer: '', qty: '2', price: '' },
+    { title: 'Dragon egg', type: 'request', column: 'research', printer: '', qty: '3', price: '' },
+    { title: 'Bolt privacy screen', type: 'ordered', column: 'staged', printer: 'Prusa MK4', qty: '1', price: '18.00' },
   ];
+
+  const withRecipient = await page.evaluate(async () => {
+    const mod = await import('/app/derive.js');
+    return mod.TYPES_WITH_RECIPIENT;
+  });
 
   await showView(page, 'board');
   for (const job of jobs) {
     await press(page, '#job-new');
     await page.fill('#job-f-title', job.title);
     await page.check(`input[name="job-type"][value="${job.type}"]`);
-    if (job.type === 'request') await page.fill('#job-f-requester', 'Ada Lovelace');
-    await page.fill('#job-f-printer', job.printer);
+    // Read from the app rather than compared to an id here — `=== 'request'` in a
+    // gate is the same defect as `=== 'request'` in the app, one layer removed.
+    if (withRecipient.includes(job.type)) await page.fill('#job-f-requester', 'Ada Lovelace');
+    // The column FIRST: it is what decides whether there is a printer box at all.
+    await page.selectOption('#job-f-column', job.column);
+    if (job.printer) await page.fill('#job-f-printer', job.printer);
     await page.fill('#job-f-quantity', job.qty);
-    if (job.price) await page.fill('#job-f-price', job.price);
+    /* ASSERTED BEFORE IT IS TYPED. Filling a hidden input throws a Playwright
+     * timeout from inside the seed, which reads as "the gate is broken" and buries
+     * the real finding — that the type money is attached to stopped asking for it.
+     * A fixture that dies on a product defect has to say which one. */
+    if (job.price) {
+      if (!(await page.isVisible('#job-f-price-field'))) {
+        fail('seed', `"${job.title}" is an ${job.type} job and the form has no price box, so nothing on this board can carry money`);
+      } else {
+        await page.fill('#job-f-price', job.price);
+      }
+    }
     await page.fill('#job-f-notes', 'a note about the print');
     // Log filament on one of them, so remaining weight is a real computation.
     if (job.title === 'Dragon egg') {
@@ -1531,19 +1651,20 @@ async function seed(page) {
     spools: document.querySelectorAll('#inventory-list .rowcard').length,
     models: document.querySelectorAll('#models-list .rowcard').length,
   }));
-  if (counts.cards !== 3) fail('seed', `expected 3 job cards after using the form, got ${counts.cards} — the job form does not work`);
+  if (counts.cards !== jobs.length) fail('seed', `expected ${jobs.length} job cards after using the form, got ${counts.cards} — the job form does not work`);
   if (counts.spools !== 1) fail('seed', `expected 1 spool, got ${counts.spools} — the spool form does not work`);
 
-  // THREE, AND THE ARITHMETIC IS THE CHECK. One model was entered directly. Three
-  // jobs followed, and the Model box fills from the title, so "Benchy" and
-  // "Calibration cube" each made one — while "Dragon egg" MATCHED the model
-  // already there rather than making a twin. 1 + 2 = 3, and a 4 means matching by
-  // name broke. A bare "expected 3" would go stale the moment the seed changed and
+  // THE ARITHMETIC IS THE CHECK. One model was entered directly. Four jobs
+  // followed, and the Model box fills from the title, so every job whose title is
+  // not already a model makes one — while "Dragon egg" MATCHED the model already
+  // there rather than making a twin. 1 + 3 = 4, and a 5 means matching by name
+  // broke. A bare "expected 4" would go stale the moment the seed changed and
   // would be a number nobody could check.
-  if (counts.models !== 3) {
-    fail('seed', `expected 3 models — 1 entered directly plus 2 created by jobs named after models that did not exist, with "Dragon egg" matching the existing one — got ${counts.models}`);
+  const expectedModels = 1 + jobs.filter((j) => j.title !== 'Dragon egg').length;
+  if (counts.models !== expectedModels) {
+    fail('seed', `expected ${expectedModels} models — 1 entered directly plus ${expectedModels - 1} created by jobs named after models that did not exist, with "Dragon egg" matching the existing one — got ${counts.models}`);
   } else {
-    pass('seed', 'a job names its model and the model appears: 1 entered + 2 made by jobs, with the repeated name matching rather than duplicating');
+    pass('seed', `a job names its model and the model appears: 1 entered + ${expectedModels - 1} made by jobs, with the repeated name matching rather than duplicating`);
   }
 
   /* A CARD WITH NO PICTURE TAKES NO PICTURE-SIZED HOLE.
@@ -1652,6 +1773,7 @@ async function main() {
   await checkJobFromModel(page);
   await checkNameMirror(page);
   await checkJobTypes(page);
+  await checkPrinterField(page);
   await checkInteractionSelectors(page);
   await checkInfoSurface(page);
   await checkDiagnosticPrivacy(page);

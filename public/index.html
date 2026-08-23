@@ -105,6 +105,9 @@
     </div>
 
     <div class="chips" role="group" aria-label="Filter by job type">
+      <button type="button" class="chip" data-type="ordered" aria-pressed="true">
+        <span class="chip-tick" aria-hidden="true">✓</span><span class="chip-label">Ordered</span>
+      </button>
       <button type="button" class="chip" data-type="request" aria-pressed="true">
         <span class="chip-tick" aria-hidden="true">✓</span><span class="chip-label">Asked</span>
       </button>
@@ -353,9 +356,14 @@
         <legend>Why is it on the board?</legend>
         <div class="typeset">
           <label class="typeopt">
+            <input type="radio" name="job-type" value="ordered">
+            <span class="typeopt-label">Ordered</span>
+            <span class="typeopt-note">someone is paying for it — the card will show who, and what it earned</span>
+          </label>
+          <label class="typeopt">
             <input type="radio" name="job-type" value="request">
             <span class="typeopt-label">Asked</span>
-            <span class="typeopt-note">someone asked you for it — the card will show who</span>
+            <span class="typeopt-note">someone asked and you are not charging — the card will show who</span>
           </label>
           <label class="typeopt">
             <input type="radio" name="job-type" value="wanted">
@@ -418,9 +426,22 @@
       <div id="job-f-picture"></div>
       <p class="note" id="job-f-picture-hint"></p>
 
-      <div class="field">
+      <!-- PRINTER IS ABOUT A PRINT THAT EXISTS, so it is absent while the job is
+           still Research — nothing is on a printer yet, and a box asking which one
+           is a question with no answer. It appears from Staged onward, driven by
+           the column below.
+
+           THE LIST IS WHAT YOU HAVE ALREADY USED. Typing the same printer name on
+           every job is the friction; two machines of the same make especially,
+           because the make is not the answer — whatever you called them is. The
+           datalist is built from the jobs that already name one, so the second
+           time is a choice rather than a spelling. -->
+      <div class="field" id="job-f-printer-field">
         <label for="job-f-printer">Printer</label>
-        <input type="text" id="job-f-printer" autocomplete="off" placeholder="Whatever you call it">
+        <input type="text" id="job-f-printer" list="job-f-printer-options" autocomplete="off"
+               aria-describedby="job-f-printer-hint" placeholder="Whatever you call it">
+        <datalist id="job-f-printer-options"></datalist>
+        <p class="note" id="job-f-printer-hint">Optional. Leave it blank until it is on a machine.</p>
       </div>
 
       <div class="row">
@@ -428,7 +449,11 @@
           <label for="job-f-quantity">Quantity</label>
           <input type="number" id="job-f-quantity" min="1" step="1" value="1" inputmode="numeric">
         </div>
-        <div class="field">
+        <!-- ONLY ON AN ORDERED JOB. Money is a property of the category rather than
+             of every job, and a box that never applies is how a reader learns to
+             skip past the ones that do. Driven by `hasPrice` on TYPES, never by an
+             id compared in three places. -->
+        <div class="field" id="job-f-price-field">
           <label for="job-f-price">Price charged</label>
           <input type="number" id="job-f-price" min="0" step="0.01" inputmode="decimal">
         </div>

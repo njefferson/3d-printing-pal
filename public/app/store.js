@@ -24,6 +24,9 @@ export const state = {
     inventorySort: 'material',
     hideFinished: false,
     typeFilter: [...TYPE_IDS],
+    // The types that existed when typeFilter was last written — see the load path
+    // for why the filter alone cannot tell a new type from a rejected one.
+    typeFilterKnown: [...TYPE_IDS],
     archivedOpen: false,
   },
   // Ids only. Enough to know whether a picture exists without reading its bytes;
@@ -97,6 +100,31 @@ export async function load() {
   // tell an empty board from a hidden one.
   if (!Array.isArray(state.prefs.typeFilter) || state.prefs.typeFilter.length === 0) {
     state.prefs.typeFilter = [...TYPE_IDS];
+  }
+
+  /* A TYPE THAT DID NOT EXIST WHEN THE FILTER WAS SAVED IS ON.
+   *
+   * The filter is stored as the list of types to SHOW, which is the natural
+   * spelling and quietly wrong across a release that adds one: a reader whose
+   * prefs say ['request','wanted','fun'] has a stored answer that predates
+   * `ordered`, so every Ordered job would be filtered off their board — invisible,
+   * on the release that introduced them, with the chips looking untouched.
+   *
+   * IT CANNOT BE FIXED BY UNIONING, because "not in the list" is also exactly what
+   * a chip the reader turned OFF looks like. The two states are identical in the
+   * stored array and are opposite in meaning, so the array cannot answer it.
+   *
+   * `typeFilterKnown` is the missing fact: the types that EXISTED when the filter
+   * was last written. Anything current and unknown is new, and new is on. A reader
+   * who then turns it off writes a `known` that contains it, and it stays off.
+   *
+   * Absent entirely means prefs written before 0.8.0, where the same rule gives
+   * the right answer for the same reason. */
+  const known = Array.isArray(state.prefs.typeFilterKnown) ? state.prefs.typeFilterKnown : [];
+  const unseen = TYPE_IDS.filter((id) => !known.includes(id) && !state.prefs.typeFilter.includes(id));
+  if (unseen.length) {
+    state.prefs.typeFilter = [...state.prefs.typeFilter, ...unseen];
+    state.prefs.typeFilterKnown = [...TYPE_IDS];
   }
   state.lastExportAt = await db.readMeta('lastExportAt', null);
   state.firstRunDone = (await db.readMeta('firstRunDone', false)) === true;

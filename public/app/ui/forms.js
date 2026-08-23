@@ -5,7 +5,7 @@
 // on it — and the app, not the reader, is the one that knows.
 
 import { $, el, clear, grams } from '../dom.js';
-import { COLUMNS, MATERIALS, TYPES_WITH_RECIPIENT, remainingFor, num } from '../derive.js';
+import { COLUMNS, MATERIALS, TYPES_WITH_RECIPIENT, TYPES_WITH_PRICE, remainingFor, num } from '../derive.js';
 import * as store from '../store.js';
 import { readUrl } from '../fromurl.js';
 import { openPanel, close, registerPanel, confirmThen, say } from './panels.js';
@@ -46,7 +46,9 @@ export function initForms() {
   for (const material of MATERIALS) materials.append(el('option', { value: material }));
 
   // `change` bubbles from a radio, so the fieldset hears all three.
-  $('#job-f-type').addEventListener('change', syncRequesterVisibility);
+  $('#job-f-type').addEventListener('change', syncJobFields);
+  // The printer box follows the column, so the column has to say when it moves.
+  columnSelect.addEventListener('change', syncJobFields);
   $('#job-f-addlink').addEventListener('click', () => addLinkRow());
 
   // A pasted link fills the Title, which then fills the Model box — so one paste
@@ -154,7 +156,8 @@ export function openJob(id, opener) {
   $('#job-f-nospools').hidden = store.state.spools.length > 0;
   $('#job-f-addlink').disabled = store.state.spools.length === 0;
 
-  syncRequesterVisibility();
+  fillPrinterOptions();
+  syncJobFields();
   openPanel('dlg-job', opener);
   $('#job-f-title').focus();
 }
@@ -235,11 +238,49 @@ function setJobType(value) {
   if (wanted) wanted.checked = true;
 }
 
-function syncRequesterVisibility() {
-  // Driven by the LIST rather than by `=== 'request'`. A gift has a recipient too,
-  // and the version of this that named one id is why adding the second one meant
-  // finding every place that had made the same assumption.
+/**
+ * Show only the boxes this job actually has.
+ *
+ * DRIVEN BY THE LISTS rather than by `=== 'request'`. A gift has a recipient too,
+ * and the version of this that named one id is why adding the second one meant
+ * finding every place that had made the same assumption. Money went in the same
+ * way: `hasPrice` on TYPES, one list, one reader.
+ *
+ * THE PRINTER IS DRIVEN BY THE COLUMN, not by the type — a printer is a fact
+ * about a print that exists, and a Research job is by definition not on one.
+ * Every type can end up on a machine, so this is the wrong question to ask of the
+ * category and the right one to ask of the state.
+ */
+function syncJobFields() {
   $('#job-f-requester-field').hidden = !TYPES_WITH_RECIPIENT.includes(jobType());
+  $('#job-f-price-field').hidden = !TYPES_WITH_PRICE.includes(jobType());
+  $('#job-f-printer-field').hidden = $('#job-f-column').value === 'research';
+}
+
+/**
+ * The printers this board already knows about, offered as a list.
+ *
+ * READ FROM THE JOBS, never stored. There is no printers table and there must not
+ * be one: a second record of which machines exist is a second thing that can
+ * disagree with the jobs, and renaming a printer would then need a migration. The
+ * set of printers IS whatever the jobs say, which is the same rule remaining
+ * weight follows.
+ *
+ * Case-insensitively deduplicated on the way in, keeping the spelling used most
+ * recently — two machines of the same make are told apart by what they were
+ * called, so "Left" and "left" being offered as two choices is noise.
+ */
+function fillPrinterOptions() {
+  const seen = new Map();
+  for (const job of store.state.jobs) {
+    const name = (job.printer || '').trim();
+    if (name) seen.set(name.toLowerCase(), name);
+  }
+  const list = $('#job-f-printer-options');
+  clear(list);
+  for (const name of [...seen.values()].sort((a, b) => a.localeCompare(b))) {
+    list.append(el('option', { value: name }));
+  }
 }
 
 // ------------------------------------------------------------- the model box
@@ -391,7 +432,12 @@ async function onSaveJob(event) {
     sourceUrl: $('#job-f-link').value,
     printer: $('#job-f-printer').value,
     quantity: $('#job-f-quantity').value,
-    priceCharged: $('#job-f-price').value,
+    // CLEARED WHEN THE CATEGORY HAS NO MONEY, exactly as the recipient is. A value
+    // the form does not show and the app still holds is the shape this codebase
+    // refuses everywhere else — it survives into the export and into the model's
+    // earnings, where nothing on screen explains it. Undo puts it back in one
+    // press if the type was changed by mistake.
+    priceCharged: TYPES_WITH_PRICE.includes(jobType()) ? $('#job-f-price').value : '',
     column: $('#job-f-column').value,
     notes: $('#job-f-notes').value,
     spoolLinks: links,
