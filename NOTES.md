@@ -812,19 +812,27 @@ the log and check whether the steps ran or were skipped.
 
 ### The staged candidate
 
-**0.7.1 is the staged candidate**, at https://staging.3d-printing-pal.pages.dev —
-the three job types renamed to Asked, Gift and Fun, with Gift given the recipient
-that made it a category rather than a colour. Pushed at `014b8c0`; all 28 gate
-steps and 5 security steps EXECUTED and passed on that exact commit, read one at a
-time rather than taken from the run's conclusion, and the deploy's six steps ran:
+**There is no staged candidate.** `staging` and `main` point at the same commit,
+whatever that commit currently is.
 
-    ✨ Uploading _headers
-    ✨ Deployment complete! Take a peek over at https://3aa54088.3d-printing-pal.pages.dev
-    ✨ Deployment alias URL: https://staging.3d-printing-pal.pages.dev
-
-**This paragraph is reset to "there is no staged candidate" on every promotion.**
+**This paragraph is reset on every promotion, and a gate now checks that it was.**
 Leaving a promoted candidate recorded here is how the next session concludes
-something is waiting when nothing is.
+something is waiting when nothing is — so `tools/branch-state-check.mjs` reads
+this section's OPENING paragraph against `public/sw.js` in the tree and at
+`origin/main`, on every commit.
+
+**0.7.1 reached production on 2026-08-23** — the three job types renamed to Asked,
+Gift and Fun, with Gift given the recipient that made it a category rather than a
+colour, and the status page's own version lines put under a gate. Promoted at
+`28246c1` as a clean fast-forward of two commits, ancestry checked with
+`git merge-base --is-ancestor` BEFORE the push and the remote read back after. All
+28 gate steps and 5 security steps had executed and passed on that exact commit,
+read one at a time rather than taken from the run's conclusion; the production
+deploy's six steps ran, its command carried `--branch=main`, and its log printed:
+
+    ✨ Success! Uploaded 0 files (39 already uploaded) (0.29 sec)
+    ✨ Uploading _headers
+    ✨ Deployment complete! Take a peek over at https://0cf0977e.3d-printing-pal.pages.dev
 
 **0.7.0 reached production on 2026-08-23** — one screen does the whole job, plus
 the probe and the measurement it produced. Promoted at `1647c9e` as a clean
@@ -836,14 +844,15 @@ steps ran, and `_headers` went up, which is what carries the probe's own policy:
     ✨ Uploading _headers
     ✨ Deployment complete! Take a peek over at https://055b1b2a.3d-printing-pal.pages.dev
 
-**`014b8c0` above is the commit whose gates were READ — it is not the head of
-`staging`.** The two differ by design and always will: the note recording a
-candidate lands on `staging` on top of the candidate, so the branch head is later
-than the SHA any paragraph here can name, and a record commit after a promotion
-moves it again. A SHA is worth writing down when it is evidence about a specific
-BUILD — the one whose steps were read, the one that was promoted — because those
-never move. A head is worth reading with `git rev-parse origin/staging` and never
-worth believing from a file.
+**Every SHA in this section is evidence about a BUILD, and none of them is a
+branch head.** The two differ by design and always will: the note recording a
+release lands on `staging` on top of the thing it describes, so the head is later
+than any SHA a paragraph here can name, and the next record moves it again. A SHA
+is worth writing down when it names something that never moves — the commit whose
+steps were read, the commit that was promoted. A head is worth reading with
+`git rev-parse origin/staging` and never worth believing from a file. **The
+paragraph that used to be here named one, and it dangled within a day**, because
+the release it pointed at was replaced by the next one directly above it.
 
 **0.6.0 reached production on 2026-08-23** — the model a job prints is named on
 its card and opens from there, and the job type is three buttons instead of a

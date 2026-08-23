@@ -30,7 +30,7 @@
     <h1>Where it stands</h1>
     <p class="lede">One page that stays current, at one address. Everything here was read from a
       run log or a git remote, not inferred from a command exiting quietly.</p>
-    <p class="lede"><b>0.7.0 is live. 0.7.1 is on staging, waiting for you to pass it.</b></p>
+    <p class="lede"><b>0.7.1 is live. Nothing is waiting on staging.</b></p>
   </header>
 
   <main>
@@ -39,20 +39,20 @@
     <div class="now">
       <div class="now-row">
         <span class="now-label">In production</span>
-        <span class="now-value">0.7.0 — <a href="https://3d-printing-pal.pages.dev">3d-printing-pal.pages.dev</a></span>
-        <span class="now-sub">Promoted 2026-08-23 at <code>1647c9e</code> as a clean fast-forward of
-          five commits, with ancestry checked before the push and the remote read back after. All
-          28 gate steps and 5 security steps had run and passed on that exact commit; all eight
-          deploy steps ran, and <code>_headers</code> went up, which is what carries the probe's
-          own policy.</span>
+        <span class="now-value">0.7.1 — <a href="https://3d-printing-pal.pages.dev">3d-printing-pal.pages.dev</a></span>
+        <span class="now-sub">Promoted 2026-08-23 at <code>28246c1</code> as a clean fast-forward of
+          two commits, with ancestry checked before the push and the remote read back after. All
+          28 gate steps and 5 security steps had run and passed on that exact commit, read one at a
+          time rather than taken from the run's conclusion; the production deploy's steps ran
+          rather than skipped.</span>
       </div>
       <div class="now-row">
         <span class="now-label">On staging</span>
-        <span class="now-value">0.7.1 — <a href="https://staging.3d-printing-pal.pages.dev">staging.3d-printing-pal.pages.dev</a></span>
-        <span class="now-sub">Pushed 2026-08-23 at <code>014b8c0</code>. All 28 gate steps and 5
-          security steps ran and passed on that exact commit, read one at a time rather than taken
-          from the run's conclusion; the deploy's six steps all ran. It renames the job types and
-          gives the middle one a recipient — details under "Waiting on you".</span>
+        <span class="now-value">Nothing waiting — <a href="https://staging.3d-printing-pal.pages.dev">staging.3d-printing-pal.pages.dev</a></span>
+        <span class="now-sub">Staging and production point at the same commit, so there is no
+          candidate. This line and the one above it are now held to the release triplet by a commit
+          guard, because on 23 August they said the opposite of what was true and nothing
+          failed.</span>
       </div>
       <div class="now-row">
         <span class="now-label">How a run is read</span>
@@ -74,15 +74,12 @@
     <p class="note">None of it is blocked on more work.</p>
     <div class="card attention">
       <ul class="list-yours">
-        <li><span><b>Pass 0.7.1 on staging, or say what is still wrong with it.</b> The three job
-          types now differ in what the app does rather than only in colour. <b>Asked</b> is
-          somebody asking and waiting. <b>Gift</b> is for somebody else who did not ask — it now
-          asks who it is for and puts them on the card, which "Wanted" never did. <b>Fun</b> is for
-          you. The question above the buttons is "Why is it on the board?", and the name box is
-          "Who it is for". <b>Nothing was migrated</b> — every existing job keeps the type it had,
-          because only the words on screen changed.</span></li>
-        <li><span><b>The picture question is closed and needs nothing from you.</b> What is under
-          "Checked, and not a defect" is a record rather than a queue.</span></li>
+        <li><span><b>Nothing.</b> 0.7.1 is live and the picture question is answered. What is
+          below is a record rather than a queue.</span></li>
+        <li><span><b>The job types changed words, not data.</b> <b>Asked</b> is somebody asking and
+          waiting. <b>Gift</b> is for somebody else who did not ask — it now asks who it is for and
+          puts them on the card, which "Wanted" never did. <b>Fun</b> is for you. Every job you
+          already had keeps the type it had; nothing was migrated.</span></li>
         <li><span><b>Nothing here needs the probe again unless you want another site.</b>
           MakerWorld is measured and answered, below. <a
           href="https://staging.3d-printing-pal.pages.dev/probe.html">/probe.html</a> is still
