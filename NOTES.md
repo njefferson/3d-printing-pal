@@ -1025,15 +1025,36 @@ the log and check whether the steps ran or were skipped.
 
 ### The staged candidate
 
-**1.0.1 is the staged candidate**, at https://staging.3d-printing-pal.pages.dev —
-every filter chip can be switched off now, including the last one. 1.0.0's welcome
-for a stranger and 0.8.1's lit chips ride along with it.
+**There is no staged candidate.** `staging` and `main` point at the same commit,
+whatever that commit currently is.
 
 **This paragraph is reset on every promotion, and a gate now checks that it was.**
 Leaving a promoted candidate recorded here is how the next session concludes
 something is waiting when nothing is — so `tools/branch-state-check.mjs` reads
 this section's OPENING paragraph against `public/sw.js` in the tree and at
 `origin/main`, on every commit.
+
+**1.0.0, 1.0.1 and 0.8.1 reached production on 2026-08-23** — the first release
+meant for somebody other than its author. The welcome is written for a stranger,
+the app is listed on the hub, the filter chips light up rather than carrying a
+tick, and every one of them can be switched off. Promoted at `cd36645` as a clean
+fast-forward of four commits, ancestry checked with
+`git merge-base --is-ancestor` BEFORE the push and the remote read back after;
+`origin/main:public/sw.js` carries the 1.0.1 triplet. All 28 gate steps and 5
+security steps had executed and passed on that exact commit, read one at a time;
+the production deploy's six steps ran, its command carried `--branch=main`, and
+its log printed:
+
+    ✨ Uploading _headers
+    ✨ Deployment complete! Take a peek over at https://6c9b6f9b.3d-printing-pal.pages.dev
+
+**THE HUB TILE WENT UP BEFORE THIS.** `noahjefferson` was pushed at `7c4d392`
+while production was still 0.8.0, so for the window between the two a visitor
+following the hub link got the OLD welcome — the one that said there were three
+job types. Recorded because it is the §7i shape one level out: a pointer to a
+thing is written before the thing it points at is ready, and only the pointer is
+in the diff you are looking at. Landing them together is the fix, and it needed
+the owner's word on the release to be possible.
 
 **0.8.0 reached production on 2026-08-23** — Ordered is a fourth job type and the
 one money belongs to; the printer is no longer asked for on a Research job; and a
