@@ -1,25 +1,32 @@
 #!/usr/bin/env node
-// public/status.html — the one page that is not the app.
+// The pages that ship with the app and are NOT the app.
 //
-// WHY IT NEEDS ITS OWN GATE. It ships inside public/ and is served by the same
-// deploy, but every other check here is pointed at the app: tools/a11y.mjs
-// derives its surface list from index.html's markup, and palette-check reads
-// palettes/3d-printing-pal.json rather than any stylesheet. status.css is a HAND
-// COPY of those palette tokens, which means nothing at all was measuring the
-// colours a reader of that page actually sees. That is the shape of a file that
-// looks covered because it sits beside covered things.
+// public/status.html — where the work stands, one address, always current.
+// public/probe.html  — can a picture's address be read? A measurement, not a
+//                      feature, and the only thing here that runs script.
 //
-// The contrast machinery is IMPORTED from tools/a11y.mjs rather than restated.
-// A second copy was written first, and it measured dark text against an assumed
-// black page because the body's background is a gradient — reporting ratios of
-// 1.32 in light mode and clean in dark, both fictional.
+// WHY THEY NEED THEIR OWN GATE. Everything else is pointed at the app:
+// tools/a11y.mjs derives its surface list from index.html's markup, and
+// palette-check reads palettes/3d-printing-pal.json rather than any stylesheet.
+// Both of these carry a HAND COPY of those palette tokens, which means nothing at
+// all was measuring the colours their readers actually see. That is the shape of a
+// file that looks covered because it sits beside covered things.
 //
-// It also asserts the two things that make it a LIVE page rather than a document:
-// no script (the CSP forbids inline, and a status page has nothing to run) and
-// nothing that would let the app's service worker keep a copy. The caching half
-// is proved at runtime by tools/update-walk.mjs against a real worker; the half
-// here is the static one, so a change to sw.js that drops the exemption fails
-// both at once.
+// The contrast machinery is IMPORTED from tools/page-helpers.mjs rather than
+// restated. A second copy was written first, and it measured dark text against an
+// assumed black page because the body's background is a gradient — reporting
+// ratios of 1.32 in light mode and clean in dark, both fictional.
+//
+// EACH PAGE DECLARES WHAT IT MAY CONTAIN, rather than sharing one rule. The status
+// page carries no script at all; the probe is nothing but script. A single rule
+// covering both would have to permit script everywhere, which would stop it saying
+// anything about the page that must not have any.
+//
+// It also asserts the two things that keep them out of the app: nothing the
+// service worker would keep a copy of, and — for the probe — that its widened
+// policy is scoped to its own path and nowhere else. The caching half is proved at
+// RUNTIME by tools/update-walk.mjs against a real worker; the half here is static,
+// so dropping the exemption fails both at once.
 
 import { chromium } from 'playwright-core';
 import { readFileSync, existsSync } from 'node:fs';
@@ -42,36 +49,93 @@ const pass = (m) => passes.push(m);
 const THEMES = ['light', 'dark'];
 const WIDTHS = [{ name: 'phone', width: 390 }, { name: 'tablet', width: 834 }];
 
+// Each page, and what it is allowed to be. `script` is per-page on purpose: the
+// status page must contain none, the probe is nothing but. `files` is everything
+// that page ships, all of which the worker must leave alone.
+const PAGES = [
+  {
+    file: 'status.html',
+    label: 'status',
+    script: false,
+    files: ['/status.html', '/status.css'],
+    ownPolicy: false,
+  },
+  {
+    file: 'probe.html',
+    label: 'probe',
+    script: true,
+    files: ['/probe.html', '/probe.css', '/probe.js'],
+    ownPolicy: true,
+  },
+];
+
 // ------------------------------------------------------------ source checks
 
 function sourceChecks() {
-  const html = readFileSync(join(ROOT, 'public/status.html'), 'utf8');
   const sw = readFileSync(join(ROOT, 'public/sw.js'), 'utf8');
-
-  if (/<script/i.test(html)) fail('status.html contains a <script> — the page carries no script by design, and the CSP forbids an inline one anyway');
-  else pass('no script on the page at all');
-
-  if (/\sstyle=/i.test(html)) fail('status.html has an inline style attribute, which `style-src \'self\'` refuses with the reason only in the console');
-  else pass('no inline style attribute — every rule comes from status.css');
-
-  if (!/<meta\s+name="robots"\s+content="noindex"/i.test(html)) fail('status.html is missing its noindex — it is not a page for search results');
-  else pass('marked noindex');
-
-  // The worker must be told to leave it alone in BOTH directions: out of the
-  // precache list, and out of the fetch handler that caches whatever it fetches.
+  const headers = readFileSync(join(ROOT, 'public/_headers'), 'utf8');
   const shell = sw.slice(sw.indexOf('const SHELL'), sw.indexOf('];', sw.indexOf('const SHELL')));
-  for (const file of ['status.html', 'status.css']) {
-    if (shell.includes(file)) fail(`${file} is in the service worker's SHELL — the status page must never be precached`);
-  }
-  if (!shell.includes('status')) pass('neither status file is in the precache list');
 
-  for (const file of ['/status.html', '/status.css']) {
-    if (!sw.includes(`'${file}'`)) {
-      fail(`the service worker does not name ${file} as live — being absent from SHELL is not enough, because the fetch handler caches everything it fetches`);
+  for (const page of PAGES) {
+    const html = readFileSync(join(ROOT, 'public', page.file), 'utf8');
+    const hasScript = /<script/i.test(html);
+
+    if (page.script && !hasScript) {
+      fail(`${page.file} has no <script>, and it is nothing but script — it cannot measure anything`);
+    } else if (!page.script && hasScript) {
+      fail(`${page.file} contains a <script>, and it carries none by design`);
+    } else {
+      pass(`${page.file} ${page.script ? 'runs its own script, from a file' : 'carries no script at all'}`);
     }
-  }
-  if (sw.includes("'/status.html'") && sw.includes("'/status.css'")) {
-    pass('the worker names both status files as live, so the fetch handler leaves them to the network');
+
+    // An inline style is refused by `style-src 'self'` with the reason only in the
+    // console, so the page renders unstyled and reads as a working page.
+    if (/\sstyle=/i.test(html)) fail(`${page.file} has an inline style attribute, which style-src 'self' silently refuses`);
+    else pass(`${page.file}: no inline style attribute`);
+
+    if (/<script(?![^>]*\ssrc=)/i.test(html)) fail(`${page.file} has an INLINE script, which script-src 'self' refuses — it must be an external file`);
+
+    if (!/<meta\s+name="robots"\s+content="noindex"/i.test(html)) fail(`${page.file} is missing its noindex — it is not a page for search results`);
+    else pass(`${page.file}: marked noindex`);
+
+    // Kept out of the worker in BOTH directions. Absent from the precache is not
+    // enough on its own: the fetch handler caches whatever it successfully fetches.
+    for (const path of page.files) {
+      const bare = path.slice(1);
+      if (shell.includes(bare)) fail(`${bare} is in the service worker's SHELL — a page that is not the app must never be precached`);
+      if (!sw.includes(`'${path}'`)) {
+        fail(`the service worker does not name ${path} as live — being absent from SHELL is not enough, because the fetch handler caches everything it fetches`);
+      }
+    }
+    if (page.files.every((path) => sw.includes(`'${path}'`) && !shell.includes(path.slice(1)))) {
+      pass(`${page.label}: all ${page.files.length} file(s) named live and none precached`);
+    }
+
+    // The widened policy is scoped to ONE path. A block written as `/probe*` or
+    // pasted into `/*` would hand the whole app permission to talk to other hosts,
+    // which is the app's central promise, given away by a wildcard.
+    if (page.ownPolicy) {
+      const blocks = headers.split('\n').filter((l) => /^\S/.test(l) && l.trim().startsWith('/'));
+      const own = blocks.filter((b) => b.trim() === `/${page.file}`);
+      if (!own.length) fail(`_headers has no block for /${page.file}, so it would be served the app's policy and every result would be a refusal by us`);
+      else if (blocks.some((b) => b.trim().startsWith(`/${page.label}`) && b.includes('*'))) {
+        fail(`_headers widens a WILDCARD path for ${page.label}, which grants more than the one page`);
+      } else {
+        pass(`${page.label}: its policy is scoped to /${page.file} exactly`);
+      }
+
+      const global = headers.slice(headers.indexOf('/*'), headers.indexOf(`/${page.file}`));
+      if (/img-src[^;\n]*https:/.test(global) || /connect-src[^;\n]*https:/.test(global)) {
+        fail("the APP's own policy now permits requests to other hosts — \"nothing is fetched\" is the thing this app is");
+      } else {
+        pass("the app's own policy still permits no request to any other host");
+      }
+
+      // Below `/*`, because both match and the later one is the one that wins.
+      if (headers.indexOf(`/${page.file}`) < headers.indexOf('/*')) {
+        fail(`the /${page.file} block is written ABOVE /*, so the global policy overrides it`);
+      }
+    }
   }
 }
 
@@ -159,8 +223,9 @@ async function main() {
     args: ['--no-sandbox'],
   });
 
-  const target = new URL('status.html', url).href;
 
+  for (const spec of PAGES) {
+  const target = new URL(spec.file, url).href;
   for (const theme of THEMES) {
     for (const viewport of WIDTHS) {
       const context = await browser.newContext({
@@ -172,8 +237,13 @@ async function main() {
       page.on('console', (m) => { if (m.type() === 'error') consoleErrors.push(m.text()); });
       page.on('pageerror', (e) => consoleErrors.push(String(e)));
 
-      await page.goto(target, { waitUntil: 'networkidle' });
-      const where = `${theme}/${viewport.name}`;
+      // `load`, not `networkidle`. The probe reads its own response headers on
+      // open, and a page that is allowed to talk to other hosts is exactly the
+      // page whose network may not go idle on cue — waiting for that is waiting
+      // on the thing under test.
+      await page.goto(target, { waitUntil: 'load' });
+      await page.waitForTimeout(250);
+      const where = `${spec.label}/${theme}/${viewport.name}`;
 
       // The stylesheet arrived AND applied. A page refused for its MIME type or
       // its CSP still renders, just unstyled, and reads as a working page.
@@ -183,8 +253,8 @@ async function main() {
         for (const sheet of sheets) { try { rules += sheet.cssRules.length; } catch { /* cross-origin */ } }
         return { sheets: sheets.length, rules, pad: getComputedStyle(document.body).paddingTop };
       });
-      if (applied.rules < 10) fail(`${where}: status.css did not apply — ${applied.sheets} sheet(s), ${applied.rules} rule(s)`);
-      else pass(`${where}: status.css applied (${applied.rules} rules)`);
+      if (applied.rules < 10) fail(`${where}: its stylesheet did not apply — ${applied.sheets} sheet(s), ${applied.rules} rule(s)`);
+      else pass(`${where}: stylesheet applied (${applied.rules} rules)`);
 
       await page.addScriptTag({ url: '/__axe.js' });
       const axeResult = await page.evaluate(async () => {
@@ -214,7 +284,7 @@ async function main() {
         for (const l of vague) fail(`a link is named "${l.name}", which says nothing out of context`);
         const unnamed = measured.links.filter((l) => !l.name.trim());
         for (const l of unnamed) fail(`the link to ${l.href} has no accessible name`);
-        if (!vague.length && !unnamed.length) pass(`all ${measured.links.length} links say where they go`);
+        if (!vague.length && !unnamed.length) pass(`${spec.label}: all ${measured.links.length} links say where they go`);
       }
 
       if (consoleErrors.length) fail(`${where}: the page logged ${consoleErrors.length} console error(s) — ${consoleErrors[0].slice(0, 120)}`);
@@ -222,6 +292,7 @@ async function main() {
 
       await context.close();
     }
+  }
   }
 
   await browser.close();
@@ -231,10 +302,10 @@ async function main() {
   for (const f of failures) console.error(`  FAIL ${f}`);
 
   if (failures.length) {
-    console.error(`\nstatus page: ${failures.length} failure(s) across ${THEMES.length} themes and ${WIDTHS.length} widths.`);
+    console.error(`\npages: ${failures.length} failure(s) over ${PAGES.length} page(s).`);
     process.exit(1);
   }
-  console.log(`status page: pass — ${passes.length} assertions across ${THEMES.length} themes and ${WIDTHS.length} widths.`);
+  console.log(`pages: pass — ${passes.length} assertions over ${PAGES.length} page(s), ${THEMES.length} themes and ${WIDTHS.length} widths.`);
 }
 
 await main();

@@ -23,25 +23,57 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', 'public');
  * prove nothing about the one that actually ships — and a CSP is the header most
  * able to break an app silently. Parsing the real file rather than restating it
  * means the two cannot drift.
+ *
+ * EVERY BLOCK, NOT JUST `/*`. This read only the global block until a page needed
+ * a policy of its own, and the failure that would have caused is the nastiest
+ * shape there is: the page passes locally under a policy it will never be served,
+ * or fails locally under one it will never be served, and either way the number it
+ * reports is about the test rig. A per-path block that this cannot see is a header
+ * nobody has ever run.
  */
-function deployedHeaders() {
+function deployedBlocks() {
   const text = readFileSync(join(ROOT, '_headers'), 'utf8');
-  const headers = {};
-  let inGlobal = false;
+  const blocks = [];
+  let current = null;
   for (const line of text.split('\n')) {
     if (/^\s*#/.test(line) || !line.trim()) continue;
     if (/^\S/.test(line)) {
-      inGlobal = line.trim() === '/*';
+      current = { path: line.trim(), headers: {} };
+      blocks.push(current);
       continue;
     }
-    if (!inGlobal) continue;
+    if (!current) continue;
     const at = line.indexOf(':');
-    if (at > 0) headers[line.slice(0, at).trim()] = line.slice(at + 1).trim();
+    if (at > 0) current.headers[line.slice(0, at).trim()] = line.slice(at + 1).trim();
   }
-  return headers;
+  return blocks;
 }
 
-export const HEADERS = deployedHeaders();
+export const BLOCKS = deployedBlocks();
+
+/** The global block on its own, for anything that only wants the app's policy. */
+export const HEADERS = (BLOCKS.find((b) => b.path === '/*') || { headers: {} }).headers;
+
+/**
+ * Every block whose path matches, merged in FILE ORDER so a later, more specific
+ * block overrides the global one — which is how Cloudflare Pages resolves a header
+ * named twice, and why the specific blocks are written below `/*` in that file.
+ *
+ * Only the two forms actually used are supported — an exact path and a trailing
+ * `*` — rather than a general glob. A matcher that quietly does not understand a
+ * pattern would send the wrong policy and look like it worked.
+ */
+function headersFor(path) {
+  const merged = {};
+  for (const block of BLOCKS) {
+    const pattern = block.path;
+    const hit = pattern.endsWith('*')
+      ? path.startsWith(pattern.slice(0, -1))
+      : path === pattern;
+    if (hit) Object.assign(merged, block.headers);
+  }
+  return merged;
+}
 
 const TYPES = {
   '.html': 'text/html; charset=utf-8',
@@ -92,7 +124,7 @@ export function serve(port = 0, { root = ROOT, extra = {} } = {}) {
 
       const body = await readFile(resolved);
       res.writeHead(200, {
-        ...HEADERS,
+        ...headersFor(path),
         'content-type': TYPES[extname(resolved)] || 'application/octet-stream',
         // No caching from the dev server: a stale module is the last thing a gate
         // measuring a service worker needs.

@@ -175,6 +175,63 @@ colour of a boundary is not where to find it.
 
 ---
 
+## The probe: can a picture's address be read? (0.7.0)
+
+`public/probe.html` answers, on a REAL machine against a REAL address, the one
+question nobody here can answer by reasoning: given a picture's address, can the
+browser read its BYTES, or only display it. That is a fact about the other site's
+CORS headers, it differs per host and per bucket, and this sandbox reaches no
+external host at all.
+
+**It exists because reasoning about this has already been wrong once, expensively.**
+A session concluded that dragging a picture from a browser into the app could not
+work, from the code plus an assumption about what a browser hands over. It already
+worked. The drop probe settled it in one look, and this is the same shape.
+
+**THREE QUESTIONS PER ADDRESS, kept apart on purpose**, because a single
+did-it-work answer leaves everyone guessing which layer said no. Does it DISPLAY,
+as a plain `<img>` — the hotlinking case, and not enough. Can `fetch` READ it. Can
+a CANVAS read it back, via `<img crossorigin>`, which needs the same header and
+fails DIFFERENTLY: the canvas is tainted and the read throws rather than the
+request being refused. A host can satisfy one path and not the other.
+
+**AND ONE ABOUT US.** Every Content-Security-Policy refusal is captured from
+`securitypolicyviolation` and attributed in words, because a refusal by our own
+policy looks exactly like the other site saying no and would be read as an answer
+about them. The page also prints the policy it was actually served, read from its
+own response headers — so if the `/probe.html` block ever stops applying, it says
+so instead of producing a wall of failures that look like the internet refusing.
+That is not decoration: the first run of `tools/probe-walk.mjs` used an `http`
+test host, our policy widens `https:` only, and the page correctly reported the
+refusal as ours. The rig was wrong and the probe said so.
+
+**The widened policy is ONE PATH, and `pages-check` holds it there.** Only
+`img-src` and `connect-src` are widened, only on `/probe.html`, written BELOW `/*`
+because both blocks match and the later one wins. The gate fails if the block is
+missing, if it is a wildcard, if it is written above `/*`, or if the app's own
+policy ever gains permission to talk to another host.
+
+**`tools/serve.mjs` had to learn about per-path blocks first**, and that ordering
+matters more than it looks. It parsed only `/*`, so the probe would have been
+exercised locally under a policy it is never served — passing or failing for a
+reason about the test rig. A per-path header the local server cannot see is a
+header nobody has ever run.
+
+**`npm run probe:walk` is developer-time**, like `render:icons`. It stands up two
+real cross-origin hosts over HTTPS — one sending `Access-Control-Allow-Origin`,
+one not, one missing — and asserts the three verdicts come out different. It is
+not in CI because making CI depend on `openssl` to test a diagnostic page is out
+of proportion; `npm run pages` holds the page itself there.
+
+**Nothing about fetching is built, and this changes none of that.** The app makes
+no request to any other host, the app's own policy still forbids it, there is no
+setting, and no privacy copy was written because nothing needs it yet. The probe
+is how the question gets an answer before any of that is proposed — and its own
+page says what a yes would cost, so a green result is never mistaken for a
+decision.
+
+---
+
 ## A picture's address contains no name (0.7.0)
 
 Pasting the link to an IMAGE rather than to its page offered `3ad2d89093fc967b` as
@@ -576,6 +633,9 @@ these.
   load-bearing ones, because *cannot* is what stops the next session building the
   thing. It still said the Move button could not reorder within a column.
 - **The staged candidate** and **Shipped to production**, below.
+- **`public/probe.html`** — the CORS probe. Hand-maintained and deployed with the
+  app. If fetching is ever built or ruled out for good, this page's own "what a yes
+  would cost" list is a claim about a decision that has since been made.
 - **`public/status.html`** — the live status page, at
   https://3d-printing-pal.pages.dev/status.html. Hand-maintained and deployed with
   the app, so it is exactly the kind of file a release leaves behind. It replaced a

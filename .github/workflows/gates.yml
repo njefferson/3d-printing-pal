@@ -142,12 +142,13 @@ jobs:
       - name: A pasted address becomes the right name
         run: npm run --silent fromurl
 
-      # status.html is served by this deploy and is not the app, so nothing else
-      # here measures it: the a11y gate derives its surfaces from index.html, and
-      # palette-check reads the palette file rather than status.css, which is a
-      # hand copy of it.
-      - name: Status page — contrast, landmarks, and never cached
-        run: npm run --silent status
+      # status.html and probe.html are served by this deploy and are not the app,
+      # so nothing else here measures them: the a11y gate derives its surfaces from
+      # index.html, and palette-check reads the palette file rather than either
+      # stylesheet, both of which are hand copies of it. This also holds the
+      # probe's widened policy to its own single path.
+      - name: The pages that are not the app — contrast, landmarks, policy, never cached
+        run: npm run --silent pages
 
       # icon.svg at the root is the one source; public/icon.svg is generated from
       # it. This compares them and needs no browser, so unlike the render itself

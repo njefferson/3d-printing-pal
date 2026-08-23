@@ -28,7 +28,7 @@ const CACHE = 'print-tracker-0.7.0';
 // Files that ship with the app and must never be cached by it. They are not in
 // SHELL either — being absent from the precache is not enough on its own, because
 // the fetch handler caches anything it successfully fetches.
-const LIVE = ['/status.html', '/status.css'];
+const LIVE = ['/status.html', '/status.css', '/probe.html', '/probe.css', '/probe.js'];
 
 const SHELL = [
   './',

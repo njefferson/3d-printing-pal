@@ -50,3 +50,29 @@
   Referrer-Policy: strict-origin-when-cross-origin
   X-Frame-Options: DENY
   Permissions-Policy: accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=(), interest-cohort=()
+
+# ONE PAGE, AND IT IS NOT THE APP. /probe.html exists to answer a question the app
+# cannot answer about itself: given a picture's address, can this browser actually
+# READ the bytes, or only display them? That is a fact about the other site's CORS
+# headers, and the only way to learn it is to try it on a real machine against a
+# real address.
+#
+# It cannot be asked under the policy above — `img-src 'self' blob:` and
+# `connect-src 'self'` refuse the request before any code runs, so every answer
+# would be "no" and every "no" would be about US. So this block, and ONLY these
+# two directives, are widened here.
+#
+# WRITTEN BELOW `/*` DELIBERATELY. Both blocks match this path and both set the
+# same header; the later one wins, on Cloudflare Pages and in tools/serve.mjs,
+# which merges in file order for exactly this reason.
+#
+# Everything else stays: script-src and style-src are still 'self', so the page
+# runs its own external file and nothing injected, and `default-src 'self'` still
+# governs every directive not named here. The page reads and writes nothing —
+# it does not touch the app's database, and it stores no result.
+#
+# THE PAGE PRINTS THE POLICY IT WAS ACTUALLY SERVED, at the top, from its own
+# response headers. If this block ever fails to apply, the probe says so in words
+# instead of reporting a wall of failures that look like the other site refusing.
+/probe.html
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' blob: data: https:; font-src 'self'; connect-src 'self' https:; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; object-src 'none'
