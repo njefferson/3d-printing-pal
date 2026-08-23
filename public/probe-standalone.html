@@ -274,6 +274,17 @@ footer {
            `download` rather than a plain link, and _headers serves it as an
            attachment too, because OPENING it here would put it back under the
            policy it exists to escape. -->
+      <!-- Only ever shown on the disk copy, where it is the one thing that makes a
+           "no" less than total. A page opened from a file has no origin, so a host
+           that allows SOME origins and not all would refuse it here and might not
+           refuse the real site. In practice a CDN that permits cross-origin reads
+           does it for everybody, so a no here is a no — but "in practice" is not
+           the same as "always" and the difference belongs on the page. -->
+      <p class="note" id="origin-note" hidden>A page opened from disk has no origin of its own, so a
+        host that permits only certain sites would refuse it here. Hosts that permit cross-origin
+        reads normally permit all of them, so a <b>no</b> here is almost certainly a no anywhere —
+        and a <b>yes</b> is conclusive. To remove the doubt entirely, run the hosted copy at
+        /probe.html instead.</p>
     </div>
   </section>
 
@@ -533,6 +544,22 @@ async function run() {
 async function showPolicy() {
   const box = $('#policy');
   const verdict = $('#policy-verdict');
+
+  // FROM DISK THERE IS NO POLICY, AND THAT IS THE POINT. A file:// page cannot
+  // fetch its own URL, so the check below throws — and the first version reported
+  // that as "Unknown policy. Treat every result below as unexplained", which is
+  // both wrong and frightening on a run that was working perfectly. A page that
+  // cries wolf about itself is the same defect as one that blames the wrong party,
+  // which is the thing this page exists to not do.
+  if (location.protocol === 'file:') {
+    box.textContent = 'None. This is the standalone copy, running from your disk.';
+    verdict.className = 'verdict is-yes';
+    verdict.textContent = 'NO POLICY APPLIES HERE, which is why this copy exists: nothing below can be refused by us, so every answer is about the site being tested. One caveat, in the box below.';
+    $('#fallback')?.remove();
+    $('#origin-note').hidden = false;
+    return;
+  }
+
   try {
     // Same-origin, so allowed under either policy. Reading the header off this
     // page's own response is the only way to know which one was served.

@@ -56,6 +56,18 @@
            `download` rather than a plain link, and _headers serves it as an
            attachment too, because OPENING it here would put it back under the
            policy it exists to escape. -->
+      <!-- Only ever shown on the disk copy, where it is the one thing that makes a
+           "no" less than total. A page opened from a file has no origin, so a host
+           that allows SOME origins and not all would refuse it here and might not
+           refuse the real site. In practice a CDN that permits cross-origin reads
+           does it for everybody, so a no here is a no — but "in practice" is not
+           the same as "always" and the difference belongs on the page. -->
+      <p class="note" id="origin-note" hidden>A page opened from disk has no origin of its own, so a
+        host that permits only certain sites would refuse it here. Hosts that permit cross-origin
+        reads normally permit all of them, so a <b>no</b> here is almost certainly a no anywhere —
+        and a <b>yes</b> is conclusive. To remove the doubt entirely, run the hosted copy at
+        /probe.html instead.</p>
+
       <div id="fallback">
         <p class="note">Runs from your disk instead, where no policy applies. Save it, then open
           the saved file — this is the copy to use if the verdict above is red.</p>

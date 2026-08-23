@@ -182,6 +182,22 @@ async function run() {
 async function showPolicy() {
   const box = $('#policy');
   const verdict = $('#policy-verdict');
+
+  // FROM DISK THERE IS NO POLICY, AND THAT IS THE POINT. A file:// page cannot
+  // fetch its own URL, so the check below throws — and the first version reported
+  // that as "Unknown policy. Treat every result below as unexplained", which is
+  // both wrong and frightening on a run that was working perfectly. A page that
+  // cries wolf about itself is the same defect as one that blames the wrong party,
+  // which is the thing this page exists to not do.
+  if (location.protocol === 'file:') {
+    box.textContent = 'None. This is the standalone copy, running from your disk.';
+    verdict.className = 'verdict is-yes';
+    verdict.textContent = 'NO POLICY APPLIES HERE, which is why this copy exists: nothing below can be refused by us, so every answer is about the site being tested. One caveat, in the box below.';
+    $('#fallback')?.remove();
+    $('#origin-note').hidden = false;
+    return;
+  }
+
   try {
     // Same-origin, so allowed under either policy. Reading the header off this
     // page's own response is the only way to know which one was served.

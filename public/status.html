@@ -78,18 +78,10 @@
           leaving the screen; check the line under the Picture box says where it will be kept.
           Then open Models and press <b>Start a job</b> on one. Nothing here was tried on a real
           machine — this sandbox cannot reach the site at all.</span></li>
-        <li><span><b>Run the probe, on the machine you catalogue from.</b> It is at
-          <a href="https://staging.3d-printing-pal.pages.dev/probe.html">/probe.html</a> on
-          staging. Paste picture addresses from the sites you actually use and it reports, per
-          address, whether the bytes can be READ or only displayed. That is the fact nobody here
-          can reason out, and it decides whether fetching a picture from a link is even
-          possible.</span></li>
-        <li><span><b>If the probe's first box is red, use the download on it instead.</b> The
-          hosted page needs a header rule to escape the app's own policy; the first version of
-          that rule was written on a wrong assumption and the page said so rather than blaming
-          the sites. The rule has been corrected and it is still a bet — this sandbox cannot
-          reach Cloudflare to confirm it. The standalone copy the page offers runs from your
-          disk, where no policy applies at all, and depends on nothing being right.</span></li>
+        <li><span><b>Nothing here needs the probe again unless you want another site.</b>
+          MakerWorld is measured and answered, below. <a
+          href="https://staging.3d-printing-pal.pages.dev/probe.html">/probe.html</a> is still
+          there for Printables, Thangs or anywhere else — each host has its own answer.</span></li>
         <li><span><b>Say whether to promote it.</b> Nothing reaches production without
           that.</span></li>
         <li><span><b>If the version at the bottom is not the one you expect</b>, the new copy is waiting
@@ -150,13 +142,8 @@
         <li><span><b>Undo lasts only while the app is open.</b> Closing it or reloading starts
           again with nothing to undo, and restoring a backup clears it.</span></li>
         <li><span><b>A picture has to be added by hand.</b> It can be pasted where the job is
-          made now, so it is one screen rather than two — but no address fills it in. A page
-          cannot be read by a browser at all, and a picture's own address needs that host to
-          permit the read; both would end "nothing is fetched". An image link also carries no
-          words: the one you sent yields only opaque ids, so there is nothing to fill a name
-          from with or without a network. Whether the BYTES of a picture can be read is a fact
-          about each host, and the probe above is how it gets measured rather than guessed.
-          Nothing is built for it, and nothing will be without your say.</span></li>
+          made now, so it is one screen rather than two — but no address fills it in, and for
+          MakerWorld that is now measured rather than assumed. See below.</span></li>
         <li><span><b>iPadOS will not always let a waiting update take over</b> while the app is
           open. Closing it fully and reopening does it.</span></li>
       </ul>
@@ -180,6 +167,17 @@
         <li><span><b>Pictures are copied in, never hotlinked.</b> Pointing at the original would
           tell that site every time your board is drawn, break when their CDN moved, and vanish
           offline.</span></li>
+        <li><span><b>Fetching a picture from a MakerWorld link is not possible, and it is
+          their decision rather than ours.</b> Measured on your machine: their image server shows
+          the picture to anyone — it displayed at 1000×750 — and permits nobody to read its
+          bytes. So there is nothing the app could copy in, and the only thing left would be
+          pointing at their server, which tells them every time your board is drawn, breaks when
+          their CDN moves, and shows nothing offline. Other sites each have their own answer;
+          this one is closed.</span></li>
+        <li><span><b>Three of the four addresses tried were PAGE addresses, and the probe said
+          so</b> rather than reporting them as refusals. That distinction is the difference
+          between closing this question and closing it wrongly — a page address failing looks
+          exactly like a picture being refused.</span></li>
         <li><span><b>Remaining weight has no field anywhere.</b> It is recomputed from the jobs on
           every read, which is why nothing can drift it.</span></li>
       </ul>

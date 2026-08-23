@@ -175,6 +175,66 @@ colour of a boundary is not where to find it.
 
 ---
 
+## MEASURED: MakerWorld is display-only (2026-08-23)
+
+**The question is answered, on real hardware, against real addresses.** Run from
+the standalone copy on the owner's own machine:
+
+    https://makerworld.bblmw.com/…/3ad2d89093fc967b.jpg
+    Displays:          yes — 1000×750
+    Bytes, by fetch:   no  — Failed to fetch
+    Bytes, by canvas:  no  — refused the cross-origin request
+
+**DISPLAY ONLY.** MakerWorld's image CDN serves the picture to anybody and permits
+no cross-origin read of it. So there is nothing the app could copy in, and the
+only thing a fetch would buy is hotlinking — pointing at their server, which tells
+them every time a board is drawn, breaks when the CDN moves, and shows nothing
+offline. That is the thing this app already refuses on purpose.
+
+**So the "fetch the picture from a link" idea is CLOSED for MakerWorld**, and it is
+closed for a better reason than the one everybody assumed. It was never about our
+policy, or about CORS being hard; it is that the host does not permit it, and no
+amount of building here changes that. Nothing was built, and now nothing needs to
+be talked out of being built.
+
+**Three of the four addresses tried were PAGE addresses**, and the probe said so
+rather than reporting a CORS failure — `NOTHING CAME BACK. Check the address is
+the picture itself and not the page it sits on.` That distinction is doing real
+work: a page address failing looks identical to a picture being refused, and
+reading the second as the first would have closed the question wrongly.
+
+**ONE CAVEAT, and it is on the page.** A file:// page has no origin, so a host that
+permits only certain sites would refuse it there and might not refuse the real
+one. Hosts that permit cross-origin reads normally permit all of them, so a no
+from disk is almost certainly a no anywhere — but "almost certainly" is not
+"always", and if this ever needs to be conclusive for our origin specifically, the
+hosted copy is the run to do.
+
+**Still worth trying for other sites.** This is a fact about MakerWorld's CDN, not
+about the web. Printables, Thangs and the rest each have their own answer and the
+probe is there to get it.
+
+---
+
+## The disk copy reported a working run as unexplained (2026-08-23)
+
+The standalone copy reads its own response headers to say which policy it is under —
+and from `file://` a page cannot fetch its own URL, so that threw, and it printed
+**"Unknown policy. Treat every result below as unexplained"** over a run that was
+working perfectly and had just produced the answer above.
+
+**That is the same defect as blaming the wrong party, pointed at itself.** The page
+was built so a refusal by us could never be read as a refusal by them; crying wolf
+about its own soundness is the other half of the same failure, and it very nearly
+made a real measurement look untrustworthy.
+
+It now recognises `file:` and says no policy applies, which is the point of that
+copy — and shows the origin caveat there, which is the one thing that makes a
+"no" from disk less than total. `probe-walk --standalone` asserts both: that the
+word "unknown" never appears, and that the caveat is on screen.
+
+---
+
 ## The probe: can a picture's address be read? (0.7.0)
 
 `public/probe.html` answers, on a REAL machine against a REAL address, the one

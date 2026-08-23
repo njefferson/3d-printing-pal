@@ -95,9 +95,24 @@ await page.waitForTimeout(400);
 // than silently turning every answer below into a refusal by us.
 const csp = (await page.textContent('#policy')).trim();
 if (ROUTE.name.startsWith('standalone')) {
-  // From disk it cannot read its own headers, and there are none to read. What
-  // matters is only that nothing refuses the requests below.
-  passes.push(`running ${ROUTE.name}, where no Content-Security-Policy applies at all`);
+  // From disk it cannot read its own headers, and there are none to read. It must
+  // SAY that rather than reporting it as a failure: the first version printed
+  // "Unknown policy. Treat every result below as unexplained" on a run that was
+  // working perfectly, which is the same defect as blaming the wrong party.
+  const said = (await page.textContent('#policy-verdict')).trim();
+  if (/unknown|unexplained/i.test(said)) {
+    failures.push(`from disk the page reported its own policy as unknown: "${said.slice(0, 70)}"`);
+  } else if (!/NO POLICY APPLIES/i.test(said)) {
+    failures.push(`from disk the page did not say that no policy applies: "${said.slice(0, 70)}"`);
+  } else {
+    passes.push('from disk it says no policy applies, rather than reporting itself as unexplained');
+  }
+  // And the caveat that makes a "no" from disk less than total is on screen.
+  if (await page.isHidden('#origin-note')) {
+    failures.push('the disk copy does not say that a page opened from a file has no origin, so a "no" here reads as more conclusive than it is');
+  } else {
+    passes.push('the disk copy states the origin caveat that qualifies a "no"');
+  }
 } else if (!/img-src[^;]*https:/.test(csp) || !/connect-src[^;]*https:/.test(csp)) {
   failures.push(`the page was served the app's policy rather than its own: ${csp.slice(0, 90)}`);
 } else {
