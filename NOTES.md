@@ -513,9 +513,16 @@ the log and check whether the steps ran or were skipped.
 
 ### The staged candidate
 
-**There is no staged candidate.** `staging` and `main` are the same commit,
-`caa3f6e`. Leaving a promoted candidate recorded here is how the next session
-concludes something is waiting when nothing is.
+**There is no staged candidate.** `staging` and `main` point at the same commit,
+whatever that commit currently is. Leaving a promoted candidate recorded here is
+how the next session concludes something is waiting when nothing is.
+
+**Deliberately no SHA in that sentence.** A record commit lands on `staging` after
+every promotion — this one included — and is promoted in turn, so any head written
+down here is stale before the paragraph naming it finishes deploying. The SHAs
+worth recording are the ones that are evidence about a RELEASE, below, because
+those never move. Check the head with `git rev-parse origin/main` rather than
+believing a file.
 
 **0.6.0 reached production on 2026-08-23** — the model a job prints is named on
 its card and opens from there, and the job type is three buttons instead of a
