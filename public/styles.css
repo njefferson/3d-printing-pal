@@ -489,11 +489,33 @@ a { color: var(--primary); }
  * a miss nobody sees and a finger finds. */
 .field .field-check { margin-top: 8px; }
 
-/* The card's source link is an <a> wearing the button's clothes, because what it
- * does is a navigation and a <button> that navigates is a lie to anything reading
- * the page. `.btn` already carries the 44px floor and the border SC 1.4.11
- * measures, so it inherits both. */
-.card-source { text-decoration: none; }
+/* The card's source link is an <a>, because what it does is a navigation and a
+ * <button> that navigates is a lie to anything reading the page.
+ *
+ * IT STOPPED WEARING THE BUTTON'S CLOTHES IN 1.2.0. It used to carry `.btn`,
+ * which meant the one control on the card that LEAVES THE APP was drawn exactly
+ * like the two that do not — so a site's name sat in a row of buttons reading as
+ * a third mystery button. It is a link now and looks like one: underlined, no
+ * fill, no border, with an outward arrow.
+ *
+ * `.btn` was also carrying the 44px floor, so that is restored here explicitly.
+ * A style that was inherited from a class being removed is the quiet way a touch
+ * target disappears — the words still look right and the finger no longer lands. */
+.card-source {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: var(--tap);
+  padding: 0 4px;
+  font: inherit;
+  font-size: 0.9375rem;
+  color: var(--primary);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+/* Decoration, so it is drawn rather than written. See the note in board.js: as a
+ * span it was text two gates computed the visible label from differently. */
+.card-source::after { content: '↗'; font-size: 0.875em; }
 /* Named rather than abbreviated, so two buttons that both open something are told
  * apart by their words rather than by position. It can be long, so it is allowed
  * to take the row it needs. */
@@ -548,6 +570,24 @@ a { color: var(--primary); }
  * a link until a job could file one. */
 .rowcard-links { margin: 0 0 12px; padding-left: 20px; }
 .rowcard-links a { display: inline-flex; align-items: center; min-height: var(--tap); }
+
+/* The jobs a model has been printed as. No bullets and no indent, because each
+ * row is a full-width control rather than an item in a list of prose — the same
+ * shape as the (i) menu, for the same reason: what a finger aims at should be the
+ * whole row, not the words inside it. */
+.rowcard-jobs { list-style: none; margin: 0 0 12px; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.joblink {
+  width: 100%;
+  justify-content: space-between;
+  gap: 12px;
+  text-align: left;
+  padding: 8px 12px;
+}
+.joblink-title { overflow-wrap: anywhere; }
+/* The column is secondary but never decorative — it is the answer to "which of
+ * these three jobs did I mean". --text-2 rather than --text-3 so it clears the
+ * same floor the title does. */
+.joblink-where { flex: 0 0 auto; color: var(--text-2); font-weight: 500; font-size: 0.875rem; }
 .field label, .fieldset legend { font-size: 0.875rem; color: var(--text-2); font-weight: 600; }
 .row { display: flex; gap: 12px; flex-wrap: wrap; }
 .row .field { flex: 1 1 9rem; }

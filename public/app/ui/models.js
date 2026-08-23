@@ -7,17 +7,21 @@
 // checked rather than trusted.
 
 import { $, el, clear, money } from '../dom.js';
-import { chargedForModel, jobsForModel } from '../derive.js';
+import { chargedForModel, jobsForModel, COLUMNS } from '../derive.js';
 import * as store from '../store.js';
 import { thumbFor } from './thumb.js';
 
 let onEdit = () => {};
 let onStart = () => {};
+let onOpenJob = () => {};
 
-export function initModels({ onEditModel, onStartJob }) {
+export function initModels({ onEditModel, onStartJob, onOpenJob: openJob }) {
   onEdit = onEditModel;
   onStart = onStartJob;
+  onOpenJob = openJob;
 }
+
+const columnLabel = (id) => COLUMNS.find((c) => c.id === id)?.label || id;
 
 export function renderModels() {
   const { models, jobs, prefs } = store.state;
@@ -35,8 +39,13 @@ function buildModelRow(model, jobs, currency) {
   const made = jobsForModel(model.id, jobs);
   const name = model.name || 'Unnamed model';
 
-  const edit = el('button', { type: 'button', class: 'btn' }, 'Open');
-  edit.setAttribute('aria-label', `Open ${name}`);
+  // "EDIT", NOT "OPEN". Open says a panel will appear and nothing about what is
+  // in it, which is survivable on a card with one button and useless on a card
+  // with several — the board's job card had three controls that all read as some
+  // flavour of "open" and none of them named what they opened. A verb the reader
+  // already knows costs the same width.
+  const edit = el('button', { type: 'button', class: 'btn' }, 'Edit');
+  edit.setAttribute('aria-label', `Edit ${name}`);
   edit.addEventListener('click', () => onEdit(model.id));
 
   // THE CATALOG IS WHERE "what shall I print" IS ANSWERED, so it is where the
@@ -71,8 +80,39 @@ function buildModelRow(model, jobs, currency) {
         : `${money(charged.total, currency) || `${currency}0.00`} charged across ${charged.count} delivered ${charged.count === 1 ? 'job' : 'jobs'}`),
   );
 
+  // THE JOBS, REACHABLE, not counted at.
+  //
+  // This said "3 jobs use this model." and stopped there — a sentence that names
+  // something the reader can now see exists and gives them no way to get to it.
+  // The route was: read the number, go to the board, and find the cards by eye.
+  // Every other link in this app is bidirectional (a job says which model, a
+  // model said how many jobs) and this was the one direction that dead-ended.
+  //
+  // Each one presses through to the job on the board, which is where a job lives
+  // — so closing the form leaves the reader looking at it rather than back on a
+  // catalogue page wondering whether the change took.
   if (made.length) {
-    body.append(el('p', { class: 'note', text: `${made.length} ${made.length === 1 ? 'job uses' : 'jobs use'} this model.` }));
+    body.append(el('h4', { class: 'rowcard-sub', text: made.length === 1 ? 'Printed as one job' : `Printed as ${made.length} jobs` }));
+    body.append(el('ul', { class: 'rowcard-jobs' }, ...made.map((job) => {
+      const title = job.title || 'Untitled job';
+      const where = columnLabel(job.column);
+      const go = el('button', { type: 'button', class: 'btn joblink' },
+        el('span', { class: 'joblink-title', text: title }),
+        // A REAL SPACE BETWEEN THEM, not just a flex gap. The two spans sit at
+        // opposite ends of the row and look like separate words, but with nothing
+        // between them in the DOM the name computed from this button's contents
+        // is "BenchyResearch" — one nonsense word, which is what a reader with no
+        // aria-label would hear and what SC 2.5.3 compares against. The gap is a
+        // painting instruction; text needs text.
+        document.createTextNode(' '),
+        el('span', { class: 'joblink-where', text: where }),
+      );
+      // The visible words are the job's title then its column, so the accessible
+      // name opens with them (SC 2.5.3) and then says what pressing does.
+      go.setAttribute('aria-label', `${title} ${where} — open this job on the board`);
+      go.addEventListener('click', (e) => onOpenJob(job.id, e.currentTarget));
+      return el('li', {}, go);
+    })));
   }
 
   if ((model.sources || []).length) {

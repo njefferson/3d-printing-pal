@@ -112,7 +112,7 @@ const STATE_TEXT = {
     '.card-model',
   ],
   inventory: [...BASE_TEXT, '.rowcard-title', '.rowcard-sub', '.remaining', '.note'],
-  models: [...BASE_TEXT, '.rowcard-title', '.rowcard-sub', '.remaining'],
+  models: [...BASE_TEXT, '.rowcard-title', '.rowcard-sub', '.remaining', '.joblink-title', '.joblink-where'],
   'update-stuck': [...BASE_TEXT, '.strip-text'],
   // The Undo button in both of its appearances. It is one element with one set of
   // colours at a time, so the unavailable form needs a state of its own or it
@@ -162,9 +162,18 @@ const STATE_TEXT = {
 };
 
 const STATE_NONTEXT = {
-  board: ['.btn', '.iconbtn', '.chip', '.card', '.column', '.card-grip', '.column-toggle', '.card-source', '.card-model'],
+  // `.card-source` IS NOT HERE ANY MORE, and that is a reclassification rather
+  // than a gap. It was a bordered button-shaped control, so its boundary was a
+  // component boundary and SC 1.4.11's 3:1 applied to it. In 1.2.0 it became a
+  // plain underlined text link — and text, including the underline that
+  // identifies it, is explicitly exempt from 1.4.11. What it owes instead is TEXT
+  // contrast, which `.card-source` in the text registry above now measures,
+  // and a 44px target, which the target check applies to every interactive
+  // element regardless of what it is made of. Neither obligation was dropped;
+  // both moved to the check that fits what the thing now is.
+  board: ['.btn', '.iconbtn', '.chip', '.card', '.column', '.card-grip', '.column-toggle', '.card-model'],
   inventory: ['.btn', '.rowcard', 'select', 'input[type="checkbox"]', '.bar'],
-  models: ['.btn', '.rowcard'],
+  models: ['.btn', '.rowcard', '.joblink'],
   'update-stuck': ['.strip', '.btn'],
   undo: ['.btn', '.iconbtn'],
   'undo-empty': ['.btn', '.iconbtn'],
@@ -1435,6 +1444,150 @@ async function checkJobFromModel(page) {
 }
 
 /**
+ * From a model to a job that ALREADY EXISTS.
+ *
+ * `checkJobFromModel` above walks model -> a NEW job, which is a different
+ * question and had been standing in for this one. Until 1.2.0 a model card said
+ * "3 jobs use this model." and stopped: it named something the reader could now
+ * see existed and gave them no way to get to it, so the route was read the
+ * number, go to the board, and find the cards by eye.
+ *
+ * A COUNT IS NOT A ROUTE, and this is the check that tells them apart. It presses
+ * the row and asserts the job that opened is the one the row named — because a
+ * list of jobs that all open the first one looks completely correct until the
+ * moment somebody has two.
+ */
+async function checkJobsOnModel(page) {
+  await closeEverything(page);
+  await showView(page, 'models');
+
+  // A MODEL WITH MORE THAN ONE JOB, and the LAST of its rows.
+  //
+  // The first version of this check pressed the first row it found, and a plant
+  // proved it worthless: with one job per model, "every row opens the first job"
+  // and "every row opens the right job" are the same observation. The seed grew a
+  // second job on one model so this can press somewhere the bug would show, and
+  // it FAILS rather than skips when the fixture cannot offer one — a check that
+  // quietly does nothing when its evidence is missing is the shape this whole
+  // gate exists to refuse.
+  const named = await page.evaluate(() => {
+    const lists = [...document.querySelectorAll('.rowcard-jobs')];
+    if (!lists.length) return { none: true };
+    const many = lists.find((l) => l.children.length > 1);
+    if (!many) return { tooFew: lists.length };
+    const rows = [...many.querySelectorAll('.joblink')];
+    const row = rows[rows.length - 1];
+    row.dataset.a11yTarget = '1';
+    return {
+      title: row.querySelector('.joblink-title')?.textContent.trim() || '',
+      where: row.querySelector('.joblink-where')?.textContent.trim() || '',
+      text: row.textContent.replace(/\s+/g, ' ').trim(),
+      label: row.getAttribute('aria-label') || '',
+      claimed: rows.length,
+      position: rows.length,
+    };
+  });
+  if (named.none) {
+    fail('jobs-on-model', 'a model offers no way to reach a job that prints it, so the catalog can say how many exist and not lead to one');
+    return;
+  }
+  if (named.tooFew) {
+    fail('jobs-on-model', `every model in the fixture has one job, so "each row opens the job it names" cannot be told apart from "every row opens the first one". Seed a model with two.`);
+    return;
+  }
+  if (!named.title) {
+    fail('jobs-on-model', 'a job on a model card has no title on it, so the row says nothing about which job it is');
+    return;
+  }
+
+  await press(page, '.joblink[data-a11y-target="1"]');
+  await page.waitForTimeout(240);
+
+  const landed = await page.evaluate(() => ({
+    open: document.getElementById('dlg-job').open,
+    title: document.getElementById('job-f-title').value,
+    view: document.querySelector('.tab[aria-current="page"]')?.textContent,
+  }));
+
+  if (!landed.open) {
+    fail('jobs-on-model', `pressing "${named.text}" did not open a job`);
+  } else if (landed.title !== named.title) {
+    fail('jobs-on-model', `the row named "${named.title}" and opened "${landed.title}" — a list where every row opens the same job reads as correct until somebody has two`);
+  } else if (!named.label.startsWith(named.title)) {
+    fail('jobs-on-model', `the row reads "${named.title}" and answers to "${named.label}", which does not open with it (SC 2.5.3)`);
+  } else if (named.where && !named.label.includes(named.where)) {
+    fail('jobs-on-model', `"${named.label}" drops the column "${named.where}" that is visible on the row`);
+  } else if (landed.view !== 'Board') {
+    fail('jobs-on-model', `the job opened over the ${landed.view} tab, so closing it leaves the reader away from the card they just changed`);
+  } else {
+    pass('jobs-on-model', `${named.claimed} jobs listed on one model, and row ${named.position} — "${named.title}" — opens ${landed.title} on the Board`);
+  }
+  await closeEverything(page);
+}
+
+/**
+ * Every control on a job card names what it opens.
+ *
+ * THREE OF THEM READ AS "OPEN" UNTIL 1.2.0 — "Open" for the job, "Open the model"
+ * for the model, and a bare site name for a page on somebody else's server. All
+ * three in one row, all three the same shape, and the reader had to know the
+ * answer already to read the buttons.
+ *
+ * This is a check about WORDS, which is unusual here and is why it is narrow: it
+ * does not judge the copy, it asserts that no two controls in the same actions row
+ * carry the same verb, and that the one which LEAVES THE APP is not drawn as a
+ * button like the two that do not. Both are things a later release can undo
+ * without noticing, because each individual label reads fine on its own.
+ */
+async function checkCardActionsDistinct(page) {
+  const where = 'card-actions';
+  await closeEverything(page);
+  await showView(page, 'board');
+
+  const report = await page.evaluate(() => {
+    // A card carrying all three: its own control, a model and a source link.
+    const card = [...document.querySelectorAll('.card')]
+      .find((c) => c.querySelector('.card-source:not([hidden])') && c.querySelector('.card-model:not([hidden])'));
+    if (!card) return { error: 'no card carries a job control, a model and a source link together, so the row that was confusing cannot be measured' };
+    const row = card.querySelector('.card-actions');
+    const controls = [...row.querySelectorAll('button, a')].filter((n) => !n.hidden);
+    const source = card.querySelector('.card-source');
+    return {
+      labels: controls.map((n) => n.textContent.replace(/\s+/g, ' ').trim()),
+      // The first word of each, lowercased — the verb, which is what a reader
+      // scans a row of buttons by.
+      verbs: controls.map((n) => n.textContent.trim().split(/\s+/)[0].toLowerCase().replace(/[^a-z]/g, '')),
+      sourceIsButtonShaped: source.classList.contains('btn'),
+      sourceOpensInNewTab: source.getAttribute('target') === '_blank',
+      sourceSaysSo: /new tab/i.test(source.getAttribute('aria-label') || ''),
+    };
+  });
+
+  if (report.error) {
+    fail(where, report.error);
+    return;
+  }
+
+  const seen = new Map();
+  for (const verb of report.verbs) seen.set(verb, (seen.get(verb) || 0) + 1);
+  const repeated = [...seen].filter(([, n]) => n > 1).map(([verb]) => verb);
+
+  if (repeated.length) {
+    fail(where, `${repeated.map((v) => `"${v}"`).join(' and ')} starts more than one control in the same row — ${report.labels.join(' · ')} — so the reader tells them apart by position rather than by reading them`);
+  }
+  if (report.sourceIsButtonShaped) {
+    fail(where, 'the link that leaves the app is drawn as a button like the two that do not, so a site name sits in a row of buttons reading as a third one');
+  }
+  if (report.sourceOpensInNewTab && !report.sourceSaysSo) {
+    fail(where, 'the source link opens a new tab and its accessible name does not say so (SC 3.2.5)');
+  }
+  if (!failures.some((f) => f.startsWith(where))) {
+    pass(where, `every control in a job's actions row starts with a different word: ${report.labels.join(' · ')}`);
+  }
+  await closeEverything(page);
+}
+
+/**
  * The Title and Model boxes fill each other, in BOTH directions.
  *
  * One direction shipped and the other did not, for three releases, and nothing
@@ -1937,6 +2090,20 @@ async function seed(page) {
     { title: 'Calibration cube', type: 'wanted', column: 'research', printer: '', qty: '2', price: '' },
     { title: 'Dragon egg', type: 'request', column: 'research', printer: '', qty: '3', price: '' },
     { title: 'Bolt privacy screen', type: 'ordered', column: 'staged', printer: 'Prusa MK4', qty: '1', price: '18.00' },
+    /* A SECOND JOB ON A MODEL THAT ALREADY HAS ONE, and it exists because a plant
+     * proved the check above it could not fail without it.
+     *
+     * `checkJobsOnModel` presses a job on a model card and asserts the job that
+     * opens is the one the row named. Every model in this seed had exactly ONE
+     * job, so "every row opens the first job" — the precise bug that assertion is
+     * for — was indistinguishable from correct: press row one, get job one, green.
+     * With two, the check presses the LAST row, and a list that always opens the
+     * first fails.
+     *
+     * `complete` rather than `research`, so the three cards the reordering checks
+     * need to move are left where they are. A seed is a fixture for every check
+     * downstream of it. */
+    { title: 'Dragon egg spare', type: 'fun', column: 'complete', printer: 'Prusa MK4', qty: '1', price: '', model: 'Dragon egg' },
   ];
 
   const withRecipient = await page.evaluate(async () => {
@@ -1967,6 +2134,12 @@ async function seed(page) {
         await page.fill('#job-f-price', job.price);
       }
     }
+    // Point it at a model that already exists, rather than letting the title make
+    // a new one. This is what puts two jobs on one model.
+    if (job.model) {
+      await page.fill('#job-f-model', job.model);
+      await page.waitForTimeout(60);
+    }
     await page.fill('#job-f-notes', 'a note about the print');
     // Log filament on one of them, so remaining weight is a real computation.
     if (job.title === 'Dragon egg') {
@@ -1974,8 +2147,15 @@ async function seed(page) {
       await page.fill('#job-f-links .linkrow input[type="number"]', '240');
     }
     // One job carries a link, so the card's source control exists to be measured.
-    // Registered in STATE_NONTEXT for `board`, where a selector matching nothing
-    // is a FAILURE — so this seed line and that registration hold each other up.
+    // Registered as `.card-source` in STATE_TEXT for `board`, where a
+    // selector matching nothing is a FAILURE — so this seed line and that
+    // registration hold each other up. It was a NON-text registration until
+    // 1.2.0, when the control stopped being a bordered button and became a text
+    // link; the obligation moved rather than lapsing.
+    //
+    // It is also the only card carrying a job control, a model AND a source at
+    // once, which is what `checkCardActionsDistinct` needs to see the row that
+    // had three lookalike controls in it.
     if (job.title === 'Benchy') {
       await page.fill('#job-f-link', 'https://www.printables.com/model/905441-bolt-euv-2022-privacy-screen-post-replacement/files');
       await page.waitForTimeout(60);
@@ -1992,17 +2172,24 @@ async function seed(page) {
   if (counts.cards !== jobs.length) fail('seed', `expected ${jobs.length} job cards after using the form, got ${counts.cards} — the job form does not work`);
   if (counts.spools !== 1) fail('seed', `expected 1 spool, got ${counts.spools} — the spool form does not work`);
 
-  // THE ARITHMETIC IS THE CHECK. One model was entered directly. Four jobs
-  // followed, and the Model box fills from the title, so every job whose title is
-  // not already a model makes one — while "Dragon egg" MATCHED the model already
-  // there rather than making a twin. 1 + 3 = 4, and a 5 means matching by name
-  // broke. A bare "expected 4" would go stale the moment the seed changed and
-  // would be a number nobody could check.
-  const expectedModels = 1 + jobs.filter((j) => j.title !== 'Dragon egg').length;
+  // THE ARITHMETIC IS THE CHECK. One model was entered directly. The jobs follow,
+  // and the Model box fills from the title, so every job whose title is not
+  // already a model makes one — while a job named "Dragon egg", or one pointed at
+  // an existing model by hand, MATCHES what is already there rather than making a
+  // twin. Two too many means matching by name broke.
+  //
+  // DERIVED FROM THE JOB LIST, never a constant. It was `j.title !== 'Dragon egg'`
+  // with a hard-coded 5 in the message, and adding one job that reuses a model
+  // failed the seed with a number that described the previous seed. A fixture
+  // assertion that has to be re-derived by hand every time the fixture changes
+  // gets "fixed" by editing the number, which is how it stops meaning anything.
+  const makesAModel = (j) => j.title !== 'Dragon egg' && !j.model;
+  const expectedModels = 1 + jobs.filter(makesAModel).length;
+  const reused = jobs.length - jobs.filter(makesAModel).length;
   if (counts.models !== expectedModels) {
-    fail('seed', `expected ${expectedModels} models — 1 entered directly plus ${expectedModels - 1} created by jobs named after models that did not exist, with "Dragon egg" matching the existing one — got ${counts.models}`);
+    fail('seed', `expected ${expectedModels} models — 1 entered directly plus ${expectedModels - 1} made by jobs naming models that did not exist, with ${reused} job(s) matching an existing model rather than duplicating it — got ${counts.models}`);
   } else {
-    pass('seed', `a job names its model and the model appears: 1 entered + ${expectedModels - 1} made by jobs, with the repeated name matching rather than duplicating`);
+    pass('seed', `a job names its model and the model appears: 1 entered + ${expectedModels - 1} made by jobs, with ${reused} matching by name rather than duplicating`);
   }
 
   /* A CARD WITH NO PICTURE TAKES NO PICTURE-SIZED HOLE.
@@ -2109,6 +2296,8 @@ async function main() {
   await checkPressing(page);
   await checkModelRoute(page);
   await checkJobFromModel(page);
+  await checkJobsOnModel(page);
+  await checkCardActionsDistinct(page);
   await checkNameMirror(page);
   await checkJobTypes(page);
   await checkPrinterField(page);

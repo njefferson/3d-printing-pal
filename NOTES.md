@@ -24,6 +24,40 @@ spool**, and the whole data model is arranged around never storing it.
 
 ## Settled decisions
 
+**Every link between records goes both ways, and a count is not a route.**
+A job card said which model it printed and opened it. A model card said "3 jobs
+use this model." and stopped — it named something the reader could now see existed
+and gave them no way to reach it, so the route was read the number, go to the
+board, find the cards by eye. **A number about records the app is holding is a
+promise it can produce them.** Added in 1.2.0, with `checkJobsOnModel` pressing a
+row and asserting the job that opens is the one the row named.
+
+**A fixture that cannot express the bug makes the check decorative.**
+That check's first version pressed the first job on a model card — and every model
+in the seed had exactly one job, so "each row opens the job it names" and "every
+row opens the first one" were the same observation. It passed a plant of the real
+bug. The seed grew a second job on one model, the check presses the LAST row, and
+it FAILS rather than skips if no model has two. **Plant against the fixture, not
+only against the code**: a green check on a fixture with one of everything has
+answered a question nobody asked.
+
+**No two controls in one row start with the same word.**
+Three on a job card read as "Open", "Open the model" and a bare site name, so the
+reader had to know the answer to read the buttons. They are `Edit`, `Model` and
+`On <site>` now, and `checkCardActionsDistinct` asserts the first word of every
+control in an actions row is distinct — plus that the one which LEAVES THE APP is
+not drawn as a button like the two that do not. Both are things a later release
+undoes without noticing, because each label reads fine alone.
+
+**Decoration goes in the stylesheet, because text is what gates compare.**
+The external link's ↗ was an `aria-hidden` span for about ten minutes, and in that
+time two gates in this repo disagreed about whether it was part of the visible
+label: the a11y gate strips `aria-hidden` before an SC 2.5.3 comparison, the
+data-safety walk did not, and one failed markup the other passed. It is a
+`::after` now. The same shape bit the model card's job rows, where two adjacent
+spans with no text node between them compute a name of "BenchyResearch" — a flex
+gap is a painting instruction and text needs text.
+
 **The (i) is a menu of five destinations, and five is the ceiling.**
 It was one scroll of eleven headings until 1.1.0, which meant everything except
 the welcome was reached by scrolling past the welcome — right on the day somebody
@@ -1101,8 +1135,10 @@ the log and check whether the steps ran or were skipped.
 
 ### The staged candidate
 
-**There is no staged candidate.** Staging and production carry the same build;
-nothing is waiting to be passed.
+**1.2.0 is the staged candidate**, at https://staging.3d-printing-pal.pages.dev —
+a model card lists the jobs that print it and each one opens, and the three
+controls on a job card that all read as some flavour of "open" now say what they
+open.
 
 **This paragraph is reset on every promotion, and a gate now checks that it was.**
 Leaving a promoted candidate recorded here is how the next session concludes

@@ -166,12 +166,26 @@ function buildCard(job) {
   const moveBtn = el('button', { type: 'button', class: 'btn' }, 'Move');
   // A class rather than a position: the actions row gained a third child and
   // `button:last-child` silently stopped matching anything.
-  const editBtn = el('button', { type: 'button', class: 'btn card-open' }, 'Open');
+  // THREE CONTROLS ON THIS CARD ALL READ AS "OPEN" UNTIL 1.2.0, and each opened
+  // something different: this job, the model it prints, and a web page on
+  // somebody else's site. "Open", "Open the model" and a bare site name sat in one
+  // row, so the reader had to already know the answer to read the buttons.
+  //
+  // Each one names its object now, and the two verbs are different words: EDIT
+  // this record, go to the MODEL, leave for the SITE. Nothing was added or taken
+  // away — the same three destinations, said in three distinguishable ways.
+  const editBtn = el('button', { type: 'button', class: 'btn card-open' }, 'Edit');
   // WHERE THE FILE IS, on the card that makes you want it. The link lives on the
   // model, which is a different tab — so choosing something to print meant
   // reading the board, leaving it, finding the model, and coming back. Hidden
   // when the model has no link, or the job has no model.
-  const sourceLink = el('a', { class: 'btn card-source', rel: 'noopener noreferrer', target: '_blank' });
+  //
+  // AND IT IS DRAWN AS A LINK, NOT AS A BUTTON. It is the only control on the
+  // card that leaves the app, and dressing it identically to the two that do not
+  // was the whole reason a site's name in a row of buttons read as a third
+  // mystery button. The arrow is aria-hidden so the accessible name still opens
+  // with the visible site name (SC 2.5.3).
+  const sourceLink = el('a', { class: 'card-source', rel: 'noopener noreferrer', target: '_blank' });
   sourceLink.hidden = true;
   // WHICH MODEL, AND A WAY INTO IT. The card showed a model's picture without
   // ever naming it, so the only route from a job to the thing it prints was the
@@ -282,8 +296,11 @@ function updateCard(node, job) {
     const name = model.name || 'unnamed';
     const same = normalise(name) === normalise(job.title);
     p.modelBtn.hidden = false;
-    p.modelBtn.textContent = same ? 'Open the model' : `Model: ${name}`;
-    p.modelBtn.setAttribute('aria-label', same ? `Open the model ${name}` : `Model: ${name} — open it`);
+    // WHEN THE NAME REPEATS THE TITLE, THE BUTTON IS JUST "MODEL" — a noun, so it
+    // reads as a destination beside "Edit" rather than as a second verb. It said
+    // "Open the model", which put a third "open" in a row of three.
+    p.modelBtn.textContent = same ? 'Model' : `Model: ${name}`;
+    p.modelBtn.setAttribute('aria-label', same ? `Model ${name} — open it` : `Model: ${name} — open it`);
   } else {
     p.modelBtn.hidden = true;
     p.modelBtn.textContent = '';
@@ -293,23 +310,35 @@ function updateCard(node, job) {
   // trusted from the record, because an imported file is somebody else's bytes.
   const source = (model?.sources || []).find((s) => isWebLink(s.url));
   if (source) {
+    const site = source.label || 'The file';
     p.sourceLink.hidden = false;
     p.sourceLink.href = source.url;
-    p.sourceLink.textContent = source.label || 'Open the file';
-    // The visible words are the site's name, so the accessible name has to start
-    // with them (SC 2.5.3) and then say what pressing it does.
+    // "On Printables", not "Printables". A site's name alone is a label with no
+    // grammar — it could equally be a heading, a tag, or a filter. The preposition
+    // is what makes it read as somewhere you are being taken.
+    //
+    // THE ARROW IS DRAWN BY CSS, not written here. It was an aria-hidden span for
+    // about ten minutes, and in that time two gates disagreed about whether it was
+    // part of the visible label: this repo's a11y gate strips aria-hidden before
+    // comparing, the data-safety walk did not, and one of them failed SC 2.5.3 on
+    // markup the other passed. The arrow is decoration, decoration belongs in the
+    // stylesheet, and putting it there leaves nothing for two checks to disagree
+    // about. The explicit aria-label means pseudo content cannot reach the name.
+    p.sourceLink.textContent = `On ${site}`;
+    // The visible words open the accessible name (SC 2.5.3), which then says what
+    // pressing it does and that it leaves the app.
     p.sourceLink.setAttribute(
       'aria-label',
-      `${source.label || 'Open the file'} — where ${job.title || 'this job'} came from, opens in a new tab`,
+      `On ${site} — where ${job.title || 'this job'} came from, opens in a new tab`,
     );
   } else {
     p.sourceLink.hidden = true;
     p.sourceLink.removeAttribute('href');
-    p.sourceLink.textContent = '';
+    p.sourceLink.replaceChildren();
   }
 
   p.moveBtn.setAttribute('aria-label', `Move ${job.title || 'this job'} to another column`);
-  p.editBtn.setAttribute('aria-label', `Open ${job.title || 'this job'}`);
+  p.editBtn.setAttribute('aria-label', `Edit ${job.title || 'this job'}`);
   p.grip.querySelector('.sr-only').textContent = `Drag ${job.title || 'this job'}, or press to choose a column`;
 }
 

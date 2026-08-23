@@ -58,6 +58,11 @@ async function start() {
     // The catalog answers "what shall I print", so it is where printing it starts.
     // The board is shown first because that is where the new job will appear.
     onStartJob: (id, opener) => { showView('board'); openJobForModel(id, opener); },
+    // The other direction, which did not exist until 1.2.0: a model listed how
+    // many jobs used it and offered no way to reach one. Same shape as
+    // `onOpenModel` above — show the tab the record lives on, then open it, so
+    // closing the form leaves the reader looking at the thing they just changed.
+    onOpenJob: (id, opener) => { showView('board'); openJob(id, opener); },
   });
   initBackup({ onImported: renderAll });
   initInfo();

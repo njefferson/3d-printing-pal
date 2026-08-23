@@ -53,8 +53,11 @@ function buildSpoolRow(spool, jobs, currency) {
   if (spool.colorHex) title.append(el('span', { class: 'swatch', style: { background: spool.colorHex }, 'aria-hidden': 'true' }));
   title.append(document.createTextNode(name + (colour ? ` — ${colour}` : '')));
 
-  const edit = el('button', { type: 'button', class: 'btn' }, 'Open');
-  edit.setAttribute('aria-label', `Open ${name}${colour ? ` in ${colour}` : ''}`);
+  // "Edit", matching the job and model cards. All three are the same control on
+  // three kinds of record, and one of them still saying "Open" would be the odd
+  // word out rather than a deliberate distinction.
+  const edit = el('button', { type: 'button', class: 'btn' }, 'Edit');
+  edit.setAttribute('aria-label', `Edit ${name}${colour ? ` in ${colour}` : ''}`);
   edit.addEventListener('click', () => onEdit(spool.id));
 
   const bar = el('div', { class: 'bar', role: 'img', 'aria-label': `${Math.round(fraction * 100)} per cent of this spool is left` },

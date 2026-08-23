@@ -7,6 +7,23 @@
 
 export const RELEASES = [
   {
+    "version": "1.2.0",
+    "kind": "CAPABILITY",
+    "date": "2026-08-23",
+    "summary": "A model lists the jobs that print it, and the buttons say what they open.",
+    "added": [
+      "A model card now lists its jobs, each with the column it is in, and pressing one opens that job on the board. The card used to say \"3 jobs use this model.\" and leave you to find them."
+    ],
+    "fixed": [
+      "Three buttons on a job card all said some version of \"open\" — one for the job, one for the model, one that was just the name of a website. Now they read Edit, Model, and On Printables with an arrow, so each one says what it opens and the one that leaves the app looks like a link rather than a third button.",
+      "\"Open\" on a model card is \"Edit\", for the same reason."
+    ],
+    "broken": [
+      "Two devices still cannot both write. Importing replaces everything, so passing one file back and forth loses whatever the other device added.",
+      "A card still does not say how long something has been waiting, what it is worth, or whether there is filament for it."
+    ]
+  },
+  {
     "version": "1.1.0",
     "kind": "CAPABILITY",
     "date": "2026-08-23",
