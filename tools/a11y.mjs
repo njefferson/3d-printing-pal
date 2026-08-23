@@ -1435,7 +1435,29 @@ async function checkChips(page) {
   await closeEverything(page);
   await showView(page, 'board');
 
+  /* THE RATIO, NOT THE STRING. The first version of this asked whether the two
+   * fills were DIFFERENT, and they were — as values. As light they differed by
+   * 1.63:1, which no eye reads as a state change, and the check went green while
+   * the app's only real cue was grey-to-colour. Inequality is not perceptibility,
+   * and a gate that confuses them measures the CSS rather than the reader.
+   *
+   * `computedFill` walks up for the first opaque ancestor, because a transparent
+   * chip's own backgroundColor is rgba(0,0,0,0) and the thing an eye compares is
+   * what shows THROUGH it. */
   const read = () => page.evaluate(() => {
+    const lum = (rgb) => {
+      const [r, g, b] = rgb;
+      const f = (c) => { c /= 255; return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; };
+      return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b);
+    };
+    const parse = (v) => (v.match(/[\d.]+/g) || []).map(Number);
+    const computedFill = (el) => {
+      for (let node = el; node; node = node.parentElement) {
+        const c = parse(getComputedStyle(node).backgroundColor);
+        if (c.length >= 3 && (c[3] === undefined || c[3] > 0)) return c.slice(0, 3);
+      }
+      return [255, 255, 255];
+    };
     const chip = document.querySelector('.chip');
     const cs = getComputedStyle(chip);
     return {
@@ -1443,6 +1465,8 @@ async function checkChips(page) {
       pressed: chip.getAttribute('aria-pressed'),
       name: chip.textContent.trim(),
       background: cs.backgroundColor,
+      fill: computedFill(chip),
+      lum: lum(computedFill(chip)),
       border: cs.borderTopColor,
       width: Math.round(chip.getBoundingClientRect().width),
     };
@@ -1452,6 +1476,9 @@ async function checkChips(page) {
   await page.click('.chip');
   await page.waitForTimeout(160);
   const off = await read();
+  const hi = Math.max(on.lum, off.lum);
+  const lo = Math.min(on.lum, off.lum);
+  on.fillRatio = (hi + 0.05) / (lo + 0.05);
   // Put it back, because every state after this one measures the board.
   await page.click('.chip');
   await page.waitForTimeout(160);
@@ -1501,14 +1528,14 @@ async function checkChips(page) {
 
   if (on.pressed !== 'true' || off.pressed !== 'false') {
     fail('chips', `pressing a chip took aria-pressed from "${on.pressed}" to "${off.pressed}" — the state is not being carried to anything that cannot see it`);
-  } else if (on.background === off.background) {
-    fail('chips', `a shown chip and a hidden one have the same fill (${on.background}), so the only difference is a hue — which is no difference at all in greyscale or to a colour-blind reader (SC 1.4.1)`);
+  } else if (on.fillRatio < 3) {
+    fail('chips', `a shown chip and a hidden one differ by ${on.fillRatio.toFixed(2)}:1 in fill — under SC 1.4.11's 3:1, so the state rests on a hue change, which is the one cue a colour-blind reader does not get`);
   } else if (on.name !== off.name) {
     fail('chips', `the chip reads "${on.name}" when on and "${off.name}" when off — the name has to say which type it is either way`);
   } else if (Math.abs(on.width - off.width) > 1) {
     fail('chips', `a chip is ${on.width}px on and ${off.width}px off — it moves the chips after it under a finger already on its way`);
   } else {
-    pass('chips', `on and off differ in fill (${on.background} against ${off.background}) and in aria-pressed, at the same width`);
+    pass('chips', `on and off differ by ${on.fillRatio.toFixed(2)}:1 in fill and in aria-pressed, at the same width`);
   }
 
   await closeEverything(page);

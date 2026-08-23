@@ -38,6 +38,11 @@
   --text-2: #d2d2d2;
   --text-3: #c1c1c1;
 
+  /* The ink on a LIT chip — the page's own ground, so a filled accent reads as a
+   * lamp rather than as a second surface. Not an accent itself: it is the one
+   * colour that has to work against all four of them. */
+  --chip-ink: #1a1a1a;
+
   --primary: #9fc2f5;
   --ordered: #7fd8e0;
   --wanted: #f0c674;
@@ -63,6 +68,8 @@
     --text: #272119;
     --text-2: #363026;
     --text-3: #4a4436;
+
+    --chip-ink: #faf3e5;
 
     --primary: #17458f;
     --ordered: #063036;
@@ -266,11 +273,25 @@ a { color: var(--primary); }
   color: var(--text-2);
   border-color: var(--rail);
 }
-.chip[aria-pressed="true"] { background: var(--surface-raised); }
-.chip-ordered[aria-pressed="true"] { color: var(--ordered); border-color: var(--ordered); }
-.chip-request[aria-pressed="true"] { color: var(--primary); border-color: var(--primary); }
-.chip-wanted[aria-pressed="true"] { color: var(--wanted); border-color: var(--wanted); }
-.chip-fun[aria-pressed="true"] { color: var(--fun); border-color: var(--fun); }
+/* A LIT CHIP IS FILLED WITH ITS ACCENT, not tinted with a raised surface.
+ *
+ * 0.8.1 lit them by swapping the text and border to the accent over
+ * `--surface-raised`, and MEASURED THE WRONG THING to check it: the gate asserted
+ * the two fills differed, which they did — as strings. As light they differed by
+ * 1.63:1 in the dark theme and 1.54:1 in the light one, against SC 1.4.11's 3:1
+ * for a non-text difference that carries meaning. So the fill was doing nothing
+ * and the whole state rested on a hue change from grey to colour, which is the
+ * one cue a colour-blind reader does not get.
+ *
+ * Filling with the accent moves it to 9.1–10.4:1 in the dark theme and 5.0–7.8:1
+ * in the light one, and the difference is LUMINANCE — so it survives colour
+ * blindness, greyscale and a screen in sunlight, none of which a hue survives.
+ * The label rides on `--chip-ink` at 8.2:1 or better against every accent. */
+.chip[aria-pressed="true"] { color: var(--chip-ink); }
+.chip-ordered[aria-pressed="true"] { background: var(--ordered); border-color: var(--ordered); }
+.chip-request[aria-pressed="true"] { background: var(--primary); border-color: var(--primary); }
+.chip-wanted[aria-pressed="true"] { background: var(--wanted); border-color: var(--wanted); }
+.chip-fun[aria-pressed="true"] { background: var(--fun); border-color: var(--fun); }
 
 /* ----------------------------------------------------------------- board */
 .board {

@@ -125,6 +125,52 @@ capability, with the rejected ones and the reason each was rejected.
 
 ---
 
+## The lit chip was not lit, and the gate that checked it asked the wrong question (1.0.2)
+
+0.8.1 lit a filter chip by swapping its text and border to the accent over
+`--surface-raised`, leaving the unlit ones transparent on the page's own ground.
+That reads as lit in a screenshot taken by whoever built it and does not read as
+lit on a device.
+
+**THE FILLS DIFFERED BY 1.63:1 IN THE DARK THEME AND 1.54:1 IN THE LIGHT ONE.**
+SC 1.4.11 asks 3:1 for a non-text difference that carries meaning. So the fill was
+contributing nothing and the entire state rested on a hue change from grey to
+colour — which is precisely the cue a colour-blind reader may not get, and the one
+the tick it replaced had been covering.
+
+**The gate said it was fine, and the gate was the real defect.** `checkChips`
+asserted that the two fills were DIFFERENT. They were — as strings,
+`rgba(0,0,0,0)` against `rgb(65,65,65)`. It never asked whether the difference was
+large enough for an eye. **Inequality is not perceptibility**, and a check that
+confuses the two is measuring the stylesheet rather than the reader.
+
+It measures the ratio now, against a 3:1 floor, walking up to the first opaque
+ancestor because a transparent chip's own `backgroundColor` is `rgba(0,0,0,0)` and
+the thing an eye compares is what shows THROUGH it. Planted red by restoring
+exactly what 0.8.1 shipped: 1.17:1, refused.
+
+**The fix is a real fill.** A lit chip carries its accent as its background with
+the label knocked out in `--chip-ink` — the page's own ground, the one colour that
+has to work against all four accents. Measured: 9.14–10.35:1 against the page in
+the dark theme, 5.04–7.83:1 in the light one, with the label at 8.25:1 or better
+on every accent in both.
+
+**And the difference is LUMINANCE rather than hue**, which is the whole point.
+Brightness survives colour blindness, greyscale and a screen in sunlight. A hue
+survives none of them.
+
+**`font-weight: 600` on the lit state lasted about a minute** — it changes the
+chip's width, and the same check asserts the two states measure the same, because
+a chip that grows on press moves the ones after it under a finger already on its
+way. The gate written for one hazard caught another.
+
+**The general shape, and it is the expensive one: a gate can be green because the
+thing it measures is not the thing that matters.** "Are these two values
+different" is answerable and useless. "Can a person tell these two states apart"
+is the question, and it has a number — so ask for the number.
+
+---
+
 ## The last filter chip could not be switched off, and the guard was pointless (1.0.1)
 
 Turning every type off was refused, with `At least one job type has to stay shown.`
@@ -1025,8 +1071,9 @@ the log and check whether the steps ran or were skipped.
 
 ### The staged candidate
 
-**There is no staged candidate.** `staging` and `main` point at the same commit,
-whatever that commit currently is.
+**1.0.2 is the staged candidate**, at https://staging.3d-printing-pal.pages.dev —
+a lit filter chip is filled with its accent rather than tinted, so the state is a
+change in brightness rather than in hue.
 
 **This paragraph is reset on every promotion, and a gate now checks that it was.**
 Leaving a promoted candidate recorded here is how the next session concludes

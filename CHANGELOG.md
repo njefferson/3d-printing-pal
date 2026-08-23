@@ -9,6 +9,30 @@ triplet is `version.capability.iteration`. Releases do not have names.
 
 ---
 
+## 1.0.2 — ITERATION — 2026-08-23
+
+A filter that is on is filled in, not just tinted.
+
+### Fixed
+
+- **The lit buttons are properly lit now.** They are filled with their type's
+  colour, with the label knocked out of it, instead of keeping the same background
+  and changing only the words and the ring around them.
+- **It works if you cannot tell the colours apart.** The old version leaned on
+  going from grey to a colour, which is the one difference a colour-blind reader
+  may not get. The new one is a change in <em>brightness</em> — nine to fourteen
+  times, against a floor of three — so it reads in greyscale, in sunlight, and to
+  anybody at all.
+
+### Still not right
+
+- **The check that was supposed to catch this asked the wrong question.** It
+  confirmed the two states had different backgrounds, which was true, and never
+  asked whether the difference was big enough to see. It measures the actual
+  contrast now, and fails under 3:1.
+
+---
+
 ## 1.0.1 — ITERATION — 2026-08-23
 
 Every filter button can be switched off, including the last one.
