@@ -1135,16 +1135,24 @@ the log and check whether the steps ran or were skipped.
 
 ### The staged candidate
 
-**1.2.0 is the staged candidate**, at https://staging.3d-printing-pal.pages.dev —
-a model card lists the jobs that print it and each one opens, and the three
-controls on a job card that all read as some flavour of "open" now say what they
-open.
+**There is no staged candidate.** Staging and production carry the same build;
+nothing is waiting to be passed.
 
 **This paragraph is reset on every promotion, and a gate now checks that it was.**
 Leaving a promoted candidate recorded here is how the next session concludes
 something is waiting when nothing is — so `tools/branch-state-check.mjs` reads
 this section's OPENING paragraph against `public/sw.js` in the tree and at
 `origin/main`, on every commit.
+
+**1.2.0 reached production on 2026-08-23.** A model card lists the jobs that print
+it and each one opens on the board, and the three job-card controls that all read
+as some flavour of "open" now say what they open. Promoted at `350a3ab` as a clean
+fast-forward of one commit, ancestry checked with `git merge-base --is-ancestor`
+BEFORE the push and the remote read back after; `origin/main:public/sw.js` carries
+the 1.2.0 triplet. All 28 gate steps and 5 security steps executed and passed on
+that exact commit, read one at a time; the production deploy's six steps ran and
+its log named the deployment. The published address itself could not be fetched —
+see the standing limit recorded under 1.1.0 below.
 
 **1.1.0 reached production on 2026-08-23.** The (i) is a menu of five destinations
 rather than one scroll of eleven headings, and Export and Import moved into "Your
