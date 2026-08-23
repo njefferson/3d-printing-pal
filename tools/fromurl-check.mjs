@@ -24,6 +24,42 @@ import { siteFrom, titleFrom } from '../public/app/fromurl.js';
 
 const CASES = [
   {
+    url: 'https://makerworld.bblmw.com/makerworld/model/USb4cd954e75f587/design/3ad2d89093fc967b.jpg?x-oss-process=image/resize,w_1000/format,webp',
+    site: 'Bblmw',
+    title: '',
+    why: "A PICTURE'S ADDRESS, which is all route and hash and no name. It offered \"3ad2d89093fc967b\" as a model's name, then \"Design\", then \"Makerworld\" as each was rejected in turn — three separate wrong answers from one link, each of which looked like an answer. An empty box is the truth about this address.",
+  },
+  {
+    url: 'https://example.com/models/1234abcd5678efab',
+    site: 'Example',
+    title: '',
+    why: 'A hash on its own. Nothing to offer, so nothing is offered.',
+  },
+  {
+    url: 'https://example.com/design/',
+    site: 'Example',
+    title: '',
+    why: 'A route word with nothing to lose to. Scoring alone let these win by default whenever a path carried no slug at all, which is how "Files" and "Design" got proposed as names.',
+  },
+  {
+    url: 'https://example.com/models/dragon',
+    site: 'Example',
+    title: 'Dragon',
+    why: 'THE ONE THE REJECTIONS MUST NOT EAT. A single-word slug is a real name, and it is the case a rule aimed at single-word route words is most likely to take with it.',
+  },
+  {
+    url: 'https://example.com/models/mk4-mount',
+    site: 'Example',
+    title: 'Mk4 Mount',
+    why: 'Digits inside a name. A rule reading "contains a digit, so it is an id" would delete every printer model number people actually use.',
+  },
+  {
+    url: 'https://example.com/models/benchy3',
+    site: 'Example',
+    title: 'Benchy3',
+    why: 'The same hazard in one token, and short, so the length floor in the opaque test is what saves it.',
+  },
+  {
     url: 'https://www.printables.com/model/905441-bolt-euv-2022-privacy-screen-post-replacement/files',
     site: 'Printables',
     title: 'Bolt Euv 2022 Privacy Screen Post Replacement',

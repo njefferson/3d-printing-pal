@@ -9,6 +9,54 @@ triplet is `version.capability.iteration`. Releases do not have names.
 
 ---
 
+## 0.7.0 — CAPABILITY — 2026-08-23
+
+A picture can be added where the job is made, a model can start its own job, and
+the undo strip has stopped shouting.
+
+### New
+
+- **Add the picture on the job.** A job could make its model and keep its link,
+  but not give it the photograph — so the one thing that makes a card readable was
+  the one thing that still meant going to Models and editing. The Picture box is
+  now on the job form, and it says which record will keep it: the model the job is
+  about to make, the model it links to, or the job itself when that model already
+  has a picture of its own. A model's picture is never replaced from here.
+- **Start a job from a model.** Every model in the catalog has a button that opens
+  a new job already about it, with the name filled in. Deciding what to print
+  happens in the catalog, so that is where printing it now starts.
+- **One paste catalogues a model.** The Add model screen has a Link box at the
+  top, the same one the job form has had since 0.5.0. Paste an address and the
+  name fills in and the address is filed below it. Cataloguing something used to
+  mean Add model, then Add a source, then typing a name the address already
+  contained — or adding a job you did not want, because that screen could do it in
+  one.
+
+### Fixed
+
+- **Naming a model fills the title.** Pasting a link filled the title and the
+  title filled the Model box, so a whole request arrived from one paste — but
+  typing or choosing a model that already exists filled nothing, and the same
+  words had to be typed a second time. The two boxes now fill each other, and
+  choosing "benchy" from the list puts "Benchy" in the title, spelled the way the
+  model is.
+- **The undo strip is quiet, and it can be hidden.** It was built as a copy of the
+  update strip — raised background, two heavy rules — which is right for a message
+  about the app and wrong for one describing what you just did on purpose. It was
+  9% of a phone screen tall, permanently, on every screen. It now sits on the page
+  in small type and takes 7%, and the ✕ hides it until the next change. Hiding it
+  gives up the undo for that one change, and it says so.
+- **A picture's address no longer names a model after a hash.** Pasting the link
+  to an image rather than to its page offered "3ad2d89093fc967b" as the name, and
+  then "Design", and then "Makerworld", as each was rejected. Those addresses are
+  all route and hash and contain no name, so the box now stays empty, which is the
+  truth about them. A single-word name like "Dragon" still fills in.
+- **A job with no picture has something to look at.** A card carrying a photograph
+  is more than twice the height of one without, and beside it the plain card
+  stopped registering as an item at all. Cards without a picture now carry a small
+  square with the job's initial in it — an anchor for the eye, not the
+  picture-sized gap that was removed in 0.5.1.
+
 ## 0.6.0 — CAPABILITY — 2026-08-22
 
 The model a job prints is named on its card and opens from there, and choosing a

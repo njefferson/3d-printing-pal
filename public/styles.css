@@ -143,21 +143,47 @@ body {
 .strip-actions { display: flex; gap: var(--gap); flex-wrap: wrap; }
 
 /* -------------------------------------------------------------- undo strip */
-/* The same construction one row lower, because it is about the CONTENT rather
+/* One row lower than the update strip, because it is about the CONTENT rather
  * than about the app: the update strip sits above the wordmark, this sits under
- * the tabs and directly over the thing it would put back. */
-/* --rail, NOT --hairline. The first spelling here used the hairline token on both
- * edges because the strip sits directly under the topbar's own hairline and two
- * heavy rules in a row looked wrong — and it measured 1.49:1, well under SC
- * 1.4.11's 3:1. A hairline is exempted as decoration because nothing depends on
- * seeing it; these edges are the whole boundary of a control, so they are the
- * component. The rule that looked wrong was the topbar's, and it is redundant
- * once this is showing. */
+ * the tabs and directly over the thing it would put back.
+ *
+ * QUIET, from 0.7.0. It was built as a copy of the update strip — raised ground,
+ * two 2px rails — which is right for THAT strip, because that one is telling the
+ * reader something they do not know. This one describes a thing they did on
+ * purpose two seconds ago, and it said so 9% of a phone screen tall, permanently,
+ * on every screen: the app agitated about the reader's own work.
+ *
+ * THE RAILS GO FROM 2px TO 1px, AND STAY --rail. The first attempt at this made
+ * them a hairline and argued in this very comment that a strip on the page's own
+ * ground is no longer a bounded component, so its edge is decoration. The gate
+ * measured 1.49:1 and failed it — the same number, on the same token, as the time
+ * before. Quieter is a matter of WEIGHT and GROUND, which 1px and no raised
+ * background deliver; the colour of a boundary is not the place to find it.
+ *
+ * The padding is 10px at the top rather than the 6px this was cut to. At 6px the
+ * Undo button sat 7px under the Models tab, below the 8px separation floor, so a
+ * thumb going for a tab could take it — which is a worse defect than the one being
+ * fixed, on a control that undoes things. */
 .undo-strip {
   grid-row: 3;
-  border-top: 2px solid var(--rail);
+  background: none;
+  border-top: 1px solid var(--rail);
+  border-bottom: 1px solid var(--rail);
+  padding: 10px 16px 8px;
 }
-.topbar:has(+ .undo-strip:not([hidden])) { border-bottom: 0; }
+.undo-strip .strip-text {
+  font-size: 0.8125rem;
+  color: var(--text-3);
+  /* BASIS ZERO, not auto and not the 16rem .strip uses. With a content-sized basis
+   * the container wraps before the item shrinks — so a one-word-longer label put
+   * the buttons on their own line and the strip stood 87px tall, taller than the
+   * bar this redesign exists to quieten, and only for some labels. A basis of 0
+   * makes it take what is left after the buttons and wrap its own text inside
+   * that. min-width:0 is what permits shrinking below content at all. */
+  flex: 1 1 0;
+  min-width: 0;
+}
+.undo-strip .strip-actions { flex: 0 0 auto; }
 
 /* ----------------------------------------------------------------- topbar */
 .topbar {
@@ -331,6 +357,33 @@ a { color: var(--primary); }
 }
 .card.is-dragging { outline: 3px solid var(--primary); }
 .card-top { display: flex; align-items: flex-start; gap: 8px; }
+
+/* The stand-in for a picture, in the head rather than as a band across the card.
+ * 56px, against the 128px band 0.5.1 removed — enough to anchor the card and give
+ * the eye somewhere to land, not enough to be a hole. It is decoration and is
+ * aria-hidden, so it has no contrast floor to clear; it is drawn well above one
+ * anyway, because a mark nobody can make out is the same as no mark. */
+.card-mark {
+  flex: 0 0 auto;
+  /* 44px, not the 56 this was drawn at first. A card is about 230px of content
+   * wide and the head is three columns — mark, badge-and-title, grip — so every
+   * pixel here comes out of the title, which was measured squeezed to 82px and
+   * wrapping a two-word name onto three lines. The mark is decoration; the title
+   * is the thing the card is for. */
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius);
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  color: var(--text-3);
+  font-size: 1.125rem;
+  font-weight: 640;
+  line-height: 1;
+  user-select: none;
+}
 .card-title { margin: 0; font-size: 0.9375rem; font-weight: 620; overflow-wrap: anywhere; flex: 1 1 auto; }
 .card-meta { margin: 6px 0 0; color: var(--text-2); font-size: 0.8125rem; }
 .card-meta span { display: block; }

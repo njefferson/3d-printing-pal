@@ -14,16 +14,24 @@ import { pictureField } from './picture.js';
 let editing = { job: null, spool: null, model: null };
 
 /**
- * Whether the reader has typed in the job form's Model box themselves.
+ * Whether the reader has typed in the job form's Title and Model boxes themselves.
  *
- * The title fills that box while this is false and stops for good the moment they
- * touch it — the same rule `offerFromUrl` follows further down, and for the same
- * reason: a suggestion that overwrites what somebody typed destroys data at the
- * moment they were looking elsewhere. Clearing the box counts as touching it, so
- * "this job is not a print of a model" sticks rather than being refilled on the
- * next keystroke of the title.
+ * THE TWO BOXES MIRROR EACH OTHER, in both directions, and each stops for good the
+ * moment the reader touches the box being written to — the same rule `offerFromUrl`
+ * follows further down, and for the same reason: a suggestion that overwrites what
+ * somebody typed destroys data at the moment they were looking elsewhere. Clearing
+ * a box counts as touching it, so "this job is not a print of a model" sticks
+ * rather than being refilled on the next keystroke of the title.
+ *
+ * IT WAS ONE-WAY UNTIL 0.7.0 and the asymmetry was invisible from inside the code:
+ * a pasted link filled the Title and the Title filled the Model, so the whole
+ * request arrived from one paste — but naming a model that already exists filled
+ * nothing, and the same words had to be typed a second time into the Title. Every
+ * gate was green, because no gate asks whether two halves of a mirror are the same
+ * size.
  */
 let modelTouched = false;
+let titleTouched = false;
 
 export function initForms() {
   registerPanel('dlg-job');
@@ -48,10 +56,11 @@ export function initForms() {
   link.addEventListener('paste', () => setTimeout(offerFromLink, 0));
   for (const event of ['input', 'change']) link.addEventListener(event, offerFromLink);
 
-  // The title fills the Model box until the reader touches it. Most jobs here are
-  // a print OF the thing the job is named after, so the common case is no typing
-  // at all — and the one that is not is a box they clear once.
+  // Each box fills the other until the reader touches the one being filled. Most
+  // jobs here are a print OF the thing the job is named after, so the common case
+  // is no typing at all — and the one that is not is a box they clear once.
   $('#job-f-title').addEventListener('input', () => {
+    titleTouched = true;
     if (modelTouched || editing.job) return;
     $('#job-f-model').value = $('#job-f-title').value;
     renderModelField();
@@ -59,11 +68,22 @@ export function initForms() {
   for (const event of ['input', 'change']) {
     $('#job-f-model').addEventListener(event, () => {
       modelTouched = true;
+      // THE MATCHED MODEL'S OWN NAME, not the letters typed to find it. Choosing
+      // "benchy" from the list is choosing Benchy, and a title reading "benchy"
+      // is the sort of thing nobody notices until it is on the board.
+      if (!titleTouched && !editing.job) {
+        const typed = $('#job-f-model').value.trim();
+        $('#job-f-title').value = (typed && store.modelNamed(typed)?.name) || $('#job-f-model').value;
+      }
       renderModelField();
     });
   }
   // The tick decides what the hint below it promises, so it redraws the hint.
   $('#job-f-model-save').addEventListener('change', renderModelField);
+  const modelLink = $('#model-f-link');
+  modelLink.addEventListener('paste', () => setTimeout(offerFromModelLink, 0));
+  for (const event of ['input', 'change']) modelLink.addEventListener(event, offerFromModelLink);
+
   $('#model-f-addsource').addEventListener('click', () => addSourceRow());
   $('#model-f-addlisting').addEventListener('click', () => addListingRow());
 
@@ -108,7 +128,11 @@ export function openJob(id, opener) {
   const modelInput = $('#job-f-model');
   const linked = job?.modelId ? store.state.models.find((m) => m.id === job.modelId) : null;
   modelInput.value = linked?.name || '';
+  // Both halves of the mirror, reset together — a flag left set from the previous
+  // job is a form that silently stops filling itself, which reads as a defect in
+  // the feature rather than in the reopening.
   modelTouched = Boolean(modelInput.value);
+  titleTouched = Boolean($('#job-f-title').value);
 
   $('#job-f-model-save').checked = true;
 
@@ -117,6 +141,11 @@ export function openJob(id, opener) {
   for (const model of store.state.models) {
     if (model.name) options.append(el('option', { value: model.name }));
   }
+
+  // The picture shown is the one the CARD shows — the job's own if it has one,
+  // otherwise its model's. Anything else would be a form disagreeing with the
+  // board about what the picture of this job is.
+  ensureJobPicture().set(job?.imageId || linked?.imageId || '');
   renderModelField();
 
   const links = $('#job-f-links');
@@ -127,6 +156,69 @@ export function openJob(id, opener) {
 
   syncRequesterVisibility();
   openPanel('dlg-job', opener);
+  $('#job-f-title').focus();
+}
+
+let jobPicture = null;
+
+function ensureJobPicture() {
+  if (jobPicture) return jobPicture;
+  jobPicture = pictureField({ label: 'Picture', describe: 'this print' });
+  $('#job-f-picture').append(jobPicture.node);
+  return jobPicture;
+}
+
+/**
+ * Where the picture will be kept, said before it is kept there.
+ *
+ * NOT GUESSABLE, and the answer moves as the Model box is typed in: the same
+ * pasted picture goes on a model being created, on a model that has none, or on
+ * the job itself when the model already has its own. A reader who is not told
+ * cannot know which, and the difference matters the next time they print the
+ * same thing.
+ */
+function renderPictureHint() {
+  const hint = $('#job-f-picture-hint');
+  const typed = $('#job-f-model').value.trim();
+  const found = typed ? store.modelNamed(typed) : null;
+  const saving = $('#job-f-model-save').checked;
+
+  if (found?.imageId) {
+    hint.textContent = `${found.name} already has a picture, so one added here is kept on this job and is what its card shows.`;
+    return;
+  }
+  if (found) {
+    hint.textContent = `Kept on ${found.name}, so every job printing it shows it.`;
+    return;
+  }
+  if (typed && saving) {
+    hint.textContent = `Kept on ${typed}, the model this job is about to make.`;
+    return;
+  }
+  hint.textContent = 'Kept on this job. With no model to hold it, the picture belongs to the job itself.';
+}
+
+/**
+ * A new job that is already a print of this model.
+ *
+ * The model is carried by NAME rather than by id, because that is what `saveJob`
+ * takes and what the box shows — the same decision as everywhere else here, and it
+ * means this route has no privileged path into the store that the typed one lacks.
+ * If the two ever disagree, they disagree in one place.
+ *
+ * Both mirror flags are set, so nothing rewrites either box afterwards: the reader
+ * asked for this exact model, and a title they then edit is theirs.
+ */
+export function openJobForModel(modelId, opener) {
+  const model = store.state.models.find((m) => m.id === modelId);
+  openJob(null, opener);
+  if (!model) return;
+
+  $('#job-f-title').value = model.name || '';
+  $('#job-f-model').value = model.name || '';
+  titleTouched = true;
+  modelTouched = true;
+  renderModelField();
   $('#job-f-title').focus();
 }
 
@@ -168,6 +260,11 @@ function offerFromLink() {
 
   if (title && !titleBox.value.trim()) {
     titleBox.value = title;
+    // The title now holds something the reader asked for by pasting, so naming a
+    // model afterwards links the job WITHOUT rewriting it. A link to a page called
+    // "Bolt EUV 2022 privacy screen post replacement", filed under a model called
+    // "Privacy screen", should keep both names rather than collapse to one.
+    titleTouched = true;
     if (!modelTouched && !editing.job) $('#job-f-model').value = title;
   }
   if (url) $('#job-f-model-save').checked = true;
@@ -196,6 +293,11 @@ function renderModelField() {
 
   const found = typed ? store.modelNamed(typed) : null;
   saveField.hidden = !typed || Boolean(found);
+
+  // The picture hint answers the same question about a different record, and it
+  // moves for the same reasons, so it is redrawn from the same place. Two hints
+  // updated from two call sites is how one of them stops being updated.
+  renderPictureHint();
 
   if (!typed) {
     hint.textContent = 'Not from a saved model. Type a name and it is added to your models if it is not there already.';
@@ -269,9 +371,15 @@ async function onSaveJob(event) {
   // would have to be trusted to honour.
   const modelName = (found || isNewModel) ? typed : '';
 
+  // The BYTES, never an id — the same contract the model form has, so the store
+  // writes the picture inside the call that writes the record and one undo takes
+  // back both. Storing it here and passing an id would put the write outside the
+  // undo entry and orphan the blob, which is what the model form did once.
+  const field = ensureJobPicture();
+
   // A NAME, never an id — see the note above saveJob for why the store is what
   // creates the model rather than this form.
-  await store.saveJob({
+  const job = await store.saveJob({
     id: editing.job,
     title: $('#job-f-title').value,
     type: jobType(),
@@ -284,7 +392,13 @@ async function onSaveJob(event) {
     column: $('#job-f-column').value,
     notes: $('#job-f-notes').value,
     spoolLinks: links,
+    picture: field.read(),
   });
+  // Whichever record ended up holding it — the job's own, or its model's.
+  const model = job?.modelId ? store.state.models.find((m) => m.id === job.modelId) : null;
+  field.saved(job?.imageId || model?.imageId || '');
+  if (job?.imageId || model?.imageId) store.askToPersist();
+
   close('dlg-job');
   // Named out loud. A record appearing in another view without being mentioned is
   // how somebody discovers their catalog has doubled a week later.
@@ -391,6 +505,10 @@ export function openModel(id, opener) {
   editing.model = model?.id || null;
 
   $('#model-title').textContent = model ? 'Edit model' : 'Add model';
+  // Cleared on every open, like the job form's. The box is for ADDING an address;
+  // showing one already filed would invite editing it here while the real rows sit
+  // below saying something different.
+  $('#model-f-link').value = '';
   $('#model-f-name').value = model?.name || '';
   $('#model-f-designer').value = model?.designer || '';
   $('#model-f-tags').value = (model?.tags || []).join(', ');
@@ -425,6 +543,36 @@ function offerFromUrl(url, { label, site } = {}) {
 
   const name = $('#model-f-name');
   if (title && name && !name.value.trim()) name.value = title;
+}
+
+/**
+ * One paste catalogues a model: the name is offered and the address is filed.
+ *
+ * The job form has had this since 0.5.0 and the model form did not, so the SHORT
+ * way to catalogue a link was to add a job you did not want. What it does is
+ * deliberately the same three things `offerFromLink` does, in the same order and
+ * under the same rule — only ever into an EMPTY box, because a guess that
+ * overwrites what somebody typed destroys it at the moment they looked away.
+ *
+ * It fills the FIRST source row rather than adding one per keystroke: this fires
+ * on `input` as well as `paste`, and a row per character is not a feature.
+ */
+function offerFromModelLink() {
+  const url = $('#model-f-link').value.trim();
+  const { title, site } = readUrl(url);
+
+  const nameBox = $('#model-f-name');
+  if (title && !nameBox.value.trim()) nameBox.value = title;
+
+  if (!url) return;
+  const rows = $('#model-f-sources');
+  if (!rows.children.length) addSourceRow();
+  const first = rows.children[0];
+  const [labelBox, urlBox] = first.querySelectorAll('input');
+  // The row the reader is typing into by hand is theirs; only an empty one is
+  // filled from up here.
+  if (!urlBox.value.trim()) urlBox.value = url;
+  if (!labelBox.value.trim()) labelBox.value = site || 'Source';
 }
 
 function addSourceRow(source = null) {

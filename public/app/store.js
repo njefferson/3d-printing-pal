@@ -239,6 +239,18 @@ export function undoLabel() {
   return journal.length ? journal[journal.length - 1].label : null;
 }
 
+/**
+ * The identity of the change the strip is currently offering to undo.
+ *
+ * The strip can be dismissed, and a dismissal has to last exactly until the NEXT
+ * change rather than for the sitting. Keying that on the label would hide the
+ * strip for a second change that happened to be described identically — adding
+ * two jobs called the same thing, which is a normal afternoon here.
+ */
+export function undoId() {
+  return journal.length ? journal[journal.length - 1].id : null;
+}
+
 export function canUndo() {
   return journal.length > 0;
 }
@@ -563,6 +575,26 @@ export async function saveJob(input) {
     }
   }
 
+  // THE PICTURE FOLLOWS THE LINK'S RULE and for the same reason: it belongs to the
+  // model, because the model is the thing that exists on somebody's site with a
+  // photograph of it, and every job printing it should show that same picture
+  // rather than each keeping a copy.
+  //
+  // EXCEPT WHEN THE MODEL ALREADY HAS ONE, and then it goes on the job. A job form
+  // must never silently replace the picture of a model somebody set up
+  // deliberately. The board has always preferred a job's own picture over its
+  // model's and the import validator has always checked the reference — a
+  // precedence written, validated, and until now unreachable, because nothing in
+  // the app could give a job a picture of its own.
+  const picture = input.picture || null;
+  const linkedModel = !createdModel && modelId ? state.models.find((m) => m.id === modelId) : null;
+  const pictureGoesOnModel = Boolean(picture?.prepared)
+    && (Boolean(createdModel) || Boolean(linkedModel && !linkedModel.imageId));
+
+  // Removing clears the JOB's own picture only. A model's picture is the model's
+  // business and is removed where it was set.
+  let jobImageId = picture?.removed ? '' : (existing?.imageId || '');
+
   const record = {
     id: input.id || newId(),
     title: (input.title || '').trim(),
@@ -582,12 +614,50 @@ export async function saveJob(input) {
     deliveredAt: existing?.deliveredAt || (column === 'delivered' ? nowIso() : null),
     updatedAt: nowIso(),
   };
+
+  // A picture landing on an existing model makes it an updated one, whether or not
+  // the link already did. Built on top of `updatedModel` rather than beside it,
+  // because two objects for the same model means the second write wins and the
+  // first change is lost — silently, and only when both happen at once.
+  if (pictureGoesOnModel && linkedModel) {
+    updatedModel = { ...(updatedModel || linkedModel), updatedAt: nowIso() };
+  }
+
   // Captured HERE rather than at the top, because a model gaining a link has to
-  // be read as it was before that decision was made.
+  // be read as it was before that decision was made. The picture a record is
+  // giving up goes in too, or undo would put the record back pointing at a blob
+  // that had been deleted underneath it.
   const before = await capture({
     jobs: [existing?.id].filter(Boolean),
     ...(updatedModel ? { models: [updatedModel.id] } : {}),
+    images: [
+      ...(pictureGoesOnModel && updatedModel ? [updatedModel.imageId] : []),
+      ...(picture?.prepared && !pictureGoesOnModel ? [existing?.imageId] : []),
+      ...(picture?.removed ? [existing?.imageId] : []),
+    ].filter(Boolean),
   });
+
+  // Written AFTER the capture, like saveModel: the id cannot be known before it
+  // exists, so its tombstone is added here. It did not exist a moment ago, so undo
+  // deletes it rather than restoring it.
+  if (picture?.prepared) {
+    const newImageId = await putImage(picture.prepared);
+    before.images = [...(before.images || []), { id: newImageId, record: null }];
+    if (pictureGoesOnModel) {
+      if (createdModel) createdModel.imageId = newImageId;
+      else updatedModel.imageId = newImageId;
+    } else {
+      jobImageId = newImageId;
+    }
+  }
+  record.imageId = jobImageId;
+
+  // A picture the job is letting go of is deleted, or every re-pick would leave a
+  // blob nobody points at and the export would carry all of them forever. Only the
+  // JOB's own — a model's is dropped where a model's is set.
+  if (existing?.imageId && existing.imageId !== record.imageId) {
+    await deleteImage(existing.imageId);
+  }
 
   // ONE TRANSACTION whether or not a model is being made or changed, so there is
   // no state in which the job points at a model that is not there yet, or at one

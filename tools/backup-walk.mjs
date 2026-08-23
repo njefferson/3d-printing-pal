@@ -603,9 +603,82 @@ async function main() {
     pass('a job that creates a model is one gesture: undo takes both back, byte for byte');
   }
 
+  // ---- a picture added where the job is made -----------------------------
+  //
+  // WHICH RECORD ENDS UP HOLDING IT is the whole question, and it has two answers
+  // that look identical on screen: the model when it has none, the job when the
+  // model already has its own. A form that quietly replaced a model's picture
+  // would look exactly like this working, until the next job for that model
+  // showed somebody else's photograph.
+  const beforePictures = await exportThroughTheButton(page);
+
+  await page.click('#tab-board');
+  await page.click('#job-new');
+  await page.fill('#job-f-title', 'Lamp shade');
+  await page.setInputFiles('#job-f-picture .pic-file', {
+    name: 'lamp.png', mimeType: 'image/png', buffer: makePng(700, 460),
+  });
+  await page.waitForFunction(
+    () => /Ready —/.test(document.querySelector('#job-f-picture .pic-status')?.textContent || ''),
+    null, { timeout: 8000 },
+  );
+  await page.click('#job-save');
+  await page.waitForTimeout(400);
+
+  const onModel = JSON.parse((await exportThroughTheButton(page)).text);
+  const madeModel = onModel.models.find((m) => m.name === 'Lamp shade');
+  const madeJob = onModel.jobs.find((j) => j.title === 'Lamp shade');
+  if (!madeModel?.imageId) {
+    fail('a picture added on the job form did not reach the model the job made — it is still a second trip to Models');
+  } else if (madeJob?.imageId) {
+    fail('the picture landed on BOTH the job and the model it made, so the same bytes are held twice and can drift');
+  } else if (!onModel.images.some((i) => i.id === madeModel.imageId)) {
+    fail('the model points at a picture that is not in the export, so this backup would be refused on import');
+  } else {
+    pass('a picture added on the job form is kept on the model the job makes, and only there');
+  }
+
+  // Second job, same model, a different picture: the model keeps its own.
+  await page.click('#job-new');
+  await page.fill('#job-f-title', 'Lamp shade for Ana');
+  await page.fill('#job-f-model', 'Lamp shade');
+  await page.setInputFiles('#job-f-picture .pic-file', {
+    name: 'ana.png', mimeType: 'image/png', buffer: makePng(640, 400),
+  });
+  await page.waitForFunction(
+    () => /Ready —/.test(document.querySelector('#job-f-picture .pic-status')?.textContent || ''),
+    null, { timeout: 8000 },
+  );
+  await page.click('#job-save');
+  await page.waitForTimeout(400);
+
+  const onJob = JSON.parse((await exportThroughTheButton(page)).text);
+  const keptModel = onJob.models.find((m) => m.name === 'Lamp shade');
+  const secondJob = onJob.jobs.find((j) => j.title === 'Lamp shade for Ana');
+  if (keptModel?.imageId !== madeModel.imageId) {
+    fail("a second job's picture REPLACED the model's own — every job printing it now shows the last one somebody added");
+  } else if (!secondJob?.imageId) {
+    fail('the second picture went nowhere: the model kept its own and the job did not get one, so the reader lost what they pasted');
+  } else if (!onJob.images.some((i) => i.id === secondJob.imageId)) {
+    fail('the job points at a picture that is not in the export, so this backup would be refused on import');
+  } else {
+    pass("a picture added for a model that already has one is kept on the JOB, and the model's own is untouched");
+  }
+
+  for (let i = 0; i < 2; i += 1) {
+    await page.click('#undo-do');
+    await page.waitForTimeout(360);
+  }
+  const afterPictureUndo = await exportThroughTheButton(page);
+  if (JSON.stringify(strip(JSON.parse(afterPictureUndo.text))) !== JSON.stringify(strip(JSON.parse(beforePictures.text)))) {
+    fail('undoing two jobs that carried pictures did NOT return the data to what it was');
+  } else {
+    pass('a job carrying a picture is still one gesture: undo takes the job, its model and the picture back together');
+  }
+
   // The failure this is really guarding: a model rolled back while the job that
   // pointed at it survives. That file imports nowhere.
-  const settled = JSON.parse(afterJobUndo.text);
+  const settled = JSON.parse(afterPictureUndo.text);
   const modelIds = new Set(settled.models.map((m) => m.id));
   const orphans = settled.jobs.filter((j) => j.modelId && !modelIds.has(j.modelId));
   if (orphans.length) {

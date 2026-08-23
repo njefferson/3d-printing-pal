@@ -86,6 +86,15 @@
   <p class="strip-text" id="undo-text"></p>
   <div class="strip-actions">
     <button type="button" id="undo-do" class="btn">Undo</button>
+    <!-- Icon-only, like every other close in the app, because a worded button
+         here made the row too wide for a phone and the strip wrapped to 87px —
+         taller than the bar this redesign exists to quieten. SC 2.5.3 governs a
+         control that HAS a visible text label; this one has none, so the whole
+         accessible name is the sr-only text. -->
+    <button type="button" id="undo-dismiss" class="iconbtn">
+      <span class="iconbtn-glyph" aria-hidden="true">✕</span>
+      <span class="sr-only">Hide this</span>
+    </button>
   </div>
 </div>
 
@@ -384,6 +393,15 @@
         <p class="note" id="job-f-model-hint"></p>
       </div>
 
+      <!-- A PICTURE, HERE, rather than only on the model's own screen. A job could
+           make its model since 0.4.0 and file its link since 0.5.0, but not give it
+           the photograph — so the one thing that makes a board card readable was
+           the one thing that still needed a second trip to Models and an edit. The
+           hint below says which record it will be kept on, because that is not
+           guessable and the answer depends on what is already there. -->
+      <div id="job-f-picture"></div>
+      <p class="note" id="job-f-picture-hint"></p>
+
       <div class="field">
         <label for="job-f-printer">Printer</label>
         <input type="text" id="job-f-printer" autocomplete="off" placeholder="Whatever you call it">
@@ -522,6 +540,19 @@
     </div>
 
     <div class="panel-body">
+      <!-- THE SAME ONE-PASTE BOX THE JOB FORM HAS HAD SINCE 0.5.0, and it should
+           have arrived here at the same time. Cataloguing something from a link
+           meant Add model, then Add a source, then a name typed by hand, then two
+           more fields — while the job form filled all of that from one paste. The
+           good affordance existed and was built in exactly one of the two places
+           that needed it. -->
+      <div class="field">
+        <label for="model-f-link">Link</label>
+        <input type="url" id="model-f-link" autocomplete="off" inputmode="url"
+               aria-describedby="model-f-link-hint" placeholder="Paste the address of the model">
+        <p class="note" id="model-f-link-hint">Optional. Pasting one fills in the name and keeps the address below.</p>
+      </div>
+
       <div class="field">
         <label for="model-f-name">Name</label>
         <input type="text" id="model-f-name" required autocomplete="off">

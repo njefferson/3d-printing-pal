@@ -84,10 +84,12 @@ and nothing goes back to close it.
 - No printing or PDF output.
 - No multi-device sync, by design rather than by omission.
 - No files attached to a model — pictures and links only.
-- A picture has to be added by hand; dropping in an address cannot pull the photo
-  from the page. Doing that needs a server to read the page's Open Graph tags,
-  which would end "nothing is fetched" — a trade the owner has not been asked to
-  make yet.
+- A picture has to be added by hand — but from 0.7.0 that can be done on the job
+  form as well as the model's own screen, so it is one screen rather than two.
+  Pasting an address still cannot pull the photo: reading the PAGE needs a server,
+  and reading a picture's own address needs that CDN to permit a cross-origin
+  read. Both would end "nothing is fetched". See "A picture's address contains no
+  name" below for what was measured.
 
 ---
 
@@ -120,6 +122,90 @@ capability, with the rejected ones and the reason each was rejected.
   doubles every control when they do.
 - **Media-query thresholds stay in `px`.** `rem` inside a media query resolves
   against the initial root font size, not the reader's.
+
+---
+
+## One screen does the whole job (0.7.0)
+
+Five reports arrived in one sitting and four of them were the SAME DEFECT wearing
+different clothes: an affordance built in one place and not in the mirror-image
+place next to it. Worth naming as a class, because each one individually looked
+like a feature request and the pattern is what makes them cheap to find.
+
+- **The Title/Model mirror ran one way.** A pasted link filled the Title and the
+  Title filled the Model box, so a request arrived from one paste. Naming a model
+  that already exists filled nothing, and the same words were typed twice. Both
+  directions now, and choosing "benchy" puts "Benchy" in the title — the model's
+  own spelling, not the letters typed to find it.
+- **Card to model existed; model to job did not.** 0.6.0 put a button on every
+  card that opens its model. The catalog had no way to act on what it showed, so
+  deciding to print something meant going to the board and typing a name the app
+  already knew.
+- **The job form could make a model and file its link, but not give it a
+  picture.** So the one thing that makes a board card readable was the one thing
+  that still needed a second trip to Models and an edit.
+- **The job form had a one-paste Link box since 0.5.0; the model form never got
+  one.** The short way to catalogue a link was to add a job you did not want.
+
+**Where a picture added on the job form is KEPT, which is the only hard part.** On
+the model when the job makes one, on the model when it links to one that has no
+picture, and on the JOB when that model already has its own. A job form must never
+silently replace the picture of a model set up deliberately — the next job for it
+would show somebody else's photograph. The board has always preferred a job's own
+picture over its model's and the importer has always validated the reference; that
+precedence was written, checked, and unreachable, because nothing could give a job
+a picture. The hint under the field says which record will hold it, and it changes
+as the Model box is typed in, because the answer does.
+
+**The undo strip was a copy of the update strip and should never have been.** Same
+raised ground, same two 2px rails — right for a message about the app, wrong for
+one describing what the reader just did on purpose, 9% of a phone screen tall,
+permanently, on every screen. It is now small type on the page's own ground at 7%,
+and a ✕ hides it until the next change. Hiding gives up the undo for that one
+change and says so; there is no other route to it.
+
+**Twice on the way there, a fix was worse than what it replaced, and only a
+measurement said so.** Cutting the strip's padding put the Undo button 7px under
+the Models tab, under the 8px separation floor — a mis-tap on a control that
+undoes things. And making its rails a hairline measured 1.49:1 against SC 1.4.11's
+3:1, the same number on the same token as the time before; the comment written to
+justify it argued that a strip on the page's own ground is no longer a bounded
+component, and the gate disagreed. Quieter is a matter of WEIGHT and GROUND. The
+colour of a boundary is not where to find it.
+
+---
+
+## A picture's address contains no name (0.7.0)
+
+Pasting the link to an IMAGE rather than to its page offered `3ad2d89093fc967b` as
+a model's name. Rejecting hashes made it offer `Design`. Rejecting route words
+made it offer `Makerworld`, the host repeated as a path segment. **Three separate
+wrong answers from one link, each of which looked like an answer**, and the
+scoring the 0.5.0 work added could not have caught any of them: scoring picks the
+best segment, and every segment here is scaffolding. Some rules have to REJECT
+rather than rank.
+
+The route-word list is the one thing here that contradicts what this file used to
+say — that a list like it would be the per-vendor coupling the app refuses. That
+was right about SITES and wrong about this: `files`, `design`, `download` are the
+vocabulary of web paths, not knowledge about anybody's site. The host-echo rule
+needs no list at all, being derived from the address itself.
+
+**And the answer to "can the picture and the details be filled in from an image
+link" is no, in two separate parts.** The details: that address contains no words
+— only opaque ids — so there is nothing to read, with or without a network. The
+picture: storing the bytes needs `fetch` or a canvas read, and both need that CDN
+to send `Access-Control-Allow-Origin`; the app's own policy also blocks it
+(`img-src 'self' blob:`, `connect-src 'self'`). Whether a given CDN allows it is a
+fact about that CDN and is TESTABLE on a real machine, which this sandbox cannot
+reach. Nothing has been built for it, and the trade it would cost — telling that
+CDN your address every time you catalogue something, and the end of "nothing is
+fetched" — is not a session's to make.
+
+**An image cannot be read for its contents either.** There is no OCR here and
+adding one would not help: a photograph of a print carries no title, no designer
+and no address. Asking a model to look at the picture and describe it means
+sending it somewhere, which is the same trade again.
 
 ---
 

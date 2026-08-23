@@ -12,9 +12,11 @@ import * as store from '../store.js';
 import { thumbFor } from './thumb.js';
 
 let onEdit = () => {};
+let onStart = () => {};
 
-export function initModels({ onEditModel }) {
+export function initModels({ onEditModel, onStartJob }) {
   onEdit = onEditModel;
+  onStart = onStartJob;
 }
 
 export function renderModels() {
@@ -36,6 +38,18 @@ function buildModelRow(model, jobs, currency) {
   const edit = el('button', { type: 'button', class: 'btn' }, 'Open');
   edit.setAttribute('aria-label', `Open ${name}`);
   edit.addEventListener('click', () => onEdit(model.id));
+
+  // THE CATALOG IS WHERE "what shall I print" IS ANSWERED, so it is where the
+  // answer has to be actionable. Without this, deciding to print something meant
+  // going to the board, pressing Add job, and typing a name the app already knew —
+  // which is the same friction as having to hunt the Models tab for a job's model,
+  // in the other direction.
+  //
+  // The visible words are a PREFIX of the accessible name rather than merely
+  // inside it (SC 2.5.3), so "start a job" said out loud reaches this control.
+  const start = el('button', { type: 'button', class: 'btn btn-primary' }, 'Start a job');
+  start.setAttribute('aria-label', `Start a job printing ${name}`);
+  start.addEventListener('click', (e) => onStart(model.id, e.currentTarget));
 
   // PICTURE AND NAME, never picture instead of name. The picture is what makes a
   // model recognisable at a glance; the name is what makes it findable, what is
@@ -80,7 +94,9 @@ function buildModelRow(model, jobs, currency) {
 
   if (model.notes) body.append(el('p', { class: 'note', text: model.notes }));
 
-  return el('li', { class: 'rowcard' }, el('div', { class: 'rowcard-head' }, head, edit), body);
+  return el('li', { class: 'rowcard' },
+    el('div', { class: 'rowcard-head' }, head, el('div', { class: 'rowcard-actions' }, start, edit)),
+    body);
 }
 
 function linkOrText(url, label) {

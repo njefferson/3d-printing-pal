@@ -1139,6 +1139,122 @@ async function checkModelRoute(page) {
   await closeEverything(page);
 }
 
+/**
+ * The other direction: from a model in the catalog to a job that prints it.
+ *
+ * checkModelRoute above walks card -> model. This walks model -> job, and the two
+ * are a pair: a route that only goes one way is how "creating a job from a model"
+ * ends up meaning "go to the board and type the name the app already knows".
+ *
+ * It asserts the FILLED FORM rather than only that a panel opened, because a form
+ * that opens empty is the defect this exists to catch, not a lesser version of
+ * success.
+ */
+async function checkJobFromModel(page) {
+  await closeEverything(page);
+  await showView(page, 'models');
+
+  const named = await page.evaluate(() => {
+    const button = document.querySelector('.rowcard .btn-primary');
+    if (!button || button.hidden) return null;
+    const row = button.closest('.rowcard');
+    return {
+      text: button.textContent.trim(),
+      label: button.getAttribute('aria-label') || '',
+      model: row.querySelector('.rowcard-title')?.textContent || '',
+    };
+  });
+  if (!named) {
+    fail('job-from-model', 'no model offers a way to start a job printing it, so the catalog can be read and not acted on');
+    return;
+  }
+
+  await press(page, '.rowcard .btn-primary');
+  await page.waitForTimeout(240);
+
+  const landed = await page.evaluate(() => ({
+    open: document.getElementById('dlg-job').open,
+    title: document.getElementById('job-f-title').value,
+    model: document.getElementById('job-f-model').value,
+    view: document.querySelector('.tab[aria-current="page"]')?.textContent,
+  }));
+
+  if (!landed.open) {
+    fail('job-from-model', `pressing "${named.text}" did not open the job form`);
+  } else if (landed.model !== named.model) {
+    fail('job-from-model', `the job form opened with model "${landed.model}" rather than "${named.model}"`);
+  } else if (!landed.title) {
+    fail('job-from-model', `the job form opened with an empty title, so the name the app already knew has to be typed anyway`);
+  } else if (!named.label.includes(named.text)) {
+    fail('job-from-model', `the button reads "${named.text}" and answers to "${named.label}", which does not contain it (SC 2.5.3)`);
+  } else if (!named.label.includes(named.model)) {
+    fail('job-from-model', `"${named.label}" does not say which model, so every one of these sounds identical`);
+  } else if (landed.view !== 'Board') {
+    fail('job-from-model', `the job form opened over the ${landed.view} tab, so saving leaves the reader away from the new card`);
+  } else {
+    pass('job-from-model', `"${named.text}" opens a job already titled ${landed.title}, on the Board, from the catalog`);
+  }
+  await closeEverything(page);
+}
+
+/**
+ * The Title and Model boxes fill each other, in BOTH directions.
+ *
+ * One direction shipped and the other did not, for three releases, and nothing
+ * here noticed — because every assertion was about a control existing, being
+ * named, being reachable and contrasting, and none about two halves of a mirror
+ * being the same size.
+ */
+async function checkNameMirror(page) {
+  await closeEverything(page);
+  await showView(page, 'board');
+
+  const existing = await page.evaluate(() => document.querySelector('#job-f-model-options option')?.value || '');
+  await press(page, '#job-new');
+  await page.waitForTimeout(200);
+
+  // Title -> Model, the direction that always worked.
+  await page.fill('#job-f-title', 'Widget stand');
+  await page.waitForTimeout(120);
+  const forward = await page.inputValue('#job-f-model');
+  if (forward !== 'Widget stand') {
+    fail('name-mirror', `typing a title left the Model box reading "${forward}"`);
+  } else {
+    pass('name-mirror', 'a typed title fills the Model box');
+  }
+
+  // Model -> Title, on a fresh form, in the case that matters: a model that exists.
+  await closeEverything(page);
+  await press(page, '#job-new');
+  await page.waitForTimeout(200);
+  if (!existing) {
+    fail('name-mirror', 'no model exists in the seed, so the direction that was broken cannot be measured');
+    await closeEverything(page);
+    return;
+  }
+  // Lower-cased on purpose: the title must come back spelled the way the MODEL is.
+  await page.fill('#job-f-model', existing.toLowerCase());
+  await page.waitForTimeout(140);
+  const back = await page.inputValue('#job-f-title');
+  if (back !== existing) {
+    fail('name-mirror', `naming the model "${existing.toLowerCase()}" left the title reading "${back}" rather than "${existing}"`);
+  } else {
+    pass('name-mirror', `naming an existing model fills the title with its own spelling, "${existing}"`);
+  }
+
+  // And the picture field says where a picture would be kept, on the same screen.
+  const hint = await page.evaluate(() => document.getElementById('job-f-picture-hint')?.textContent?.trim() || '');
+  const hasField = await page.evaluate(() => Boolean(document.querySelector('#job-f-picture .pic-zone')));
+  if (!hasField) {
+    fail('name-mirror', 'the job form has no picture field, so a picture still needs a second trip to Models');
+  } else if (!hint.includes(existing)) {
+    fail('name-mirror', `the picture hint reads "${hint}", which does not say which record keeps it`);
+  } else {
+    pass('name-mirror', `a picture can be added here, and it says where it goes: "${hint}"`);
+  }
+  await closeEverything(page);
+}
+
 async function checkInteractionSelectors(page) {
   const where = 'interactions/live';
   const spec = JSON.parse(readFileSync(join(ROOT, 'INTERACTIONS.json'), 'utf8'));
@@ -1364,6 +1480,8 @@ async function main() {
   await seed(page);
   await checkPressing(page);
   await checkModelRoute(page);
+  await checkJobFromModel(page);
+  await checkNameMirror(page);
   await checkInteractionSelectors(page);
   await checkInfoSurface(page);
   await checkDiagnosticPrivacy(page);

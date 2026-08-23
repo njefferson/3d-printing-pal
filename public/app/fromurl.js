@@ -50,31 +50,72 @@ export function siteFrom(url) {
 }
 
 /**
+ * Path words that are never the name of a thing.
+ *
+ * A LIST, and this file's header used to say a list like this was exactly the
+ * per-vendor coupling it refused to have. That was right about SITES and wrong
+ * about this: none of these words is about a site. They are the vocabulary of web
+ * PATHS, and the same dozen appear on every model host there is.
+ *
+ * Scoring alone had it half-covered in a way that was easy to mistake for
+ * covered: `files` scores 0 and loses to a real slug, so
+ * `/model/905441-bolt-euv/files` came out right and the rule looked like it
+ * worked. A route word only wins when there is nothing better in the whole path —
+ * which is exactly what a picture's address is, all route and no name.
+ */
+const ROUTE_WORDS = new Set([
+  'model', 'models', 'design', 'designs', 'thing', 'things', 'item', 'items',
+  'file', 'files', 'download', 'downloads', 'image', 'images', 'img', 'photo',
+  'photos', 'media', 'asset', 'assets', 'upload', 'uploads', 'static', 'cdn',
+  'view', 'detail', 'details', 'product', 'products', 'page', 'index',
+]);
+
+/**
+ * Is this one token an identifier rather than a word?
+ *
+ * Three shapes, each measured against real addresses rather than imagined: a long
+ * run of hex (`3ad2d89093fc967b`), a long token carrying both digits and letters
+ * with no separator (`USb4cd954e75f587`), and a long token with no vowel in it at
+ * all. Length is part of every test on purpose — `mk4`, `a1`, `x1c` and `benchy3`
+ * are names people actually give prints, and a rule reading "has a digit in it"
+ * would throw all of them away.
+ */
+function looksOpaque(token) {
+  if (token.length < 10) return false;
+  if (/^[0-9a-f]{10,}$/i.test(token)) return true;
+  if (/\d/.test(token) && /[a-z]/i.test(token) && token.length >= 12) return true;
+  return !/[aeiou]/i.test(token);
+}
+
+/**
  * A title guess from the path.
  *
  * `/models/1234-articulated-dragon` becomes "Articulated Dragon".
  *
- * IT PICKS THE BEST SEGMENT, NOT THE LAST ONE, and that is the whole of it. The
- * first version walked from the end and took the first word-looking segment, so
- * the link somebody actually sends —
- * `/model/905441-bolt-euv-2022-privacy-screen-post-replacement/files`, copied
- * from the Files tab, which is the tab you send to a person who is going to
- * print it — offered the title **"Files"**. The name was in the URL the whole
- * time, one segment earlier.
- *
- * The signal is structural rather than a list of route words, because a list of
- * route words is the per-vendor coupling this file exists to avoid:
+ * IT PICKS THE BEST SEGMENT, NOT THE LAST ONE. The first version walked from the
+ * end and took the first word-looking segment, so the link somebody actually sends
+ * — `/model/905441-bolt-euv-2022-privacy-screen-post-replacement/files`, copied
+ * from the Files tab, which is the tab you send to a person who is going to print
+ * it — offered the title **"Files"**. The name was in the URL the whole time, one
+ * segment earlier.
  *
  *   2 — the segment begins with digits and a dash. Every site here mints slugs
  *       that way, and nothing else in a path looks like it.
  *   1 — the segment is more than one word. A route is `files`, `download`,
  *       `comments`; a name is not.
  *   0 — a single word. Taken only when nothing scores higher, so `/models/dragon`
- *       still reads, and `/…/slug/files` no longer does.
+ *       still reads.
  *
- * A Thingiverse `thing:2478331/files` still yields "Files": that path carries no
- * title in any segment, so there is nothing better to find. It is a guess in an
- * editable field and it is wrong there — recorded rather than hidden.
+ * SCORING IS NOT ENOUGH ON ITS OWN, which a picture's address is what proved. In
+ * `makerworld.bblmw.com/makerworld/model/USb4cd954e75f587/design/3ad2d89093fc967b.jpg`
+ * every segment is route or hash, so the winner is whichever piece of scaffolding
+ * scored least badly — and it offered "3ad2d89093fc967b", then "Design", then
+ * "Makerworld", as the name of a model. Three rules below reject a segment
+ * outright rather than ranking it, and with all of them the answer is an empty
+ * box, which is the truth: that address contains no name.
+ *
+ * A Thingiverse `thing:2478331/files` also yields nothing now, for the same
+ * reason. That path carries no title in any segment and never did.
  */
 export function titleFrom(url) {
   const parsed = parse(url);
@@ -82,6 +123,12 @@ export function titleFrom(url) {
 
   const segments = parsed.pathname.split('/').filter(Boolean);
   if (!segments.length) return '';
+
+  // A segment that repeats a piece of the HOST is branding or routing, not a name
+  // — `makerworld.bblmw.com/makerworld/model/...`. Derived from the address rather
+  // than from a list of sites, so it needs no per-site knowledge and works for the
+  // next host as well as this one.
+  const hostWords = new Set(parsed.hostname.toLowerCase().split('.').filter((w) => w && w !== 'www'));
 
   let best = null;
   for (const segment of segments) {
@@ -107,6 +154,19 @@ export function titleFrom(url) {
 
     // A single short token is more likely a route than a name — "models", "p", "m".
     if (parts.length === 1 && parts[0].length <= 3) continue;
+
+    // AND A SINGLE LONG TOKEN WITH NO WORDS IN IT IS AN ID, not a name. A CDN
+    // address for a picture is built entirely of these — the whole path of
+    // `makerworld.bblmw.com/makerworld/model/USb4cd954e75f587/design/3ad2d89093fc967b.jpg`
+    // is opaque, and the old rule produced "3ad2d89093fc967b" as a title and
+    // offered it as a model's name. A hash that looks like an answer is worse than
+    // an empty box, which is the same reason `thing:2478331` is skipped above.
+    //
+    // The test is for a run of hex or a long unbroken mixed-case-and-digits token,
+    // NOT "has a digit in it" — "benchy3" and "mk4" are names.
+    if (parts.length === 1 && looksOpaque(parts[0])) continue;
+    if (parts.length === 1 && ROUTE_WORDS.has(parts[0].toLowerCase())) continue;
+    if (parts.length === 1 && hostWords.has(parts[0].toLowerCase())) continue;
 
     const score = idPrefixed ? 2 : (parts.length > 1 ? 1 : 0);
     // `>=` so that among equal scores the LAST segment wins, which is where a

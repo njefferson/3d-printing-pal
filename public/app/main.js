@@ -12,7 +12,7 @@ import { wireOpeners, initConfirm, say } from './ui/panels.js';
 import { initBoard, renderBoard } from './ui/board.js';
 import { initInventory, renderInventory } from './ui/inventory.js';
 import { initModels, renderModels } from './ui/models.js';
-import { initForms, openJob, openSpool, openModel } from './ui/forms.js';
+import { initForms, openJob, openJobForModel, openSpool, openModel } from './ui/forms.js';
 import { initBackup, renderLastExport, renderSnapshots } from './ui/backup-ui.js';
 import { initInfo, maybeFirstRun } from './ui/info.js';
 import { initDiagnostic } from './ui/diagnostic.js';
@@ -53,7 +53,12 @@ async function start() {
     onOpenModel: (id, opener) => { showView('models'); openModel(id, opener); },
   });
   initInventory({ onEditSpool: (id) => openSpool(id, document.activeElement) });
-  initModels({ onEditModel: (id) => openModel(id, document.activeElement) });
+  initModels({
+    onEditModel: (id) => openModel(id, document.activeElement),
+    // The catalog answers "what shall I print", so it is where printing it starts.
+    // The board is shown first because that is where the new job will appear.
+    onStartJob: (id, opener) => { showView('board'); openJobForModel(id, opener); },
+  });
   initBackup({ onImported: renderAll });
   initInfo();
   initDiagnostic();

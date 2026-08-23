@@ -170,16 +170,28 @@ function buildCard(job) {
 
   const thumb = el('div', { class: 'card-thumb' });
 
+  /* A CARD WITH NO PICTURE HAD NOTHING TO LOOK AT, only words, and beside a card
+   * carrying a photograph it stopped registering as an item at all — 155px against
+   * 345px, and the tall one is the one the eye goes to. 0.5.1 took the empty
+   * 128px band off these cards for good reason and that measurement still holds;
+   * this is not it coming back. It is a 56px mark in the card's HEAD, where the
+   * eye already is, so the card has an anchor without a picture-sized hole.
+   *
+   * The letter is the job's own initial, so a column of them is scannable rather
+   * than a wall of one repeated glyph. aria-hidden, because the title it is taken
+   * from is the next thing read out. */
+  const mark = el('div', { class: 'card-mark', 'aria-hidden': 'true' });
+
   const node = el(
     'li',
     { class: 'card', dataset: { jobId: job.id } },
-    el('div', { class: 'card-top' }, el('div', { class: 'card-topmain' }, badge, title), grip),
+    el('div', { class: 'card-top' }, mark, el('div', { class: 'card-topmain' }, badge, title), grip),
     thumb,
     meta,
     el('div', { class: 'card-actions' }, moveBtn, editBtn, modelBtn, sourceLink),
   );
 
-  node._parts = { grip, title, badge, meta, moveBtn, editBtn, thumb, sourceLink, modelBtn };
+  node._parts = { grip, title, badge, meta, moveBtn, editBtn, thumb, sourceLink, modelBtn, mark };
 
   moveBtn.addEventListener('click', () => openMove(job.id, moveBtn));
   editBtn.addEventListener('click', () => onEdit(node.dataset.jobId));
@@ -222,6 +234,13 @@ function updateCard(node, job) {
     // the note over thumbFor for the measurement.
     p.thumb.append(thumbFor(imageId, job.title || 'this job', { keepSpace: false }));
   }
+
+  // The mark stands in for the picture and is hidden the moment there is one, so
+  // no card ever carries both. A letter only — never the whole word, which at this
+  // size becomes an unreadable smudge that looks like a rendering fault.
+  const initial = (job.title || '').trim().replace(/^[^\p{L}\p{N}]+/u, '').charAt(0);
+  p.mark.textContent = initial ? initial.toUpperCase() : '·';
+  p.mark.hidden = Boolean(imageId);
 
   const bits = [];
   if (job.printer) bits.push(`Printer: ${job.printer}`);
