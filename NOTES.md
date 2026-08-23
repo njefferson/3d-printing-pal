@@ -746,7 +746,18 @@ the log and check whether the steps ran or were skipped.
 ### The staged candidate
 
 **There is no staged candidate.** `staging` and `main` point at the same commit,
-whatever that commit currently is. Leaving a promoted candidate recorded here is
+whatever that commit currently is.
+
+**0.7.0 reached production on 2026-08-23** — one screen does the whole job, plus
+the probe and the measurement it produced. Promoted at `1647c9e` as a clean
+fast-forward of five commits, ancestry checked with `git merge-base --is-ancestor`
+BEFORE the push and the remote read back after. All 28 gate steps and 5 security
+steps had executed and passed on that exact commit; the production deploy's eight
+steps ran, and `_headers` went up, which is what carries the probe's own policy:
+
+    ✨ Uploading _headers
+    ✨ Deployment complete! Take a peek over at https://055b1b2a.3d-printing-pal.pages.dev
+ Leaving a promoted candidate recorded here is
 how the next session concludes something is waiting when nothing is.
 
 **Deliberately no SHA in that sentence.** A record commit lands on `staging` after
