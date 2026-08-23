@@ -84,7 +84,13 @@ const BASE_TEXT = [
   '.tab[aria-current="page"]',
   '.btn',
   '.btn-primary',
-  '.lastexport',
+  // TWO SPANS, NOT THE BUTTON. Since 1.1.0 the last-export line is a control in
+  // two parts — the sentence in --text-3 and the "Keep a copy" action in --text-2
+  // — and neither colour is on the button itself. Measuring `.lastexport` would
+  // have measured a container holding no text of its own and reported the pair as
+  // covered, which is the exact shape of the chip fill that shipped at 1.63:1.
+  '.lastexport-state',
+  '.lastexport-go',
   '.stamp .linkbtn',
 ];
 
@@ -115,7 +121,21 @@ const STATE_TEXT = {
   undo: [...BASE_TEXT, '#undo-do'],
   'undo-empty': [...BASE_TEXT, '#undo-do'],
   firstrun: ['#dlg-firstrun h2', '#dlg-firstrun p', '#dlg-firstrun li', '#dlg-firstrun .btn', '.panel-foot-note'],
-  info: ['#dlg-info h2', '#dlg-info h3', '#dlg-info p', '#dlg-info li', '#dlg-info a', '#dlg-info .release-head'],
+  // THE (i) IS SIX STATES, NOT ONE. It was a single scroll until 1.1.0; it is now
+  // a menu and five destinations, and only one of them is on screen at a time.
+  // Measuring the panel once would measure whichever screen happened to be
+  // showing and report the other five as covered — the same shape as the disabled
+  // Undo button, one level up. Every destination gets its own state or it ships
+  // unmeasured, and `checkInfoMenu` refuses a section that no state reaches.
+  info: ['#dlg-info h2', '#dlg-info .info-item-title', '#dlg-info .info-item-note'],
+  'info-about': ['#dlg-info h2', '#dlg-info h3', '#dlg-info p', '#dlg-info li'],
+  'info-changed': ['#dlg-info h2', '#dlg-info p', '#dlg-info li', '#dlg-info .release-head'],
+  // No `li` here: this destination is prose and two buttons. The registry fails on
+  // a selector that matches nothing, which is what caught it — a list that stops
+  // existing takes its own contrast measurement with it, silently, otherwise.
+  'info-data': ['#dlg-info h2', '#dlg-info h3', '#dlg-info p', '#dlg-info .btn'],
+  'info-wrong': ['#dlg-info h2', '#dlg-info h3', '#dlg-info p', '#dlg-info .btn', '#dlg-info .note'],
+  'info-legal': ['#dlg-info h2', '#dlg-info li', '#dlg-info a'],
   diagnostic: ['#dlg-diagnostic h2', '#dlg-diagnostic p', '#dlg-diagnostic .diag-text'],
   // `.note` is the Model box's hint, which is ALWAYS on screen — that is what
   // makes it registerable. It shares the class with #job-f-nospools, which is
@@ -149,7 +169,12 @@ const STATE_NONTEXT = {
   undo: ['.btn', '.iconbtn'],
   'undo-empty': ['.btn', '.iconbtn'],
   firstrun: ['#dlg-firstrun .btn', '#dlg-firstrun .iconbtn'],
-  info: ['#dlg-info .btn', '#dlg-info .iconbtn'],
+  info: ['#dlg-info .info-item', '#dlg-info .iconbtn'],
+  'info-about': ['#dlg-info .iconbtn'],
+  'info-changed': ['#dlg-info .iconbtn'],
+  'info-data': ['#dlg-info .btn', '#dlg-info .iconbtn'],
+  'info-wrong': ['#dlg-info .btn', '#dlg-info .iconbtn'],
+  'info-legal': ['#dlg-info .iconbtn'],
   diagnostic: ['#dlg-diagnostic .btn', '#dlg-diagnostic .diag-text'],
   // No .fieldset here on purpose: a fieldset is a grouping named by its <legend>,
   // which is text, so its border carries no information a reader needs to
@@ -238,6 +263,14 @@ const STATES = [
   },
   { name: 'firstrun', surface: 'dlg-firstrun', enter: async (p) => openFirstRun(p) },
   { name: 'info', surface: 'dlg-info', enter: async (p) => press(p, '#info-open') },
+  // One per destination. `enterInfoSection` presses the (i) and then the menu
+  // item that names the section, so a section unreachable from the menu fails
+  // here as a missing button rather than passing as an unvisited div.
+  { name: 'info-about', surface: 'dlg-info', enter: async (p) => enterInfoSection(p, 'info-sec-about') },
+  { name: 'info-changed', surface: 'dlg-info', enter: async (p) => enterInfoSection(p, 'info-sec-changed') },
+  { name: 'info-data', surface: 'dlg-info', enter: async (p) => enterInfoSection(p, 'info-sec-data') },
+  { name: 'info-wrong', surface: 'dlg-info', enter: async (p) => enterInfoSection(p, 'info-sec-wrong') },
+  { name: 'info-legal', surface: 'dlg-info', enter: async (p) => enterInfoSection(p, 'info-sec-legal') },
   { name: 'diagnostic', surface: 'dlg-diagnostic', enter: async (p) => press(p, '#diag-open') },
   { name: 'job', surface: 'dlg-job', enter: async (p) => { await showView(p, 'board'); await press(p, '#job-new'); } },
   {
@@ -302,7 +335,8 @@ const STATES = [
       await press(p, '#spool-delete');
     },
   },
-  { name: 'import', surface: 'dlg-import', enter: async (p) => press(p, '#import-open') },
+  // Import moved behind the (i) in 1.1.0, so the state walks the real route.
+  { name: 'import', surface: 'dlg-import', enter: async (p) => { await enterInfoSection(p, 'info-sec-data'); await press(p, '#import-open'); } },
   {
     name: 'undo-empty',
     surface: null,
@@ -419,6 +453,23 @@ async function closeEverything(page) {
     for (const d of document.querySelectorAll('dialog[open]')) d.close();
   });
   await page.waitForTimeout(60);
+}
+
+/**
+ * Open the (i) and walk to one destination THE WAY A READER DOES — press the
+ * menu item, rather than un-hiding the section from script.
+ *
+ * That difference is the whole value of this helper. Setting `hidden = false`
+ * would render every section perfectly and prove nothing about whether anything
+ * on screen leads to it; a section whose menu button was deleted, or whose
+ * `data-info-section` no longer matches its id, would still be measured, still
+ * be green, and still be unreachable in the app. Pressing the button means an
+ * unreachable section fails as a missing locator.
+ */
+async function enterInfoSection(page, sectionId) {
+  await closeEverything(page);
+  await press(page, '#info-open');
+  await press(page, `#dlg-info .info-item[data-info-section="${sectionId}"]`);
 }
 
 // ---------------------------------------------------------- in-page checks
@@ -1076,11 +1127,20 @@ async function checkInfoSurface(page) {
     fail(where, `the (i) control's accessible name does not say what it opens: "${report.name}"`);
   }
 
-  // The seven things behind it.
+  // The eight things behind it.
+  //
+  // `textContent`, NOT `innerText`, and that is not a detail. Since 1.1.0 only one
+  // destination is on screen at a time, so `innerText` — which is what is
+  // RENDERED — returns the menu and nothing else. This check would have gone red
+  // on five items that are all present and one press away, and the obvious way to
+  // make it green again is to stop hiding the sections, which is to undo the
+  // release. What §7e asks is whether the panel CARRIES these things, and
+  // `textContent` is the question that asks that. Reachability is a separate
+  // assertion with a separate failure message, in `checkInfoMenu` below.
   await press(page, '#info-open');
   const contents = await page.evaluate(() => {
     const panel = document.getElementById('dlg-info');
-    const text = panel.innerText;
+    const text = panel.textContent;
     return {
       orientationInside: Boolean(panel.querySelector('#info-orientation')?.textContent.trim()),
       whatItIs: /what this is/i.test(text),
@@ -1091,7 +1151,11 @@ async function checkInfoSurface(page) {
       reporting: /report a problem/i.test(text),
       accessibility: Boolean(panel.querySelector('a[href*="accessibility"]')),
       licence: Boolean(panel.querySelector('a[href*="LICENSE"]')),
-      height: Math.round(panel.scrollHeight),
+      // The MENU's height, which is what a reader meets on opening it. The old
+      // number measured one scroll of everything, and bounding that is what this
+      // was for; bounding the menu is the same intent one level up, and a menu
+      // that needs scrolling is a menu with too many destinations in it.
+      height: Math.round(document.getElementById('info-menu').scrollHeight),
     };
   });
 
@@ -1111,11 +1175,106 @@ async function checkInfoSurface(page) {
   if (!contents.orientationInside) {
     fail(where, 'the first-run orientation is not inside the information panel — it has to live there permanently, not be copied there');
   }
-  // Bounded, so it cannot become the app. Generous, so the failure is never fixed
-  // by cutting the words a reader needs.
-  if (contents.height > 9000) fail(where, `the information panel is ${contents.height}px of content — bound it by structure, not by deleting prose`);
-  if (!failures.some((f) => f.startsWith(where))) pass(where, `(i) control in the chrome, all seven items behind it, ${contents.height}px`);
+  // Bounded, so it cannot become the app. The bound is now on the MENU rather
+  // than on the sum of the prose: an (i) becomes a manual by growing chapters,
+  // and chapters are visible here as destinations. 900px is roughly five items
+  // and no scroll on a phone.
+  if (contents.height > 900) fail(where, `the (i) menu is ${contents.height}px — that is more destinations than a reader will read. Merge two, do not shrink the type.`);
+  if (!failures.some((f) => f.startsWith(where))) pass(where, `(i) control in the chrome, all eight items behind it, a ${contents.height}px menu`);
 
+  await closeEverything(page);
+}
+
+/**
+ * The menu and its destinations agree, in both directions.
+ *
+ * WHY THIS IS HAND-WRITTEN. Until 1.1.0 the panel was one document, and the check
+ * that no screen could ship unmeasured came for free: the surface list is derived
+ * from `<dialog id>` in the markup, so a new screen without a state failed the
+ * build. Five destinations inside ONE dialog are invisible to that derivation —
+ * they are divs. So the assertion it was making has to be re-made by hand, or the
+ * release quietly removes a gate while adding the thing the gate was for.
+ *
+ * Both directions, because each catches a different accident. A section with no
+ * menu item is content nobody can reach. A menu item pointing at a section that
+ * does not exist is a button that does nothing, which is worse than a missing one
+ * — it answers "is this handled" with yes.
+ */
+async function checkInfoMenu(page) {
+  const where = 'info-menu';
+  await closeEverything(page);
+  await press(page, '#info-open');
+
+  const report = await page.evaluate(() => {
+    const panel = document.getElementById('dlg-info');
+    const items = [...panel.querySelectorAll('.info-item')];
+    const sections = [...panel.querySelectorAll('.info-section')];
+    const targeted = items.map((b) => b.dataset.infoSection);
+    return {
+      itemCount: items.length,
+      menuVisible: !document.getElementById('info-menu').hidden,
+      backHiddenOnMenu: document.getElementById('info-back').hidden === true,
+      // A destination whose button names an id that is not in the panel.
+      danglingItems: targeted.filter((id) => !panel.querySelector(`#${CSS.escape(id)}.info-section`)),
+      // A destination nothing leads to.
+      orphanSections: sections.map((s) => s.id).filter((id) => !targeted.includes(id)),
+      // Two buttons on one destination: one of them is dead weight and the reader
+      // cannot tell which.
+      duplicates: targeted.filter((id, i) => targeted.indexOf(id) !== i),
+      // Every destination says what it is before it is opened. "Your data" alone
+      // does not tell a stranger their export lives behind it.
+      untitled: items.filter((b) => !b.querySelector('.info-item-title')?.textContent.trim()).length,
+      undescribed: items.filter((b) => !b.querySelector('.info-item-note')?.textContent.trim()).length,
+      // Each section carries the name the head will announce when it opens.
+      unnamed: sections.filter((s) => !(s.dataset.infoTitle || '').trim()).map((s) => s.id),
+      // Nothing is on screen twice.
+      shownAtOnce: sections.filter((s) => !s.hidden).map((s) => s.id),
+    };
+  });
+
+  if (!report.menuVisible) fail(where, 'opening the (i) does not land on the menu — a panel that reopens wherever it was last left has a first screen nobody chose');
+  if (!report.backHiddenOnMenu) fail(where, 'the back button is on screen at the top level, where it either does nothing or closes the panel');
+  if (report.shownAtOnce.length) fail(where, `${report.shownAtOnce.join(', ')} is on screen beside the menu — one destination at a time, or the menu is a table of contents above the document it lists`);
+  for (const id of report.danglingItems) fail(where, `a menu item points at "${id}", which is not a section in the panel — a button that does nothing answers "is this handled" with yes`);
+  for (const id of report.orphanSections) fail(where, `the section "${id}" is in the panel and no menu item reaches it, so it would ship unmeasured and unread. Add an item in the same commit as the section.`);
+  for (const id of report.duplicates) fail(where, `two menu items point at "${id}" — one of them is dead weight and the reader cannot tell which`);
+  for (const id of report.unnamed) fail(where, `the section "${id}" has no data-info-title, so the panel would keep announcing "About print-tracker" while showing it`);
+  if (report.untitled) fail(where, `${report.untitled} menu item(s) have no title`);
+  if (report.undescribed) fail(where, `${report.undescribed} menu item(s) have no sentence saying what is behind them`);
+  if (report.itemCount < 2) fail(where, 'there is no menu behind the (i)');
+
+  // AND THE BACK ROUTE WORKS, pressed rather than assumed. A section with no way
+  // back is a dead end inside a modal, and the only exit left is the one that
+  // throws away the reader's place entirely.
+  if (!report.danglingItems.length && report.itemCount) {
+    await press(page, '#dlg-info .info-item');
+    const inSection = await page.evaluate(() => ({
+      menuHidden: document.getElementById('info-menu').hidden === true,
+      backShown: document.getElementById('info-back').hidden === false,
+      title: document.getElementById('info-title').textContent.trim(),
+      focusIsTitle: document.activeElement === document.getElementById('info-title'),
+    }));
+    if (!inSection.menuHidden) fail(where, 'pressing a menu item leaves the menu on screen');
+    if (!inSection.backShown) fail(where, 'there is no way back from a section — a dead end inside a modal, where the only exit left throws away the reader\'s place');
+    if (inSection.title === 'About print-tracker') fail(where, 'the panel keeps its top-level name inside a section, so one dialog has one name for six screens');
+    if (!inSection.focusIsTitle) fail(where, 'focus does not move to the section title, so the change is rendered without being announced');
+
+    await press(page, '#info-back');
+    const backOnMenu = await page.evaluate(() => ({
+      menuVisible: document.getElementById('info-menu').hidden === false,
+      backHidden: document.getElementById('info-back').hidden === true,
+      title: document.getElementById('info-title').textContent.trim(),
+      focusOnItem: document.activeElement?.classList.contains('info-item') === true,
+    }));
+    if (!backOnMenu.menuVisible) fail(where, 'back does not return to the menu');
+    if (!backOnMenu.backHidden) fail(where, 'the back button stays on screen after returning to the menu');
+    if (backOnMenu.title !== 'About print-tracker') fail(where, `back leaves the panel titled "${backOnMenu.title}" while showing the menu`);
+    if (!backOnMenu.focusOnItem) fail(where, 'back does not put focus on the item that was pressed, so the reader re-reads the list to find their place');
+  }
+
+  if (!failures.some((f) => f.startsWith(where))) {
+    pass(where, `${report.itemCount} destinations, each named and described, each reachable, back returns focus`);
+  }
   await closeEverything(page);
 }
 
@@ -1957,6 +2116,7 @@ async function main() {
   await checkOrientationTypes(page);
   await checkInteractionSelectors(page);
   await checkInfoSurface(page);
+  await checkInfoMenu(page);
   await checkDiagnosticPrivacy(page);
 
   for (const state of STATES) {

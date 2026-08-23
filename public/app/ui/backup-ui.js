@@ -38,9 +38,23 @@ export function renderLastExport() {
   const when = store.state.lastExportAt;
   // A value written and never read is how "when did I last save a copy?" becomes
   // unanswerable. It is recorded, so it is shown.
-  node.textContent = when
+  const state = when
     ? `Last export from this device: ${readableDate(when)}. Clearing this site's data removes everything the app holds, so keep that file somewhere safe.`
     : 'No copy has been exported from this device yet. Clearing this site’s data would remove everything the app holds.';
+
+  // TWO PARTS, AND ONLY THE SECOND LOOKS PRESSABLE. The whole line became a
+  // button in 1.1.0 so that the sentence naming the risk is itself the route to
+  // the remedy — but a paragraph-length underline reads as a mistake, and a
+  // sentence with no affordance at all reads as text. So the state is prose and
+  // the action is a short underlined phrase inside the same control.
+  //
+  // Both are visible text inside the button, so the accessible name is the whole
+  // line and SC 2.5.3 holds without an aria-label competing with it.
+  clear(node);
+  node.append(
+    el('span', { class: 'lastexport-state', text: state }),
+    el('span', { class: 'lastexport-go', text: 'Keep a copy' }),
+  );
 }
 
 function resetImport() {

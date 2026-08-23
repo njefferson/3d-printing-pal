@@ -9,6 +9,38 @@ triplet is `version.capability.iteration`. Releases do not have names.
 
 ---
 
+## 1.1.0 — CAPABILITY — 2026-08-23
+
+The **i** button is a short menu now, and your export lives behind it.
+
+### New
+
+- **Pressing the i gives you five things to choose from** instead of one long
+  page to scroll: what this is, what changed, your data, what to do if something
+  is wrong, and the accessibility statement. Each one says what is behind it
+  before you open it, and there is a way back to the list.
+- **Export and Import moved into "Your data"**, next to the safety copies the app
+  keeps and the paragraph explaining why any of it matters. They used to be at the
+  bottom of the screen, which is not where the welcome had been telling you to
+  look for them.
+- **The line at the bottom saying when you last kept a copy is now the way to
+  make one.** Press it and it takes you straight to Export.
+
+### Fixed
+
+- **The welcome no longer sends you somewhere the buttons are not.** It said to
+  use Export in the information panel; Export was in the footer. Now both are
+  true.
+
+### Still not right
+
+- **Two devices still cannot both write.** Importing replaces everything, so
+  passing one file back and forth loses whatever the other device added.
+- **Undo still lasts only while the app is open.** Closing it or reloading starts
+  again with nothing to take back.
+
+---
+
 ## 1.0.2 — ITERATION — 2026-08-23
 
 A filter that is on is filled in, not just tinted.

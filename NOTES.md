@@ -24,6 +24,36 @@ spool**, and the whole data model is arranged around never storing it.
 
 ## Settled decisions
 
+**The (i) is a menu of five destinations, and five is the ceiling.**
+It was one scroll of eleven headings until 1.1.0, which meant everything except
+the welcome was reached by scrolling past the welcome — right on the day somebody
+installs it and wrong every day after. The menu is what a reader meets, and the
+accessibility gate bounds it at 900px rather than bounding the prose, because an
+(i) does not become a manual by growing paragraphs. It becomes one by growing
+CHAPTERS, and a chapter is visible here as a destination. The bar for a sixth is a
+thing a reader will go looking for, not a thing that would be nice to document.
+
+**One dialog that swaps its body, not six dialogs.**
+Five `<dialog>` elements would have been measured for free — the a11y gate derives
+its surface list from `<dialog id>` in the markup — but they stack modals on
+modals and give "back" and "close" the same job. One dialog keeps a single focus
+trap and a single way out. The cost is that the derivation stops covering the new
+screens, so `checkInfoMenu` re-makes that assertion by hand in both directions: a
+section no menu item reaches, and a menu item pointing at a section that does not
+exist. **A release that moves screens out from under a derived gate has to put the
+gate back by hand in the same commit, or it has quietly removed a check while
+adding the thing the check was for.** Planted red on both directions before
+shipping.
+
+**Export and Import live under the (i), and the nag stays on the page.**
+They were footer buttons while the welcome told a newcomer to use "Export in the
+information panel" — a sentence that had been wrong since it was written and cost
+nothing to the one person who already knew. Moving the controls made it true. What
+did NOT move is the line saying when a copy was last kept: that is the only part
+that works by being seen without being looked for, and burying it would have made
+the restructure a net loss for the one thing this app cannot recover from. It is a
+button now, and the route.
+
 **Remaining weight is computed, never stored.**
 Filament usage is recorded only on the job, in `job.spoolLinks`. A spool's
 remaining weight is `totalWeightG` minus the sum of every job's links to it,
@@ -1071,8 +1101,10 @@ the log and check whether the steps ran or were skipped.
 
 ### The staged candidate
 
-**There is no staged candidate.** Staging and production carry the same build;
-nothing is waiting to be passed.
+**1.1.0 is the staged candidate**, at https://staging.3d-printing-pal.pages.dev —
+the (i) is a menu of five destinations rather than one scroll of eleven headings,
+and Export and Import moved into "Your data" where the welcome had always said
+they were.
 
 **This paragraph is reset on every promotion, and a gate now checks that it was.**
 Leaving a promoted candidate recorded here is how the next session concludes

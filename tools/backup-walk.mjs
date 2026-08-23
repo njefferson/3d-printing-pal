@@ -126,14 +126,40 @@ async function counts(page) {
   });
 }
 
+/**
+ * Open the (i) at "Your data", where Export and Import have lived since 1.1.0.
+ *
+ * PRESSED, NOT SCRIPTED. Both controls used to sit in the footer and this walk
+ * clicked them where they stood. Reaching them by un-hiding the section would
+ * keep every assertion below passing while the route to them was broken — and
+ * the route is now the part most likely to break, because it is new. So the walk
+ * takes it: (i), then the menu item, then the button.
+ */
+async function openDataSection(page) {
+  await page.evaluate(() => { for (const d of document.querySelectorAll('dialog[open]')) d.close(); });
+  await page.waitForTimeout(80);
+  await page.click('#info-open');
+  await page.waitForTimeout(120);
+  await page.click('.info-item[data-info-section="info-sec-data"]');
+  await page.waitForTimeout(120);
+}
+
 /** Export through the real button, and hand back what the file actually contained. */
 async function exportThroughTheButton(page) {
+  await openDataSection(page);
   const [download] = await Promise.all([
     page.waitForEvent('download', { timeout: 15000 }),
     page.click('#export-run'),
   ]);
   const path = join(scratch, `export-${Date.now()}-${Math.random().toString(36).slice(2, 7)}.json`);
   await download.saveAs(path);
+  // AND CLOSE IT AGAIN. Export used to be a footer button and left nothing on
+  // screen; behind the (i) it leaves a modal open over the whole app, and every
+  // later click in this walk lands on the panel instead of the board. Playwright
+  // reports that as a 30-second timeout on an unrelated control several hundred
+  // lines away, which says nothing about the cause.
+  await page.evaluate(() => { for (const d of document.querySelectorAll('dialog[open]')) d.close(); });
+  await page.waitForTimeout(120);
   return { path, filename: download.suggestedFilename(), text: readFileSync(path, 'utf8') };
 }
 
@@ -142,6 +168,7 @@ async function expectRefusal(page, label, text, before) {
   const path = join(scratch, `bad-${label}.json`);
   writeFileSync(path, text);
 
+  await openDataSection(page);
   await page.click('#import-open');
   await page.waitForTimeout(120);
   await page.setInputFiles('#import-file', path);
@@ -265,6 +292,7 @@ async function main() {
     pass('site data wiped — the app came back empty');
   }
 
+  await openDataSection(page);
   await page.click('#import-open');
   await page.waitForTimeout(120);
   await page.setInputFiles('#import-file', first.path);

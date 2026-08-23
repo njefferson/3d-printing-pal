@@ -178,11 +178,23 @@
 </main>
 
 <footer class="footer">
-  <div class="footer-data">
-    <button type="button" id="export-run" class="btn">Export everything</button>
-    <button type="button" id="import-open" class="btn" data-surface-opener="dlg-import">Import</button>
-  </div>
-  <p class="lastexport" id="last-export">No copy has been exported from this device yet.</p>
+  <!-- THE NAG STAYS ON THE PAGE, THE CONTROLS MOVED. Export and Import used to sit
+       here as two buttons. They now live under the (i), in "Your data", beside the
+       safety copies they make and the paragraph explaining why they matter — which
+       is also where the welcome has always SAID they were, in a sentence that was
+       simply untrue while they were down here.
+
+       WHAT DOES NOT MOVE IS THE SENTENCE SAYING WHEN YOU LAST KEPT A COPY. That is
+       the only part of this that works by being seen without being looked for, and
+       burying "no copy has been exported from this device yet" inside a menu would
+       have made the restructure a net loss for the one thing this app cannot
+       recover from. So it stays on the page and is itself the way in: one route to
+       the controls rather than two, and it lands on the section rather than the
+       top of a panel to be scrolled. -->
+  <button type="button" class="lastexport linkbtn" id="last-export"
+          data-surface-opener="dlg-info" data-info-section="info-sec-data">
+    No copy has been exported from this device yet.
+  </button>
   <p class="stamp">
     <button type="button" id="diag-open" class="linkbtn" data-surface-opener="dlg-diagnostic">
       <span class="sr-only">Open the diagnostic report. Running version </span><span id="version-stamp">—</span>
@@ -217,16 +229,90 @@
 </dialog>
 
 <!-- ================================================== information ====== -->
+<!--
+  A MENU OF FIVE DESTINATIONS, NOT A DOCUMENT. Until 1.1.0 this panel was one
+  scroll of eleven headings, and everything except the first was reached by
+  scrolling past the welcome. That is fine on the day somebody installs it and
+  wrong every day after: the reader who wants their last export, or what changed,
+  or how to send a diagnostic, met a page of orientation first, every time.
+
+  THE FAILURE MODE OF THE FIX IS THE FORTY-PAGE MANUAL, which is what an (i) turns
+  into the moment a menu makes room for chapters. Five destinations, and the bar
+  for a sixth is a thing a reader will actually go looking for — not a thing that
+  would be nice to document. Nothing was added to the panel in this release; the
+  same prose was grouped, and one section gained the two controls its own
+  paragraphs had always claimed were there.
+
+  IT IS A LIST OF BUTTONS, NOT role="menu". A menu widget brings arrow-key
+  semantics, an expectation of typeahead, and a contract to trap the arrow keys —
+  all of it invented, none of it wanted. Buttons in a list are what this is, and
+  tab already moves between them.
+-->
 <dialog id="dlg-info" class="panel" aria-labelledby="info-title">
   <div class="panel-head">
-    <h2 id="info-title">About print-tracker</h2>
+    <!-- BACK IS FIRST IN THE DOM, so tabbing into the panel meets the way out of
+         the section before its contents — the same reasoning that puts the close
+         button in the head rather than the foot. Hidden on the menu, because a
+         back button on a top level is a control that either does nothing or
+         closes the panel, and both teach the reader to distrust it. -->
+    <button type="button" class="iconbtn" id="info-back" hidden>
+      <span class="iconbtn-glyph" aria-hidden="true">‹</span>
+      <span class="sr-only">Back to the information menu</span>
+    </button>
+    <!-- The panel's accessible name, and it CHANGES WITH THE SECTION. A dialog
+         that keeps announcing "About print-tracker" while showing four different
+         things has one name for four screens. Focus moves here on every
+         navigation, which is what makes the change audible rather than merely
+         true; `tabindex="-1"` is what allows that without adding a tab stop. -->
+    <h2 id="info-title" tabindex="-1">About print-tracker</h2>
     <button type="button" class="iconbtn" data-close="dlg-info">
       <span class="iconbtn-glyph" aria-hidden="true">✕</span>
       <span class="sr-only">Close the information panel</span>
     </button>
   </div>
 
-  <div class="panel-body">
+  <!-- `tabindex="0"` ON THE SCROLLING BODY, and it is not decoration. Four of the
+       five destinations are prose with no control in them, so once the menu is
+       hidden the scrolling region contains nothing focusable and a keyboard has no
+       way to scroll it — axe calls this scrollable-region-focusable, and it was
+       found by the gate rather than by reading. The first-run panel has carried
+       the same attribute for the same reason since it was built. -->
+  <div class="panel-body" tabindex="0">
+
+    <ul class="info-menu" id="info-menu">
+      <li>
+        <button type="button" class="info-item" data-info-section="info-sec-about">
+          <span class="info-item-title">What this is</span>
+          <span class="info-item-note">What the app does, what it will never do, and how to put it on your home screen.</span>
+        </button>
+      </li>
+      <li>
+        <button type="button" class="info-item" data-info-section="info-sec-changed">
+          <span class="info-item-title">What changed</span>
+          <span class="info-item-note">The last few releases, including what is still not right.</span>
+        </button>
+      </li>
+      <li>
+        <button type="button" class="info-item" data-info-section="info-sec-data">
+          <span class="info-item-title">Your data</span>
+          <span class="info-item-note">Keep a copy, bring one back, and the safety copies the app keeps for you.</span>
+        </button>
+      </li>
+      <li>
+        <button type="button" class="info-item" data-info-section="info-sec-wrong">
+          <span class="info-item-title">If something is wrong</span>
+          <span class="info-item-note">The diagnostic report, and what to send with it.</span>
+        </button>
+      </li>
+      <li>
+        <button type="button" class="info-item" data-info-section="info-sec-legal">
+          <span class="info-item-title">Accessibility and licence</span>
+          <span class="info-item-note">The accessibility statement, the licence, and the other apps here.</span>
+        </button>
+      </li>
+    </ul>
+
+    <div class="info-section" id="info-sec-about" data-info-title="What this is" hidden>
     <!-- THE GREETING, AND IT IS THE SAME COPY AS THE (i)'s FIRST SECTIONS.
          Doctrine §7e: shown on first run, then MOVED — never duplicated — into the
          information panel, so there is one text to keep true rather than two that
@@ -253,9 +339,9 @@
       <p>There is no account and no server. Nothing you type leaves the device, nobody else can
         see it — including whoever made this — and there is nothing to sign up for.</p>
       <p><b>That also means it is not backed up.</b> Clearing this site's data, or deleting the
-        browser, takes everything with it. Use <em>Export</em> in the information panel now and
-        then and keep the file somewhere you trust. It is one file, and importing it puts
-        everything back exactly as it was.</p>
+        browser, takes everything with it. Press the <b>i</b> at the top, then <em>Your data</em>,
+        and export a copy now and then — keep the file somewhere you trust. It is one file, and
+        importing it puts everything back exactly as it was.</p>
 
       <h3>What it is not</h3>
       <ul>
@@ -286,31 +372,68 @@
         the kinds you are looking at, so you can see only what people are waiting on.</p>
 
       <h3>If you get stuck</h3>
-      <p>This welcome stays under the <b>i</b> button at the top, along with what changed in each
-        release, your safety copies, and how to report a problem. Nothing here is a one-time
-        message you have to finish reading now.</p>
+      <p>This welcome stays under the <b>i</b> button at the top. Pressing it opens a short list:
+        this page, what changed in each release, your data and its safety copies, what to do when
+        something is wrong, and the accessibility statement. Nothing here is a one-time message you
+        have to finish reading now.</p>
+    </div>
     </div>
 
-    <h3>What changed</h3>
-    <div id="info-releases"></div>
+    <div class="info-section" id="info-sec-changed" data-info-title="What changed" hidden>
+      <div id="info-releases"></div>
+    </div>
 
-    <h3>Where the numbers come from</h3>
-    <p>All of them come from you. This app fetches nothing, ships with no dataset, and contacts no service — so there is no feed to credit and nothing to go out of date behind your back. Every figure on screen is either something you typed or arithmetic on it.</p>
+    <div class="info-section" id="info-sec-data" data-info-title="Your data" hidden>
+      <h3>Keep a copy</h3>
+      <p>There is no account and no server, so nothing here is backed up anywhere. Clearing this
+        site's data, or deleting the browser, takes the lot. An export is one file with everything
+        in it — jobs, spools, models and pictures — and importing it puts everything back exactly
+        as it was.</p>
+      <!-- THE CONTROLS ARE HERE, WHERE THE WORDS ALWAYS SAID THEY WERE. They were
+           in the footer until 1.1.0 while the welcome told a newcomer to use
+           "Export in the information panel" — a sentence that had been wrong since
+           it was written, and cost nothing to anyone who already knew where the
+           button was. Which was one person. -->
+      <div class="info-data">
+        <button type="button" id="export-run" class="btn btn-primary">Export everything</button>
+        <!-- CLOSES THIS PANEL RATHER THAN STACKING ON IT. Import is itself a
+             modal, and a modal opened from inside a modal gives the reader two
+             dialogs, two close buttons and no way to tell which one Escape will
+             take. Same pattern as the diagnostic button below. -->
+        <button type="button" id="import-open" class="btn" data-close="dlg-info" data-then-open="dlg-import">Import</button>
+      </div>
 
-    <h3>Your safety copies</h3>
-    <p>Before any import replaces your data, the app saves a copy of what is already here — both as a download and inside the app. The most recent are below.</p>
-    <div id="info-snapshots"></div>
+      <h3>Your safety copies</h3>
+      <p>Before any import replaces your data, the app saves a copy of what is already here — both
+        as a download and inside the app. The most recent are below.</p>
+      <div id="info-snapshots"></div>
 
-    <h3>How to report a problem</h3>
-    <p>Open the diagnostic report from the version number at the bottom of the screen, copy it, and send it with a note about what happened. It is plain text, it says what the app can see about this device and this build, and it contains nothing you have typed into the app.</p>
-    <p><button type="button" class="btn" data-close="dlg-info" data-then-open="dlg-diagnostic">Open the diagnostic report</button></p>
+      <h3>Where the numbers come from</h3>
+      <p>All of them come from you. This app fetches nothing, ships with no dataset, and contacts no service — so there is no feed to credit and nothing to go out of date behind your back. Every figure on screen is either something you typed or arithmetic on it.</p>
+    </div>
 
-    <h3>Accessibility and licence</h3>
-    <ul>
-      <li><a href="https://noahjefferson.pages.dev/accessibility">The accessibility statement</a> covering this and the other free apps here.</li>
-      <li><a href="https://github.com/njefferson/3d-printing-pal/blob/main/LICENSE.md">PolyForm Noncommercial 1.0.0</a> — use it, change it, share it; do not sell it. Your data is yours and is not covered by it.</li>
-      <li>The rest of the free apps and the photography are <a href="https://noahjefferson.pages.dev/">on Noah Jefferson's site</a>.</li>
-    </ul>
+    <div class="info-section" id="info-sec-wrong" data-info-title="If something is wrong" hidden>
+      <h3>How to report a problem</h3>
+      <p>Open the diagnostic report, copy it, and send it with a note about what happened. It is
+        plain text, it says what the app can see about this device and this build, and it contains
+        nothing you have typed into the app — no job titles, no names, no notes.</p>
+      <p><button type="button" class="btn btn-primary" data-close="dlg-info" data-then-open="dlg-diagnostic">Open the diagnostic report</button></p>
+      <p class="note">The version number at the bottom of the screen opens the same report.</p>
+
+      <h3>If the app looks out of date</h3>
+      <p>A new version never takes over while you are using it — it waits, and a strip appears at
+        the top of the screen offering it. On an installed app on iPadOS, closing it fully and
+        opening it again is what lets a waiting version through.</p>
+    </div>
+
+    <div class="info-section" id="info-sec-legal" data-info-title="Accessibility and licence" hidden>
+      <ul>
+        <li><a href="https://noahjefferson.pages.dev/accessibility">The accessibility statement</a> covering this and the other free apps here.</li>
+        <li><a href="https://github.com/njefferson/3d-printing-pal/blob/main/LICENSE.md">PolyForm Noncommercial 1.0.0</a> — use it, change it, share it; do not sell it. Your data is yours and is not covered by it.</li>
+        <li>The rest of the free apps and the photography are <a href="https://noahjefferson.pages.dev/">on Noah Jefferson's site</a>.</li>
+      </ul>
+    </div>
+
   </div>
 
   <div class="panel-foot">

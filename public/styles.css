@@ -707,8 +707,25 @@ input[type="checkbox"]:checked::after {
   align-items: center;
   gap: 12px 16px;
 }
-.footer-data { display: flex; gap: var(--gap); flex-wrap: wrap; }
-.lastexport { margin: 0; flex: 1 1 14rem; color: var(--text-3); font-size: 0.8125rem; }
+/* The last-export line is a BUTTON as of 1.1.0 — the sentence that says you have
+ * no copy is the way to the control that makes one. Left-aligned rather than
+ * centred like the other link buttons, because it is a sentence in the footer
+ * rather than a stamp. */
+.lastexport {
+  margin: 0;
+  flex: 1 1 14rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: flex-start;
+  gap: 4px 8px;
+  text-align: left;
+  color: var(--text-3);
+  font-size: 0.8125rem;
+  text-decoration: none;
+}
+.lastexport-state { text-decoration: none; }
+.lastexport-go { color: var(--text-2); text-decoration: underline; white-space: nowrap; }
 /* The build stamp. Always on screen in the normal working view, written at boot,
  * selectable, and dimmed with a token rather than an opacity so the contrast gate
  * measures what the reader actually sees. */
@@ -748,6 +765,13 @@ dialog.panel form { display: flex; flex-direction: column; min-height: 0; }
   padding: 14px 16px;
   border-bottom: 1px solid var(--hairline);
 }
+/* The title takes the room the buttons do not, so a three-child head — back,
+ * title, close — does not squeeze a long section name into two words a line. */
+.panel-head h2 { flex: 1 1 auto; min-width: 0; }
+/* Focus lands on the title on every navigation, and that is how the change is
+ * announced. It takes the app's one focus ring like everything else — no special
+ * rule here, deliberately, because a second ring style is a second thing to keep
+ * measured. */
 .panel-body {
   flex: 1 1 auto;
   min-height: 0;
@@ -795,6 +819,47 @@ dialog.panel form { display: flex; flex-direction: column; min-height: 0; }
 
 .snapshot { display: flex; gap: var(--gap); align-items: center; flex-wrap: wrap; margin-bottom: var(--gap); }
 .snapshot-when { flex: 1 1 12rem; font-size: 0.875rem; color: var(--text-2); }
+
+/* ------------------------------------------------------- the (i) menu */
+/* Five destinations, each a full-width button with its own sentence. The note
+ * under each title is what makes the list answerable without opening anything —
+ * "Your data" alone does not tell a stranger their export lives there.
+ *
+ * NO EXPLICIT HEIGHT ANYWHERE HERE. Each item's height comes from its own two
+ * lines of type, so it grows with the reader's text size instead of clipping at
+ * 200%; the floor is a real one for a finger and the ceiling is the words. */
+.info-menu {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.info-item {
+  width: 100%;
+  min-height: var(--tap);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  text-align: left;
+  font: inherit;
+  color: var(--text);
+  background: var(--surface-raised);
+  border: 1px solid var(--rail);
+  border-radius: 10px;
+  padding: 12px 14px;
+  cursor: pointer;
+}
+.info-item:hover { border-color: var(--text-3); }
+.info-item-title { font-size: 1rem; font-weight: 640; }
+.info-item-note { font-size: 0.875rem; color: var(--text-2); line-height: 1.4; }
+
+/* A section is shown one at a time; `hidden` does the work and nothing here
+ * overrides it. */
+.info-section > h3:first-of-type { margin-top: 0; }
+.info-data { display: flex; flex-wrap: wrap; gap: var(--gap); margin: 12px 0; }
 
 .release { margin-bottom: 18px; }
 .release-head { margin: 0 0 4px; font-size: 0.9375rem; font-weight: 640; }
