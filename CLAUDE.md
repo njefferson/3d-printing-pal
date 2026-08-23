@@ -75,6 +75,16 @@ This repo's own gates live in `tools/` because they are specific to this app:
   a non-drag alternative that exists in the markup, and every declaration matches
   something.
 
+**One gate is deliberately outside `npm run check` and outside CI**, and the
+reason is in the first screen of its own file: `tools/branch-state-check.mjs`
+holds every hand-written line saying which version is on staging and which is in
+production — NOTES.md's staged-candidate opening, and both the lede and the rows
+of `public/status.html` — against `public/sw.js` in this tree and at
+`origin/main`. It is declared in `.branch-guard` and runs on every commit, because
+its assertion is true of a CLONE AT A MOMENT: on a runner after a promote
+`origin/main` is already the merge, so a CI step would be red by construction for
+a window on every release. A missing `origin/main` fails rather than skips.
+
 ## Working on this locally
 
 No build step: `public/` is the app. Node 20 or newer, and two things that are

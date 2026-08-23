@@ -3,3 +3,10 @@
 work=staging
 promote=main
 escape=PAL_PROMOTE
+
+# Runs on EVERY commit including a promote, because it is about WHAT is being
+# committed rather than where. Deliberately not in CI and not in `npm run check`:
+# it compares this tree against `origin/main` as of the moment of the commit, and
+# on a runner after a promote origin/main is already the merge — so a CI step
+# would be red by construction for a window on every release. Hub LESSONS 128.
+also=tools/branch-state-check.mjs

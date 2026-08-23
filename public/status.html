@@ -30,7 +30,7 @@
     <h1>Where it stands</h1>
     <p class="lede">One page that stays current, at one address. Everything here was read from a
       run log or a git remote, not inferred from a command exiting quietly.</p>
-    <p class="lede"><b>0.7.0 is live. Nothing is waiting on staging.</b></p>
+    <p class="lede"><b>0.7.0 is live. 0.7.1 is on staging, waiting for you to pass it.</b></p>
   </header>
 
   <main>
@@ -48,9 +48,11 @@
       </div>
       <div class="now-row">
         <span class="now-label">On staging</span>
-        <span class="now-value">Nothing waiting — <a href="https://staging.3d-printing-pal.pages.dev">staging.3d-printing-pal.pages.dev</a></span>
-        <span class="now-sub">Staging and production point at the same commit, so there is no
-          candidate.</span>
+        <span class="now-value">0.7.1 — <a href="https://staging.3d-printing-pal.pages.dev">staging.3d-printing-pal.pages.dev</a></span>
+        <span class="now-sub">Pushed 2026-08-23 at <code>014b8c0</code>. All 28 gate steps and 5
+          security steps ran and passed on that exact commit, read one at a time rather than taken
+          from the run's conclusion; the deploy's six steps all ran. It renames the job types and
+          gives the middle one a recipient — details under "Waiting on you".</span>
       </div>
       <div class="now-row">
         <span class="now-label">How a run is read</span>
@@ -59,7 +61,7 @@
           up here: a conclusion with steps that never ran after an early failure; a conclusion of
           <code>cancelled</code> from a push that superseded it, which measures nothing and is not
           red either; a green workflow that deployed nothing, which is what a fully-skipped deploy
-          looks like; and — found this release — two checks that existed, were tested, and had
+          looks like; and — found in 0.7.0 — two checks that existed, were tested, and had
           never once run here, because the list of checks lives in two files and nothing compared
           them. Both now run, and a fifth check compares the two lists so it cannot happen
           quietly again.</span>
@@ -72,8 +74,15 @@
     <p class="note">None of it is blocked on more work.</p>
     <div class="card attention">
       <ul class="list-yours">
-        <li><span><b>Nothing, tonight.</b> 0.7.0 is live and the picture question is answered.
-          What is below is a record rather than a queue.</span></li>
+        <li><span><b>Pass 0.7.1 on staging, or say what is still wrong with it.</b> The three job
+          types now differ in what the app does rather than only in colour. <b>Asked</b> is
+          somebody asking and waiting. <b>Gift</b> is for somebody else who did not ask — it now
+          asks who it is for and puts them on the card, which "Wanted" never did. <b>Fun</b> is for
+          you. The question above the buttons is "Why is it on the board?", and the name box is
+          "Who it is for". <b>Nothing was migrated</b> — every existing job keeps the type it had,
+          because only the words on screen changed.</span></li>
+        <li><span><b>The picture question is closed and needs nothing from you.</b> What is under
+          "Checked, and not a defect" is a record rather than a queue.</span></li>
         <li><span><b>Nothing here needs the probe again unless you want another site.</b>
           MakerWorld is measured and answered, below. <a
           href="https://staging.3d-printing-pal.pages.dev/probe.html">/probe.html</a> is still
@@ -113,6 +122,10 @@
         <li><span><b>Undo is quiet.</b> The strip is small type rather than a standing alert, and
           it can be hidden until the next change — which gives up that one undo, and says
           so.</span></li>
+        <li><span><b>The job type is a real question with three real answers.</b> Asked, Gift and
+          Fun sort by who it is for and whether they asked — and Gift carries a recipient onto the
+          card, so the middle button now changes what the app does rather than only its
+          colour.</span></li>
       </ul>
     </div>
   </section>

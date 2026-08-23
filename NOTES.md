@@ -696,6 +696,26 @@ on a push.
 - **`tools/update-walk.mjs`** — drives genuinely different second and third
   service workers through the browser's own update machinery, then runs the app
   offline. A mocked registration proves the mock works and nothing else.
+- **`tools/branch-state-check.mjs`** — the lines that say which version is on
+  staging and which is in production, held against `public/sw.js` in this tree
+  and at `origin/main`. It is a COMMIT GUARD declared in `.branch-guard`, not a
+  step in the chain above and not in CI, because its assertion is true of a clone
+  at a moment rather than of a tree: after a promote, `origin/main` on a runner is
+  already the merge, so a CI step would be red by construction for a window on
+  every release, and a gate that is red for a window teaches everyone to ignore
+  red. A missing `origin/main` FAILS rather than skipping. Planted six ways,
+  including the state where nothing is staged and the page still claims a
+  candidate.
+
+**Why that one exists at all.** On 2026-08-23 the status page said "0.7.0 is live,
+nothing is waiting on staging" while 0.7.1 sat on staging, and nothing failed —
+it was found by going to look. Quietkeep's equivalent block was wrong three times
+in four days and all three discoveries were luck (hub LESSONS 128). Nothing about
+a version number beside a URL looks stale: a broken link 404s, a generated file
+fails its `--check`, a missing surface fails the walk, and a prose fact just sits
+there being wrong. **Both numbers were derivable the whole time**, which is the
+test worth applying to any hand-written fact in this file — a fact some file
+already knows is not documentation, it is a second copy waiting to disagree.
 
 **Not verified from here, and needing the owner's hands:** the real feel on a device, the
 share sheet, home-screen install, and the iPadOS behaviour below.
@@ -792,8 +812,19 @@ the log and check whether the steps ran or were skipped.
 
 ### The staged candidate
 
-**There is no staged candidate.** `staging` and `main` point at the same commit,
-whatever that commit currently is.
+**0.7.1 is the staged candidate**, at https://staging.3d-printing-pal.pages.dev —
+the three job types renamed to Asked, Gift and Fun, with Gift given the recipient
+that made it a category rather than a colour. Pushed at `014b8c0`; all 28 gate
+steps and 5 security steps EXECUTED and passed on that exact commit, read one at a
+time rather than taken from the run's conclusion, and the deploy's six steps ran:
+
+    ✨ Uploading _headers
+    ✨ Deployment complete! Take a peek over at https://3aa54088.3d-printing-pal.pages.dev
+    ✨ Deployment alias URL: https://staging.3d-printing-pal.pages.dev
+
+**This paragraph is reset to "there is no staged candidate" on every promotion.**
+Leaving a promoted candidate recorded here is how the next session concludes
+something is waiting when nothing is.
 
 **0.7.0 reached production on 2026-08-23** — one screen does the whole job, plus
 the probe and the measurement it produced. Promoted at `1647c9e` as a clean
@@ -804,15 +835,15 @@ steps ran, and `_headers` went up, which is what carries the probe's own policy:
 
     ✨ Uploading _headers
     ✨ Deployment complete! Take a peek over at https://055b1b2a.3d-printing-pal.pages.dev
- Leaving a promoted candidate recorded here is
-how the next session concludes something is waiting when nothing is.
 
-**Deliberately no SHA in that sentence.** A record commit lands on `staging` after
-every promotion — this one included — and is promoted in turn, so any head written
-down here is stale before the paragraph naming it finishes deploying. The SHAs
-worth recording are the ones that are evidence about a RELEASE, below, because
-those never move. Check the head with `git rev-parse origin/main` rather than
-believing a file.
+**`014b8c0` above is the commit whose gates were READ — it is not the head of
+`staging`.** The two differ by design and always will: the note recording a
+candidate lands on `staging` on top of the candidate, so the branch head is later
+than the SHA any paragraph here can name, and a record commit after a promotion
+moves it again. A SHA is worth writing down when it is evidence about a specific
+BUILD — the one whose steps were read, the one that was promoted — because those
+never move. A head is worth reading with `git rev-parse origin/staging` and never
+worth believing from a file.
 
 **0.6.0 reached production on 2026-08-23** — the model a job prints is named on
 its card and opens from there, and the job type is three buttons instead of a
