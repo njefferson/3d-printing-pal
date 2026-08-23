@@ -521,18 +521,20 @@ is three buttons instead of a dropdown. To try: press the model button on a card
 and check it lands on the right model with the Models tab showing; open a job and
 check the three type buttons read well under a thumb.
 
+**Verified at `fd7f256`.** All 21 gate steps and 5 security steps **executed** and
+passed, read one by one rather than taken from the run's conclusion — nothing
+skipped. The Deploy workflow for that same commit ran its `Deploy to Cloudflare
+Pages` step rather than stepping over it.
+
+Three of those steps had never run in CI before this commit: `App shell`,
+`A pasted address becomes the right name` and the new `Status page`. The first two
+were not new gates — they had been in the local chain for a release and longer,
+passing on a laptop and nowhere else. See "A gate can be written, planted red, and
+never run on a runner", below.
+
 **0.5.1 reached production on 2026-08-22** — a job with no picture no longer
-leaves a picture-sized gap.
-
-**Verified at `191e8de`.** Its deploy steps RAN rather than skipped, and its log
-printed:
-
-    ✨ Deployment complete! Take a peek over at https://4af84679.3d-printing-pal.pages.dev
-    ✨ Deployment alias URL: https://staging.3d-printing-pal.pages.dev
-
-Its Gates run is green with all 22 gate steps and 4 security steps having
-**executed**, checked one by one. Production stays at `f8e9c86` (0.5.0) until this
-is promoted.
+leaves a picture-sized gap. **Production is at `f2c057d`** until 0.6.0 is
+promoted.
 
 **0.1.1 never reached production on its own, and that was deliberate.** Its entire
 content was the link preview card, which 0.1.2 redrew; promoting it separately

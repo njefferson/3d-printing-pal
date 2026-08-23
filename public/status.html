@@ -48,17 +48,21 @@
         <span class="now-label">On staging</span>
         <span class="now-value">0.6.0 — <a href="https://staging.3d-printing-pal.pages.dev">staging.3d-printing-pal.pages.dev</a></span>
         <span class="now-sub">The model a job prints is named on its card and opens from there, and
-          the job type is three buttons instead of a dropdown. Nothing is promoted until you
-          say.</span>
+          the job type is three buttons instead of a dropdown. Green at <code>fd7f256</code>: all
+          21 gate steps ran and passed, none skipped, and the deploy step for that same commit
+          executed rather than being stepped over. Nothing is promoted until you say.</span>
       </div>
       <div class="now-row">
         <span class="now-label">How a run is read</span>
         <span class="now-value">By step, not by conclusion</span>
-        <span class="now-sub">Three ways a run can fail to mean what it looks like have all turned
+        <span class="now-sub">Four ways a run can fail to mean what it looks like have all turned
           up here: a conclusion with steps that never ran after an early failure; a conclusion of
           <code>cancelled</code> from a push that superseded it, which measures nothing and is not
-          red either; and a green workflow that deployed nothing, which is what a fully-skipped
-          deploy looks like.</span>
+          red either; a green workflow that deployed nothing, which is what a fully-skipped deploy
+          looks like; and — found this release — two checks that existed, were tested, and had
+          never once run here, because the list of checks lives in two files and nothing compared
+          them. Both now run, and a fifth check compares the two lists so it cannot happen
+          quietly again.</span>
       </div>
     </div>
   </section>
