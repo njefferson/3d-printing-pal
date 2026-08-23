@@ -9,6 +9,26 @@ triplet is `version.capability.iteration`. Releases do not have names.
 
 ---
 
+## 0.8.1 — ITERATION — 2026-08-23
+
+The filter buttons light up instead of carrying a tick.
+
+### Fixed
+
+- **A filter that is on is lit, in its own type's colour.** The chips used to show
+  a small tick, which asked you to read a mark rather than see a state — and put
+  the answer in a glyph about the width of your own fingertip's shadow. A chip that
+  is showing its type now has a filled background and a coloured ring, the same
+  colour that type's badge carries on the card, so the two teach each other.
+- **The state is not carried by colour alone.** On and off differ in fill as well,
+  so it still reads in greyscale, to a colour-blind reader, and on a phone in
+  sunlight. That was the one real risk in dropping the tick.
+- **Nothing moves when you press one.** Both states keep the same border and the
+  same weight, so the chips after the one you pressed stay where your finger
+  expects them.
+
+---
+
 ## 0.8.0 — CAPABILITY — 2026-08-23
 
 Ordered is a fourth job type, and it is the one money belongs to.

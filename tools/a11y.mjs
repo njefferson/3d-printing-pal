@@ -1362,6 +1362,57 @@ async function checkNameMirror(page) {
  * printer being typed on every job after that. Neither is visible to a contrast or
  * a target check, so without this they are two behaviours nothing measures.
  */
+/**
+ * The filter chips say which types are shown, and say it in more than a hue.
+ *
+ * They were ticks until 0.8.1. A tick is unambiguous and asks the reader to READ a
+ * mark; a lit button is seen. The risk in the swap is the obvious one — if the
+ * only difference between on and off is which accent the text is, then greyscale,
+ * colour blindness and a phone in sunlight all lose the answer.
+ *
+ * So this asserts the FILL differs, which is the cue that survives all three, and
+ * that `aria-pressed` still carries the state to anything not looking at pixels.
+ */
+async function checkChips(page) {
+  await closeEverything(page);
+  await showView(page, 'board');
+
+  const read = () => page.evaluate(() => {
+    const chip = document.querySelector('.chip');
+    const cs = getComputedStyle(chip);
+    return {
+      type: chip.dataset.type,
+      pressed: chip.getAttribute('aria-pressed'),
+      name: chip.textContent.trim(),
+      background: cs.backgroundColor,
+      border: cs.borderTopColor,
+      width: Math.round(chip.getBoundingClientRect().width),
+    };
+  });
+
+  const on = await read();
+  await page.click('.chip');
+  await page.waitForTimeout(160);
+  const off = await read();
+  // Put it back, because every state after this one measures the board.
+  await page.click('.chip');
+  await page.waitForTimeout(160);
+
+  if (on.pressed !== 'true' || off.pressed !== 'false') {
+    fail('chips', `pressing a chip took aria-pressed from "${on.pressed}" to "${off.pressed}" — the state is not being carried to anything that cannot see it`);
+  } else if (on.background === off.background) {
+    fail('chips', `a shown chip and a hidden one have the same fill (${on.background}), so the only difference is a hue — which is no difference at all in greyscale or to a colour-blind reader (SC 1.4.1)`);
+  } else if (on.name !== off.name) {
+    fail('chips', `the chip reads "${on.name}" when on and "${off.name}" when off — the name has to say which type it is either way`);
+  } else if (Math.abs(on.width - off.width) > 1) {
+    fail('chips', `a chip is ${on.width}px on and ${off.width}px off — it moves the chips after it under a finger already on its way`);
+  } else {
+    pass('chips', `on and off differ in fill (${on.background} against ${off.background}) and in aria-pressed, at the same width`);
+  }
+
+  await closeEverything(page);
+}
+
 async function checkPrinterField(page) {
   await closeEverything(page);
   await showView(page, 'board');
@@ -1774,6 +1825,7 @@ async function main() {
   await checkNameMirror(page);
   await checkJobTypes(page);
   await checkPrinterField(page);
+  await checkChips(page);
   await checkInteractionSelectors(page);
   await checkInfoSurface(page);
   await checkDiagnosticPrivacy(page);

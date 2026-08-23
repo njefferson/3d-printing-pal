@@ -125,6 +125,30 @@ capability, with the rejected ones and the reason each was rejected.
 
 ---
 
+## The filter chips light up rather than carrying a tick (0.8.1)
+
+A tick is unambiguous and asks the reader to READ a mark. A lit button is seen.
+The tick also put the whole answer in a glyph about the width of a fingertip's
+own shadow, on a control sized for a finger.
+
+**The light is the type's own accent**, so the chip and the badge on the card
+teach each other — a reader who has learned that cyan means Ordered on a tile
+knows what the cyan chip is filtering for without reading it.
+
+**THE RISK IN DROPPING THE TICK IS COLOUR ALONE**, and it is the whole reason the
+tick was safe. If on and off differ only in which accent the text is, then
+greyscale, colour blindness and a bright screen outdoors all lose the answer
+(SC 1.4.1). So the states differ in FILL as well — a raised surface against the
+page's own ground — and `aria-pressed` carries it to anything not looking at
+pixels. `checkChips` in the a11y gate asserts the fill differs and was planted red
+by making both states transparent.
+
+**Both states keep the same border width and weight**, so nothing reflows under a
+finger already moving to the next chip. That is the same reasoning that made the
+old tick permanently visible rather than toggled, kept after the tick itself went.
+
+---
+
 ## Ordered is where the money lives, and the other three stopped asking (0.8.0)
 
 **Price charged sat on EVERY job from the first release**, so three categories in
@@ -922,8 +946,8 @@ the log and check whether the steps ran or were skipped.
 
 ### The staged candidate
 
-**There is no staged candidate.** `staging` and `main` point at the same commit,
-whatever that commit currently is.
+**0.8.1 is the staged candidate**, at https://staging.3d-printing-pal.pages.dev —
+the filter chips light up in their own type's colour rather than carrying a tick.
 
 **This paragraph is reset on every promotion, and a gate now checks that it was.**
 Leaving a promoted candidate recorded here is how the next session concludes

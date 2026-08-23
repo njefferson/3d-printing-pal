@@ -6,4 +6,4 @@
 //
 // version.capability.iteration — see the hub's DOCTRINE.md release taxonomy.
 
-export const VERSION = '0.8.0';
+export const VERSION = '0.8.1';

@@ -104,18 +104,29 @@
       <button type="button" id="job-new" class="btn btn-primary">Add job</button>
     </div>
 
+    <!-- LIT MEANS INCLUDED. These were ticks until 0.8.1, which asked the reader to
+         read a mark rather than see a state — and put the answer in a glyph the
+         width of a finger's own shadow.
+
+         THE LIGHT IS THE TYPE'S OWN COLOUR, so the chip and the badge on the card
+         teach each other. A chip that is on carries the accent its badge carries.
+
+         NOT COLOUR ALONE, which is the trap the tick was covering. On and off
+         differ in FILL as well — a raised surface against the page's own ground —
+         so the state survives greyscale, colour blindness and a bright screen
+         outdoors. `aria-pressed` carries it to anything not looking at pixels. -->
     <div class="chips" role="group" aria-label="Filter by job type">
-      <button type="button" class="chip" data-type="ordered" aria-pressed="true">
-        <span class="chip-tick" aria-hidden="true">✓</span><span class="chip-label">Ordered</span>
+      <button type="button" class="chip chip-ordered" data-type="ordered" aria-pressed="true">
+        <span class="chip-label">Ordered</span>
       </button>
-      <button type="button" class="chip" data-type="request" aria-pressed="true">
-        <span class="chip-tick" aria-hidden="true">✓</span><span class="chip-label">Asked</span>
+      <button type="button" class="chip chip-request" data-type="request" aria-pressed="true">
+        <span class="chip-label">Asked</span>
       </button>
-      <button type="button" class="chip" data-type="wanted" aria-pressed="true">
-        <span class="chip-tick" aria-hidden="true">✓</span><span class="chip-label">Gift</span>
+      <button type="button" class="chip chip-wanted" data-type="wanted" aria-pressed="true">
+        <span class="chip-label">Gift</span>
       </button>
-      <button type="button" class="chip" data-type="fun" aria-pressed="true">
-        <span class="chip-tick" aria-hidden="true">✓</span><span class="chip-label">Fun</span>
+      <button type="button" class="chip chip-fun" data-type="fun" aria-pressed="true">
+        <span class="chip-label">Fun</span>
       </button>
     </div>
 

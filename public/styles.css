@@ -256,12 +256,21 @@ a { color: var(--primary); }
   border-radius: 999px;
   cursor: pointer;
 }
-.chip[aria-pressed="false"] { background: transparent; color: var(--text-2); }
-/* The tick occupies its space in BOTH states and only its visibility changes.
- * A tick that appears on press widens the control under a finger already on its
- * way, and reflows every chip after it in a wrapping row. */
-.chip-tick { visibility: hidden; }
-.chip[aria-pressed="true"] .chip-tick { visibility: visible; }
+/* OFF IS THE PAGE'S OWN GROUND, on is a raised surface. The fill is the cue that
+ * survives greyscale and colour blindness; the accent is what ties the chip to the
+ * badge it filters for. Both states keep a 2px border and the same weight, so
+ * nothing reflows under a finger already on its way to the next chip — the reason
+ * the tick it replaced was made permanently visible rather than toggled. */
+.chip[aria-pressed="false"] {
+  background: transparent;
+  color: var(--text-2);
+  border-color: var(--rail);
+}
+.chip[aria-pressed="true"] { background: var(--surface-raised); }
+.chip-ordered[aria-pressed="true"] { color: var(--ordered); border-color: var(--ordered); }
+.chip-request[aria-pressed="true"] { color: var(--primary); border-color: var(--primary); }
+.chip-wanted[aria-pressed="true"] { color: var(--wanted); border-color: var(--wanted); }
+.chip-fun[aria-pressed="true"] { color: var(--fun); border-color: var(--fun); }
 
 /* ----------------------------------------------------------------- board */
 .board {
