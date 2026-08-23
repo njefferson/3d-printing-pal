@@ -79,12 +79,13 @@ body {
    * widest descendant's min-content, so a horizontally scrolling board would
    * widen the whole page and make it scroll sideways at 320px. */
   display: grid;
-  /* Five named rows: update strip, topbar, undo strip, main, footer. THE ROW
-   * NUMBERS ON EACH CHILD ARE LOAD-BEARING and not decoration — both strips are
-   * hidden most of the time, and a hidden grid child is out of the flow, so under
-   * auto-placement `main` would slide up into an `auto` track and the `1fr` would
-   * land on the footer. Add a row here and renumber everything below it. */
-  grid-template-rows: auto auto auto 1fr auto;
+  /* Four named rows: update strip, topbar, main, footer. THE ROW NUMBERS ON EACH
+   * CHILD ARE LOAD-BEARING and not decoration — the update strip is hidden most of
+   * the time, and a hidden grid child is out of the flow, so under auto-placement
+   * `main` would slide up into an `auto` track and the `1fr` would land on the
+   * footer. Add or remove a row here and renumber everything below it. (It was
+   * five until 0.7.2, when the undo strip became a button in the topbar.) */
+  grid-template-rows: auto auto 1fr auto;
   grid-template-columns: minmax(0, 1fr);
   min-height: 100dvh;
   background: linear-gradient(180deg, var(--page-alt), var(--page));
@@ -142,49 +143,6 @@ body {
 .strip-text { margin: 0; flex: 1 1 16rem; font-size: 0.9375rem; }
 .strip-actions { display: flex; gap: var(--gap); flex-wrap: wrap; }
 
-/* -------------------------------------------------------------- undo strip */
-/* One row lower than the update strip, because it is about the CONTENT rather
- * than about the app: the update strip sits above the wordmark, this sits under
- * the tabs and directly over the thing it would put back.
- *
- * QUIET, from 0.7.0. It was built as a copy of the update strip — raised ground,
- * two 2px rails — which is right for THAT strip, because that one is telling the
- * reader something they do not know. This one describes a thing they did on
- * purpose two seconds ago, and it said so 9% of a phone screen tall, permanently,
- * on every screen: the app agitated about the reader's own work.
- *
- * THE RAILS GO FROM 2px TO 1px, AND STAY --rail. The first attempt at this made
- * them a hairline and argued in this very comment that a strip on the page's own
- * ground is no longer a bounded component, so its edge is decoration. The gate
- * measured 1.49:1 and failed it — the same number, on the same token, as the time
- * before. Quieter is a matter of WEIGHT and GROUND, which 1px and no raised
- * background deliver; the colour of a boundary is not the place to find it.
- *
- * The padding is 10px at the top rather than the 6px this was cut to. At 6px the
- * Undo button sat 7px under the Models tab, below the 8px separation floor, so a
- * thumb going for a tab could take it — which is a worse defect than the one being
- * fixed, on a control that undoes things. */
-.undo-strip {
-  grid-row: 3;
-  background: none;
-  border-top: 1px solid var(--rail);
-  border-bottom: 1px solid var(--rail);
-  padding: 10px 16px 8px;
-}
-.undo-strip .strip-text {
-  font-size: 0.8125rem;
-  color: var(--text-3);
-  /* BASIS ZERO, not auto and not the 16rem .strip uses. With a content-sized basis
-   * the container wraps before the item shrinks — so a one-word-longer label put
-   * the buttons on their own line and the strip stood 87px tall, taller than the
-   * bar this redesign exists to quieten, and only for some labels. A basis of 0
-   * makes it take what is left after the buttons and wrap its own text inside
-   * that. min-width:0 is what permits shrinking below content at all. */
-  flex: 1 1 0;
-  min-width: 0;
-}
-.undo-strip .strip-actions { flex: 0 0 auto; }
-
 /* ----------------------------------------------------------------- topbar */
 .topbar {
   grid-row: 2;
@@ -196,6 +154,19 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: var(--gap);
+  /* WRAPS RATHER THAN OVERFLOWS. At 320px with 200% text the wordmark alone very
+   * nearly fills the row, so Undo and the (i) drop to a second line there instead
+   * of squeezing the controls under the 44px floor or pushing the page sideways.
+   * That costs a line of chrome only at the setting where everything costs one. */
+  flex-wrap: wrap;
+}
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--gap);
+  /* Both controls travel together: `space-between` on the row would otherwise put
+   * Undo in the middle of the bar, adrift between the name and the (i). */
+  margin-left: auto;
 }
 .wordmark {
   margin: 0;
@@ -234,7 +205,7 @@ body {
 
 /* ------------------------------------------------------------------ main */
 #main {
-  grid-row: 4;
+  grid-row: 3;
   min-width: 0;
   padding: 16px;
 }
@@ -625,6 +596,17 @@ input[type="checkbox"]:checked::after {
 }
 .btn:hover { background: var(--surface-pressed); }
 .btn[disabled] { color: var(--text-3); cursor: not-allowed; border-style: dashed; }
+/* THE SAME APPEARANCE AS `disabled`, WITHOUT THE SEMANTICS. `aria-disabled` keeps
+ * the control focusable and in a screen reader's list, which is the whole reason
+ * the Undo button uses it — but a reader looking at it must still be able to tell
+ * it will not act, so it borrows the styling rather than inventing a second one.
+ * `--text-3` on `--surface-raised` is the pair `[disabled]` already uses. */
+.btn[aria-disabled="true"] { color: var(--text-3); cursor: not-allowed; border-style: dashed; }
+.btn[aria-disabled="true"]:hover { background: var(--surface-raised); }
+
+/* Chrome-sized: the topbar is not a form, and a 16px-padded button beside the
+ * wordmark crowds a phone. 12px keeps the 44px tap height and gives back 8px. */
+.btn-chrome { padding: 0 12px; font-size: 0.875rem; }
 /* Accent text on an OPAQUE surface, never on a tint of its own accent: a 12%
  * primary wash over the page pulls the backdrop toward the text colour and took
  * this button from 4.82:1 to 4.13:1 in the light theme. The accent lives in the
@@ -667,7 +649,7 @@ input[type="checkbox"]:checked::after {
 
 /* ---------------------------------------------------------------- footer */
 .footer {
-  grid-row: 5;
+  grid-row: 4;
   padding: 16px;
   border-top: 1px solid var(--hairline);
   display: flex;

@@ -78,7 +78,7 @@ and nothing goes back to close it.
 
 - No per-currency formatting or conversion — a symbol you choose, and plain numbers.
 - Undo does not survive closing the app or reloading the page, and an import clears
-  it. Yesterday's deletion comes back from a backup, not from the strip.
+  it. Yesterday's deletion comes back from a backup, not from the Undo button.
 - Restoring a backup cannot itself be undone; the way back is the safety copy taken
   immediately before it.
 - No printing or PDF output.
@@ -207,9 +207,8 @@ as the Model box is typed in, because the answer does.
 **The undo strip was a copy of the update strip and should never have been.** Same
 raised ground, same two 2px rails — right for a message about the app, wrong for
 one describing what the reader just did on purpose, 9% of a phone screen tall,
-permanently, on every screen. It is now small type on the page's own ground at 7%,
-and a ✕ hides it until the next change. Hiding gives up the undo for that one
-change and says so; there is no other route to it.
+permanently, on every screen. 0.7.0 made it small type on the page's own ground at
+7%, with a ✕ that hid it until the next change.
 
 **Twice on the way there, a fix was worse than what it replaced, and only a
 measurement said so.** Cutting the strip's padding put the Undo button 7px under
@@ -219,6 +218,23 @@ undoes things. And making its rails a hairline measured 1.49:1 against SC 1.4.11
 justify it argued that a strip on the page's own ground is no longer a bounded
 component, and the gate disagreed. Quieter is a matter of WEIGHT and GROUND. The
 colour of a boundary is not where to find it.
+
+**And in 0.7.2 the strip was removed, which is what all of that was circling.**
+Three releases were spent making a band quieter, and each fix was a smaller
+version of the same wrong thing. The form was never the question a reader asks —
+they know what they just did, and what they want is somewhere to take it back.
+That is a button in the chrome, which is where every other program on the device
+keeps it, and no amount of tuning a band arrives at one. Worth writing down as a
+shape rather than an incident: **when a fix has to be repeated at decreasing size,
+the thing being fixed is the wrong object.**
+
+What the button had to keep, and does: it never expires; it says what it would put
+back, in its accessible name and its title, rather than permanently on screen; and
+it is there BEFORE the first change, which the strip never was. What it dropped
+is a ✕ that used to cost the reader that one undo — nothing to hide, nothing to
+give up. It also dropped a piece of focus management: the strip removed itself
+from under the finger when the last change was undone, dropping focus to the body,
+and needed code to catch that. A control that never leaves has no such problem.
 
 ---
 
@@ -812,8 +828,8 @@ the log and check whether the steps ran or were skipped.
 
 ### The staged candidate
 
-**There is no staged candidate.** `staging` and `main` point at the same commit,
-whatever that commit currently is.
+**0.7.2 is the staged candidate**, at https://staging.3d-printing-pal.pages.dev —
+Undo is a button in the app's own bar and the strip across the page is gone.
 
 **This paragraph is reset on every promotion, and a gate now checks that it was.**
 Leaving a promoted candidate recorded here is how the next session concludes

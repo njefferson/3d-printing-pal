@@ -408,13 +408,13 @@ async function main() {
   await page.click('#model-save');
   await page.waitForTimeout(300);
 
-  const named = await page.evaluate(() => ({
-    hidden: document.getElementById('undo-strip').hidden,
-    text: document.getElementById('undo-text').textContent,
-  }));
-  if (named.hidden) fail('four changes were made and the undo strip is still hidden — there is no route back');
-  else if (!named.text.includes('Undo me')) fail(`the undo strip says "${named.text}", which does not name the change that was just made`);
-  else pass(`the undo strip names the last change: "${named.text}"`);
+  const named = await page.evaluate(() => {
+    const b = document.getElementById('undo-do');
+    return { off: b.getAttribute('aria-disabled') === 'true', name: b.getAttribute('aria-label') };
+  });
+  if (named.off) fail('four changes were made and the Undo button is still unavailable — there is no route back');
+  else if (!named.name.includes('Undo me')) fail(`the Undo button's name is "${named.name}", which does not name the change that was just made`);
+  else pass(`the Undo button names the last change: "${named.name}"`);
 
   const midway = await counts(page);
   if (midway.spools !== 0 || midway.models !== beforeUndo.models.length + 1) {
@@ -422,8 +422,8 @@ async function main() {
   }
 
   for (let i = 0; i < 4; i += 1) {
-    const hidden = await page.evaluate(() => document.getElementById('undo-strip').hidden);
-    if (hidden) { fail(`undo ran out after ${i} of 4 changes`); break; }
+    const off = await page.evaluate(() => document.getElementById('undo-do').getAttribute('aria-disabled') === 'true');
+    if (off) { fail(`undo ran out after ${i} of 4 changes`); break; }
     await page.click('#undo-do');
     await page.waitForTimeout(320);
   }
@@ -452,14 +452,22 @@ async function main() {
     pass('undoing a model that was created with a picture leaves no orphaned picture behind');
   }
 
-  // Only meaningful if the strip was showing in the first place — "it is hidden
-  // now" is trivially true of a control that is never shown, and a pass that a
-  // broken feature also earns is worse than no check, because it reads as
-  // coverage. The assertion above is what establishes it was there.
-  const emptied = await page.evaluate(() => document.getElementById('undo-strip').hidden);
-  if (named.hidden) fail('the undo strip never appeared, so there is nothing to say about it going away');
-  else if (!emptied) fail('the undo strip is still offering an undo after every change was undone');
-  else pass('the undo strip goes away when there is nothing left to undo');
+  // Only meaningful if the button was available in the first place — "it is
+  // unavailable now" is trivially true of a control that is never enabled, and a
+  // pass that a broken feature also earns is worse than no check, because it
+  // reads as coverage. The assertion above is what establishes it was live.
+  //
+  // The button itself STAYS, which is the 0.7.2 change: it is the same element
+  // before the first change, between changes and after the last undo, so what is
+  // measured here is its availability rather than its presence.
+  const emptied = await page.evaluate(() => {
+    const b = document.getElementById('undo-do');
+    return { gone: !b, off: b && b.getAttribute('aria-disabled') === 'true' };
+  });
+  if (named.off) fail('the Undo button never became available, so there is nothing to say about it going quiet');
+  else if (emptied.gone) fail('the Undo button was removed from the page once there was nothing to undo — it has to stay, or a reader cannot tell the app can undo at all');
+  else if (!emptied.off) fail('the Undo button is still offering an undo after every change was undone');
+  else pass('the Undo button stays in the chrome and goes unavailable when there is nothing left to undo');
 
   // ------------------------------------------- a model made by adding a job
   //
@@ -585,8 +593,8 @@ async function main() {
 
   // Both jobs and the one model, undone.
   for (let i = 0; i < 2; i += 1) {
-    const hidden = await page.evaluate(() => document.getElementById('undo-strip').hidden);
-    if (hidden) { fail(`undo ran out after ${i} of the 2 jobs that named models`); break; }
+    const off = await page.evaluate(() => document.getElementById('undo-do').getAttribute('aria-disabled') === 'true');
+    if (off) { fail(`undo ran out after ${i} of the 2 jobs that named models`); break; }
     await page.click('#undo-do');
     await page.waitForTimeout(320);
   }

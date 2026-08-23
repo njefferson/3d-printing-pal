@@ -1,21 +1,28 @@
-// The undo strip.
+// The Undo button.
 //
-// IT NAMES WHAT IT WOULD PUT BACK, in words on the screen. "Undo" alone asks the
-// reader to remember which of the last few things they did was the last one, and
-// on a board where a move, an edit and a delete all look like the tile changing,
-// that is a guess with consequences.
+// IT LIVES IN THE APP'S CHROME, beside the (i), which is where every other
+// program on this device keeps undo. Until 0.7.2 it was a strip across the page:
+// a standing band under the tabs describing a thing the reader had deliberately
+// done two seconds earlier. That form was right about one thing and wrong about
+// the rest — a toast with a deadline IS a route that expires, and the answer to
+// that is a control that does not expire, not a bar that narrates.
 //
-// IT NEVER GOES AWAY ON A TIMER, and it never went away at all until 0.7.0. A
-// toast that vanishes is a route that is gone before a reader who looked up, was
-// interrupted, or reads slowly can take it. But the answer to that was a bar
-// under the tabs with two heavy rails and a raised background, permanently, on
-// every screen — 72px of an 844px phone, 9% of it, reading as an alert about a
-// thing the reader had just deliberately done.
+// IT IS ALWAYS THERE. A button that appears only once there is something to undo
+// answers "can this app undo" with silence until the moment it is too late to
+// ask, and the strip had exactly that shape: hidden until the first change.
 //
-// SO IT IS QUIET, AND IT CAN BE DISMISSED. Quiet is most of it: no rails, no
-// raised ground, small text. Dismissing it is keyed to the CHANGE rather than to
-// the sitting, so the next thing they do brings it back — which is the only
-// version of "go away" that does not silently cost them the route.
+// `aria-disabled`, NOT `disabled`. A truly disabled button is skipped by tabbing
+// and dropped from a screen reader's list of controls, so a reader who has not
+// yet changed anything would never learn undo exists — the same defect one level
+// down. This one keeps its place in the order, and pressing it when there is
+// nothing says so.
+//
+// WHAT IT WOULD PUT BACK is in the accessible name and the title rather than in
+// the visible word. "Undo" alone does ask the reader to remember which of the
+// last few things they did was the last one — but the app already told them, at
+// the moment it happened, through the live region in panels.js, and it says what
+// came back when they press this. A word that changes width on every edit, in a
+// bar that holds the app's name, buys that reminder with a chrome that moves.
 //
 // THE STORE IS THE ONLY THING THAT KNOWS. Nothing here tracks what happened; it
 // asks store.undoLabel() on every announcement and draws the answer. A second
@@ -25,39 +32,26 @@ import { $ } from '../dom.js';
 import * as store from '../store.js';
 import { say } from './panels.js';
 
-// The change whose strip the reader has waved away. Not a boolean: a boolean
-// would either come back on the next render or never come back at all.
-let dismissed = null;
-
 export function initUndo() {
   const button = $('#undo-do');
 
-  $('#undo-dismiss').addEventListener('click', () => {
-    dismissed = store.undoId();
-    renderUndo();
-    // Said out loud, because a strip vanishing under a finger with nothing
-    // announced is indistinguishable from the app having lost the change.
-    //
-    // AND IT SAYS THE COST. Dismissing gives up the undo for THIS change — there
-    // is no other route to it — and the strip returns for the next one. Hiding
-    // that would be the app quietly removing a safety net and saying "hidden".
-    say('Hidden, and this change can no longer be undone. Your next change brings the strip back.');
-  });
-
   button.addEventListener('click', async () => {
+    // The button is focusable while unavailable, so this is a real path rather
+    // than a guard against the impossible. Silence here would read as the app
+    // having lost the press.
+    if (!store.canUndo()) {
+      say('Nothing to undo. Your next change can be undone from here.');
+      return;
+    }
+
     const label = await store.undo();
     if (!label) return;
     say(`Undone — ${label}.`);
-
-    // Focus has to land somewhere deliberate. When there is more to undo the
-    // button is still here and keeps it; when this was the last one the button
-    // disappears from under the finger, and focus left on a removed element falls
-    // to the body, which loses a screen reader's place entirely.
-    if (!store.canUndo()) {
-      const main = $('#main');
-      main.tabIndex = -1;
-      main.focus();
-    }
+    // NO FOCUS RESCUE, and that is the point of the button living in the chrome.
+    // The strip removed itself from under the finger when the last change was
+    // undone, dropping focus to the body and losing a screen reader's place, so
+    // it needed code to move focus somewhere deliberate. This element never
+    // leaves, so focus stays exactly where the reader put it.
   });
 
   store.subscribe(renderUndo);
@@ -65,18 +59,14 @@ export function initUndo() {
 }
 
 export function renderUndo() {
-  const strip = $('#undo-strip');
-  const text = $('#undo-text');
   const button = $('#undo-do');
   const label = store.undoLabel();
 
-  strip.hidden = !label || store.undoId() === dismissed;
-  if (strip.hidden) return;
-
-  text.textContent = `Last change: ${label}.`;
-  // The visible word is "Undo" and it appears verbatim at the start of the
-  // accessible name, so somebody saying "undo" out loud matches it (SC 2.5.3).
-  // The rest of the name is what the strip's own text already says, for a reader
-  // who reaches the button without having read across to it.
-  button.setAttribute('aria-label', `Undo ${label}`);
+  button.setAttribute('aria-disabled', label ? 'false' : 'true');
+  // The visible word is "Undo" and it opens the accessible name, so somebody
+  // saying "undo" out loud matches it (SC 2.5.3). `title` carries the same words
+  // for a pointer, and is deliberately the same string rather than a shorter one.
+  const name = label ? `Undo ${label}` : 'Undo — nothing to undo yet';
+  button.setAttribute('aria-label', name);
+  button.title = name;
 }

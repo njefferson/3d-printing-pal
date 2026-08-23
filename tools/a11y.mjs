@@ -107,7 +107,12 @@ const STATE_TEXT = {
   inventory: [...BASE_TEXT, '.rowcard-title', '.rowcard-sub', '.remaining', '.note'],
   models: [...BASE_TEXT, '.rowcard-title', '.rowcard-sub', '.remaining'],
   'update-stuck': [...BASE_TEXT, '.strip-text'],
-  undo: [...BASE_TEXT, '.strip-text'],
+  // The Undo button in both of its appearances. It is one element with one set of
+  // colours at a time, so the unavailable form needs a state of its own or it
+  // ships unmeasured — which is what a `.btn[aria-disabled]` rule quietly is
+  // until something looks at it on screen.
+  undo: [...BASE_TEXT, '#undo-do'],
+  'undo-empty': [...BASE_TEXT, '#undo-do'],
   firstrun: ['#dlg-firstrun h2', '#dlg-firstrun p', '#dlg-firstrun li', '#dlg-firstrun .btn', '.panel-foot-note'],
   info: ['#dlg-info h2', '#dlg-info h3', '#dlg-info p', '#dlg-info li', '#dlg-info a', '#dlg-info .release-head'],
   diagnostic: ['#dlg-diagnostic h2', '#dlg-diagnostic p', '#dlg-diagnostic .diag-text'],
@@ -140,7 +145,8 @@ const STATE_NONTEXT = {
   inventory: ['.btn', '.rowcard', 'select', 'input[type="checkbox"]', '.bar'],
   models: ['.btn', '.rowcard'],
   'update-stuck': ['.strip', '.btn'],
-  undo: ['.strip', '.btn'],
+  undo: ['.btn', '.iconbtn'],
+  'undo-empty': ['.btn', '.iconbtn'],
   firstrun: ['#dlg-firstrun .btn', '#dlg-firstrun .iconbtn'],
   info: ['#dlg-info .btn', '#dlg-info .iconbtn'],
   diagnostic: ['#dlg-diagnostic .btn', '#dlg-diagnostic .diag-text'],
@@ -193,25 +199,39 @@ const STATES = [
     name: 'undo',
     surface: null,
     // ASSERTED, NOT STAGED. The seed above makes five changes through the real
-    // forms, so by the time any state runs the strip is genuinely on screen and
-    // carrying a real label. Setting `hidden = false` here instead would prove the
-    // strip renders and prove nothing about whether anything ever shows it — and
-    // the strip's whole failure mode is being wired to nothing.
+    // forms, so by the time this runs the button is genuinely live and carrying a
+    // real label. Setting the attribute here instead would prove the button
+    // renders and prove nothing about whether anything ever enables it — and being
+    // wired to nothing is this control's whole failure mode.
     enter: async (p) => {
       await showView(p, 'board');
-      const found = await p.evaluate(() => ({
-        hidden: document.getElementById('undo-strip').hidden,
-        text: document.getElementById('undo-text').textContent,
-        name: document.getElementById('undo-do').getAttribute('aria-label'),
-      }));
-      if (found.hidden) {
-        fail('undo', 'the undo strip is hidden after the seed made five changes through the forms, so nothing on it is measured and nothing offers the reader a way back');
-      } else if (!/\S/.test(found.text)) {
-        fail('undo', 'the undo strip is showing with no words in it — "Undo" alone does not say what would come back');
-      } else if (!found.name?.startsWith('Undo ')) {
-        fail('undo', `the undo button's accessible name is "${found.name}", which does not begin with its visible word (SC 2.5.3)`);
+      const found = await p.evaluate(() => {
+        const b = document.getElementById('undo-do');
+        return {
+          inChrome: Boolean(b.closest('.topbar')),
+          disabledAttr: b.disabled,
+          ariaDisabled: b.getAttribute('aria-disabled'),
+          label: b.textContent.trim(),
+          name: b.getAttribute('aria-label'),
+          title: b.title,
+        };
+      });
+      // WHERE IT RENDERS, not only that it exists. It was a band across the page
+      // until 0.7.2 and the reason it is not one now is that a band is the wrong
+      // form for it — a check that only asks "is there an Undo control" passes
+      // just as happily on the thing that was removed.
+      if (!found.inChrome) {
+        fail('undo', 'the Undo button is not inside the topbar — it belongs in the app\'s own chrome, not in a band across the page');
+      } else if (found.disabledAttr) {
+        fail('undo', 'the Undo button carries the `disabled` attribute, which drops it from tabbing and from a screen reader\'s list of controls — it must use aria-disabled so a reader can find it before they need it');
+      } else if (found.ariaDisabled !== 'false') {
+        fail('undo', 'the Undo button still says aria-disabled after the seed made five changes through the forms, so nothing offers the reader a way back');
+      } else if (!found.name?.startsWith(found.label)) {
+        fail('undo', `the Undo button's accessible name is "${found.name}", which does not begin with its visible word "${found.label}" (SC 2.5.3)`);
+      } else if (found.name === found.label || found.title !== found.name) {
+        fail('undo', `the Undo button's name is "${found.name}" and its title is "${found.title}" — the name has to say WHAT would come back, and the title has to say the same thing`);
       } else {
-        pass('undo', `the strip names its last change: "${found.text}"`);
+        pass('undo', `the button names its last change: "${found.name}"`);
       }
     },
   },
@@ -282,7 +302,64 @@ const STATES = [
     },
   },
   { name: 'import', surface: 'dlg-import', enter: async (p) => press(p, '#import-open') },
+  {
+    name: 'undo-empty',
+    surface: null,
+    // THE UNAVAILABLE APPEARANCE, which is a second set of colours on the same
+    // element and therefore a second thing to measure. `.btn[aria-disabled]` is
+    // dimmed text and a dashed border, and until something looked at it on screen
+    // it was a rule nobody had checked against the floors in either theme.
+    //
+    // REACHED BY RELOADING, which is the app's own behaviour rather than a pose.
+    // The undo journal is in memory and nothing else is: closing the app or
+    // reloading it starts again with nothing to undo and every record intact.
+    // That is a documented limit of undo, so this is a state a reader genuinely
+    // meets — every session begins in it.
+    //
+    // THE FIRST VERSION UNDID EVERYTHING INSTEAD, by pressing the button until it
+    // went quiet. Honest, and it emptied the database: the card-shape check and
+    // the 320px outcome question run after the state loop, found no cards, and
+    // reported the app as broken. Re-seeding afterwards produced a second failure,
+    // because the seed is not idempotent. **Reaching a state must not cost the
+    // states around it** — and "put it last" was not the fix, because there is
+    // always work after the last thing in a list.
+    enter: async (p) => {
+      await p.reload({ waitUntil: 'networkidle' });
+      await p.waitForSelector('#version-stamp');
+      await showView(p, 'board');
+      const found = await p.evaluate(() => {
+        const b = document.getElementById('undo-do');
+        return {
+          present: Boolean(b),
+          visible: Boolean(b && b.getClientRects().length),
+          off: b?.getAttribute('aria-disabled'),
+          name: b?.getAttribute('aria-label'),
+          focusable: b?.tabIndex >= 0 && !b.disabled,
+        };
+      });
+      if (!found.present || !found.visible) {
+        fail('undo-empty', 'the Undo button is not on screen once there is nothing to undo — it has to stay, or a reader cannot tell the app can undo before they need it');
+      } else if (found.off !== 'true') {
+        fail('undo-empty', 'the app was reloaded, which empties the undo journal, and the Undo button still says it can act');
+      } else if (!found.focusable) {
+        fail('undo-empty', 'the unavailable Undo button cannot be focused, so a reader tabbing through the chrome never meets it');
+      } else if (!/nothing/i.test(found.name || '')) {
+        fail('undo-empty', `the unavailable Undo button's name is "${found.name}", which does not say there is nothing to undo`);
+      } else {
+        pass('undo-empty', `it stays in the chrome, focusable, and says "${found.name}"`);
+      }
+    },
+  },
 ];
+
+// The state above RELOADS the page, which clears the in-memory undo journal for
+// everything that runs after it. Nothing later needs an undo to be available, and
+// keeping it last is how that stays true. A comment saying "keep this last" is the
+// kind of instruction this repo has watched fail; this is the check.
+if (STATES[STATES.length - 1].name !== 'undo-empty') {
+  console.error('a11y: FAIL — `undo-empty` must be the LAST state. It reloads the app, which empties the undo journal for every state after it.');
+  process.exit(1);
+}
 
 // ------------------------------------------------------------- the surfaces
 //

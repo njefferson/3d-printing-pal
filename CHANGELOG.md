@@ -9,6 +9,28 @@ triplet is `version.capability.iteration`. Releases do not have names.
 
 ---
 
+## 0.7.2 — ITERATION — 2026-08-23
+
+Undo is a button in the top bar now, and the strip across the page is gone.
+
+### Fixed
+
+- **Undo moved into the app's own bar, beside the (i).** It was a band across the
+  page describing what you had just done, which is not how undo works anywhere
+  else — nothing else on your device narrates your own edits back to you in a
+  strip. It is now a button where you would expect to find one, and it is there
+  from the moment the app opens rather than appearing after your first change.
+- **It says what it will put back when you touch and hold it**, and it says what
+  came back after you press it. The words used to sit permanently on screen; they
+  are on the button itself now.
+- **The ✕ that hid the strip is gone, and nothing is given up any more.** Hiding
+  it used to cost you that one undo. There is nothing to hide, so there is
+  nothing to lose.
+- **The page is one band shorter.** On a phone the strip took about 7% of the
+  screen whenever anything had been changed, which was most of the time.
+
+---
+
 ## 0.7.1 — ITERATION — 2026-08-23
 
 The three job types say what they are for, and the middle one is a gift.

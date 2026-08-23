@@ -58,10 +58,35 @@
 <header class="topbar">
   <div class="topbar-row">
     <h1 class="wordmark">print-tracker</h1>
-    <button type="button" id="info-open" class="iconbtn" data-surface-opener="dlg-info">
-      <span class="iconbtn-glyph" aria-hidden="true">i</span>
-      <span class="sr-only">Information — what this app is, how to install it, what changed, and how to report a problem</span>
-    </button>
+    <div class="topbar-actions">
+      <!-- UNDO LIVES IN THE APP'S CHROME, which is where every other program on
+           the device keeps it. It was a strip across the page until 0.7.2 — a
+           standing band under the tabs, describing something the reader had just
+           done on purpose. Correct about timing (a toast with a deadline is a
+           route that expires) and wrong about form: nothing else the reader uses
+           announces their own edits back to them in a bar.
+
+           ALWAYS PRESENT, NEVER REMOVED. A control that appears only once there
+           is something to undo answers "can this app undo" with silence until the
+           moment it is too late to ask. It is here from the first paint and
+           carries its own unavailability instead.
+
+           `aria-disabled` RATHER THAN `disabled`, deliberately. A truly disabled
+           button is skipped by tabbing and dropped from a screen reader's list of
+           controls, so the reader never learns undo exists at all — the same
+           defect one level down. This one keeps its place, says it has nothing to
+           undo when pressed, and is styled as unavailable.
+
+           WHAT IT WOULD PUT BACK is in the accessible name and the title, not in
+           the visible word: "Undo" is the label, "Undo deleting Dragon lamp" is
+           the name, so SC 2.5.3 holds — the visible text opens the name. The
+           reader was told what happened when it happened, through #live. -->
+      <button type="button" id="undo-do" class="btn btn-chrome" aria-disabled="true">Undo</button>
+      <button type="button" id="info-open" class="iconbtn" data-surface-opener="dlg-info">
+        <span class="iconbtn-glyph" aria-hidden="true">i</span>
+        <span class="sr-only">Information — what this app is, how to install it, what changed, and how to report a problem</span>
+      </button>
+    </div>
   </div>
   <nav class="tabs" aria-label="Views">
     <button type="button" class="tab" id="tab-board" data-view="board" aria-current="page">Board</button>
@@ -69,34 +94,6 @@
     <button type="button" class="tab" id="tab-models" data-view="models">Models</button>
   </nav>
 </header>
-
-<!-- A STANDING CONTROL, NOT A TIMED TOAST. A toast is a control with a deadline:
-     it is gone before a reader who looked away comes back, and on a tablet it is
-     a small target in a corner that the hand holding the device is nowhere near.
-     This appears with the first undoable change and then STAYS, changing only its
-     words — so it shifts the page once in a session rather than on every action,
-     which is the actual cost a toast avoids and then charges elsewhere.
-
-     It says what it will undo IN WORDS THE READER CAN SEE. "Undo" on its own asks
-     them to remember which of the last few things they did was the last one.
-
-     Not a live region: panels.js already announces every change through #live,
-     and a second one here would say everything twice. -->
-<div id="undo-strip" class="strip undo-strip" role="region" aria-label="Undo" hidden>
-  <p class="strip-text" id="undo-text"></p>
-  <div class="strip-actions">
-    <button type="button" id="undo-do" class="btn">Undo</button>
-    <!-- Icon-only, like every other close in the app, because a worded button
-         here made the row too wide for a phone and the strip wrapped to 87px —
-         taller than the bar this redesign exists to quieten. SC 2.5.3 governs a
-         control that HAS a visible text label; this one has none, so the whole
-         accessible name is the sr-only text. -->
-    <button type="button" id="undo-dismiss" class="iconbtn">
-      <span class="iconbtn-glyph" aria-hidden="true">✕</span>
-      <span class="sr-only">Hide this</span>
-    </button>
-  </div>
-</div>
 
 <main id="main">
 
