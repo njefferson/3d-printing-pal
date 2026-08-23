@@ -82,8 +82,14 @@
           <a href="https://staging.3d-printing-pal.pages.dev/probe.html">/probe.html</a> on
           staging. Paste picture addresses from the sites you actually use and it reports, per
           address, whether the bytes can be READ or only displayed. That is the fact nobody here
-          can reason out, and it decides whether fetching a picture from a link is even possible
-          before anything is proposed.</span></li>
+          can reason out, and it decides whether fetching a picture from a link is even
+          possible.</span></li>
+        <li><span><b>If the probe's first box is red, use the download on it instead.</b> The
+          hosted page needs a header rule to escape the app's own policy; the first version of
+          that rule was written on a wrong assumption and the page said so rather than blaming
+          the sites. The rule has been corrected and it is still a bet — this sandbox cannot
+          reach Cloudflare to confirm it. The standalone copy the page offers runs from your
+          disk, where no policy applies at all, and depends on nothing being right.</span></li>
         <li><span><b>Say whether to promote it.</b> Nothing reaches production without
           that.</span></li>
         <li><span><b>If the version at the bottom is not the one you expect</b>, the new copy is waiting

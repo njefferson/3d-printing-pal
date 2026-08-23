@@ -205,10 +205,33 @@ That is not decoration: the first run of `tools/probe-walk.mjs` used an `http`
 test host, our policy widens `https:` only, and the page correctly reported the
 refusal as ours. The rig was wrong and the probe said so.
 
-**The widened policy is ONE PATH, and `pages-check` holds it there.** Only
-`img-src` and `connect-src` are widened, only on `/probe.html`, written BELOW `/*`
-because both blocks match and the later one wins. The gate fails if the block is
-missing, if it is a wildcard, if it is written above `/*`, or if the app's own
+**THE HEADER RULE WAS WRITTEN ON AN ASSUMPTION AND THE ASSUMPTION WAS WRONG.** The
+`/probe.html` block went BELOW `/*`, reasoning that a later and more specific rule
+overrides the global one. On the deployed site the page was served the APP's
+policy and could measure nothing. `tools/serve.mjs` had been taught the same
+assumption, so the local run agreed with the guess rather than with production —
+a rig is only worth its fidelity, and one built on a guess hands the guess back
+with a passing grade. Both are now first-match-wins, the specific block is above
+`/*`, and the gate asserts that order with the reason attached.
+
+**AND THE ANSWER NO LONGER DEPENDS ON IT.** `public/probe-standalone.html` is the
+same probe with the CSS and JS inlined, served with `Content-Disposition:
+attachment` so it downloads rather than opening — on a `file://` page there is no
+Content-Security-Policy at all and no header behaviour to be right about. That
+header is additive, so unlike the policy block it does not depend on which rule
+wins. Two routes, because one of them still rests on something unverified: this
+sandbox cannot reach Cloudflare to confirm the ordering, and a second round of
+"try it and see" was not an acceptable thing to hand over.
+
+**The standalone copy is GENERATED, which is what makes a second copy tolerable.**
+`tools/render-probe.mjs` builds it from the three source files and `--check` fails
+on drift, the same shape as the icon. It also asserts the inlining actually
+happened — a regex that stopped matching would produce a file that is "in step"
+and still points at two files that are not beside it. Planted red both ways.
+
+**The widened policy is ONE PATH.** Only `img-src` and `connect-src`, only on
+`/probe.html`. The gate fails if the block is missing, is a wildcard, sits below
+`/*`, if the standalone copy loses its attachment header, or if the app's own
 policy ever gains permission to talk to another host.
 
 **`tools/serve.mjs` had to learn about per-path blocks first**, and that ordering
@@ -221,7 +244,10 @@ header nobody has ever run.
 real cross-origin hosts over HTTPS — one sending `Access-Control-Allow-Origin`,
 one not, one missing — and asserts the three verdicts come out different. It is
 not in CI because making CI depend on `openssl` to test a diagnostic page is out
-of proportion; `npm run pages` holds the page itself there.
+of proportion; `npm run pages` and `npm run probe` hold the page itself there.
+**`--standalone` runs the SAME walk against the downloaded copy from `file://`**,
+because the route that cannot fail is worth nothing if nobody ever ran it. Both
+routes pass.
 
 **Nothing about fetching is built, and this changes none of that.** The app makes
 no request to any other host, the app's own policy still forbids it, there is no

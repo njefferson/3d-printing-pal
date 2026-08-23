@@ -199,7 +199,10 @@ async function showPolicy() {
       verdict.textContent = 'No policy at all, which is not what production sends. Results from here do not represent the deployed app.';
     } else {
       verdict.className = 'verdict is-no';
-      verdict.textContent = 'THIS IS THE APP\'S POLICY, NOT THE PROBE\'S. Every result below will be a refusal by this page, and none of them says anything about the sites being tested. The /probe.html block in _headers is not being applied.';
+      verdict.textContent = "THIS IS THE APP'S POLICY, NOT THE PROBE'S. Every result below would be a refusal by this page and would say nothing about the sites being tested. Use the standalone copy below instead — it runs from your disk, where no policy applies at all.";
+      // Only ever emphasised, never introduced: a route that appears when things
+      // go wrong is a route nobody has seen working.
+      document.getElementById('fallback')?.classList.add('is-urgent');
     }
   } catch (error) {
     box.textContent = `Could not read this page's own headers: ${error.message}`;

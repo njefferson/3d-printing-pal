@@ -190,3 +190,18 @@ footer {
   color: var(--text-3);
   font-size: 0.875rem;
 }
+
+/* The standalone offer. Always present, because a control that only appears on
+   failure is a control nobody has seen working — emphasised when the hosted page
+   has been served the wrong policy and the download is the only route left. */
+#fallback {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border-radius: var(--radius);
+  background: var(--surface);
+  border-left: 4px solid var(--rail);
+}
+#fallback.is-urgent { border-left-color: var(--danger); }
+#fallback a { display: inline-flex; align-items: center; text-decoration: none; }

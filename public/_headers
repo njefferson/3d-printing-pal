@@ -1,7 +1,7 @@
 # Security headers for print-tracker — Doctrine §16.6
 #
 # THIS FILE IS EXERCISED BY THE GATE, NOT JUST SHIPPED. tools/serve.mjs parses
-# the /* block below and sends the same headers, and tools/a11y.mjs boots the app
+# every block below and sends the same headers, and tools/a11y.mjs boots the app
 # through it and fails on any page error — so a Content-Security-Policy that
 # breaks the app goes red here rather than on a reader's device. A CSP written
 # and never run is a guess with a header's authority.
@@ -44,35 +44,52 @@
 # TLS for it. A header with lock-in semantics that cannot be tested from here is
 # worse than leaving it to the platform.
 
+# ---------------------------------------------------------------- the probe
+#
+# ONE PAGE, AND IT IS NOT THE APP. /probe.html answers a question the app cannot
+# answer about itself: given a picture's address, can this browser READ the bytes
+# or only display them? That is a fact about the other site's CORS headers, and
+# the only way to learn it is to try it against a real address.
+#
+# It cannot be asked under the app's policy — `img-src 'self' blob:` and
+# `connect-src 'self'` refuse the request before any code runs, so every answer
+# would be "no" and every "no" would be about US.
+#
+# WRITTEN ABOVE `/*`, AND THAT ORDER IS A BET RATHER THAN A FACT. Both blocks
+# match this path and both set the same header. It was first written BELOW, on the
+# reasoning that a later and more specific rule wins — and on the deployed site the
+# page was served the APP's policy. It said so, in words, rather than producing a
+# wall of failures that would have read as the internet refusing. So the observed
+# behaviour is that `/*` won, and the specific block is now first.
+#
+# WHICH IS WHY THE ANSWER NO LONGER DEPENDS ON IT. /probe-standalone.html is the
+# same probe with everything inlined, served as an attachment so it downloads
+# rather than opening: on a file:// page there is no Content-Security-Policy at
+# all and no header behaviour to be right about. If this block works the hosted
+# page is the convenient route; if it does not, the page says so and hands over
+# the file. Two routes, because one of them rests on something unverified.
+#
+# Everything else stays: script-src and style-src are still 'self', so the page
+# runs its own external file and nothing injected, and `default-src 'self'` still
+# governs every directive not named here. The page reads and writes nothing — it
+# does not touch the app's database and it stores no result.
+/probe.html
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' blob: data: https:; font-src 'self'; connect-src 'self' https:; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; object-src 'none'
+
+# DOWNLOADED, NEVER OPENED IN PLACE. Navigating to it would serve it under the
+# app's policy, where its inline script and inline style are both refused and it
+# renders as a broken page that still looks like the probe. As an attachment the
+# only way to run it is from disk, which is the one place no policy applies.
+#
+# This header is ADDITIVE — nothing else sets Content-Disposition — so unlike the
+# block above it does not depend on which rule wins.
+/probe-standalone.html
+  Content-Disposition: attachment; filename="print-tracker-probe.html"
+
+# ------------------------------------------------------------------- the app
 /*
   Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' blob:; font-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; object-src 'none'
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   X-Frame-Options: DENY
   Permissions-Policy: accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=(), interest-cohort=()
-
-# ONE PAGE, AND IT IS NOT THE APP. /probe.html exists to answer a question the app
-# cannot answer about itself: given a picture's address, can this browser actually
-# READ the bytes, or only display them? That is a fact about the other site's CORS
-# headers, and the only way to learn it is to try it on a real machine against a
-# real address.
-#
-# It cannot be asked under the policy above — `img-src 'self' blob:` and
-# `connect-src 'self'` refuse the request before any code runs, so every answer
-# would be "no" and every "no" would be about US. So this block, and ONLY these
-# two directives, are widened here.
-#
-# WRITTEN BELOW `/*` DELIBERATELY. Both blocks match this path and both set the
-# same header; the later one wins, on Cloudflare Pages and in tools/serve.mjs,
-# which merges in file order for exactly this reason.
-#
-# Everything else stays: script-src and style-src are still 'self', so the page
-# runs its own external file and nothing injected, and `default-src 'self'` still
-# governs every directive not named here. The page reads and writes nothing —
-# it does not touch the app's database, and it stores no result.
-#
-# THE PAGE PRINTS THE POLICY IT WAS ACTUALLY SERVED, at the top, from its own
-# response headers. If this block ever fails to apply, the probe says so in words
-# instead of reporting a wall of failures that look like the other site refusing.
-/probe.html
-  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' blob: data: https:; font-src 'self'; connect-src 'self' https:; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; object-src 'none'

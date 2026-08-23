@@ -142,11 +142,19 @@ jobs:
       - name: A pasted address becomes the right name
         run: npm run --silent fromurl
 
+      # probe-standalone.html is generated from probe.html/css/js and committed. It
+      # is the copy that runs from a DISK, where no policy applies and where nobody
+      # would think to check it against anything — so a stale one would measure
+      # something different from its source and never be found out.
+      - name: The standalone probe has not drifted from its source
+        run: npm run --silent probe
+
       # status.html and probe.html are served by this deploy and are not the app,
       # so nothing else here measures them: the a11y gate derives its surfaces from
       # index.html, and palette-check reads the palette file rather than either
-      # stylesheet, both of which are hand copies of it. This also holds the
-      # probe's widened policy to its own single path.
+      # stylesheet, both of which are hand copies of it. This also holds the probe's
+      # widened policy to its own single path, above /*, and the standalone copy to
+      # being served as an attachment.
       - name: The pages that are not the app — contrast, landmarks, policy, never cached
         run: npm run --silent pages
 

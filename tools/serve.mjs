@@ -55,9 +55,20 @@ export const BLOCKS = deployedBlocks();
 export const HEADERS = (BLOCKS.find((b) => b.path === '/*') || { headers: {} }).headers;
 
 /**
- * Every block whose path matches, merged in FILE ORDER so a later, more specific
- * block overrides the global one — which is how Cloudflare Pages resolves a header
- * named twice, and why the specific blocks are written below `/*` in that file.
+ * Every block whose path matches, and where two set the same header THE FIRST ONE
+ * WINS.
+ *
+ * THIS WAS WRITTEN THE OTHER WAY ROUND AND IT WAS WRONG. The reasoning was that a
+ * later, more specific rule overrides the global one, so `/probe.html` went below
+ * `/*` and this merged with later-wins. Locally that behaved exactly as intended.
+ * On the deployed site the probe page was served the APP's policy — so Cloudflare
+ * did not resolve it that way, and this file had been mimicking an assumption
+ * about the platform rather than the platform.
+ *
+ * That is the whole hazard of a local rig: it is only worth what its fidelity is
+ * worth, and a rig built on a guess reports the guess back to you with a passing
+ * grade. The specific blocks are now written FIRST in `_headers`, and this matches
+ * what production was observed to do rather than what would be tidy.
  *
  * Only the two forms actually used are supported — an exact path and a trailing
  * `*` — rather than a general glob. A matcher that quietly does not understand a
@@ -70,7 +81,10 @@ function headersFor(path) {
     const hit = pattern.endsWith('*')
       ? path.startsWith(pattern.slice(0, -1))
       : path === pattern;
-    if (hit) Object.assign(merged, block.headers);
+    if (!hit) continue;
+    for (const [name, value] of Object.entries(block.headers)) {
+      if (!(name in merged)) merged[name] = value;
+    }
   }
   return merged;
 }

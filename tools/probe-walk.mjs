@@ -26,11 +26,13 @@ import { createServer } from 'node:https';
 import { execFileSync } from 'node:child_process';
 import { readFileSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { serve } from './serve.mjs';
 import { makePng } from './png.mjs';
 
 const BROWSER = process.env.CHROMIUM_PATH || '/opt/pw-browsers/chromium';
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const scratch = mkdtempSync(join(tmpdir(), 'print-tracker-probe-'));
 const key = join(scratch, 'key.pem');
 const cert = join(scratch, 'cert.pem');
@@ -80,13 +82,23 @@ const context = await browser.newContext({ viewport: { width: 390, height: 900 }
 const page = await context.newPage();
 page.on('pageerror', (error) => failures.push(`the page threw: ${error}`));
 
-await page.goto(new URL('probe.html', url).href, { waitUntil: 'load' });
+// BOTH ROUTES, because the hosted one rests on a header rule that was already
+// wrong once. `file://` is the one that cannot fail: no policy applies there.
+const ROUTE = process.argv.includes('--standalone')
+  ? { name: 'standalone, from disk', href: `file://${join(ROOT, 'public/probe-standalone.html')}` }
+  : { name: 'hosted, under its own header', href: new URL('probe.html', url).href };
+
+await page.goto(ROUTE.href, { waitUntil: 'load' });
 await page.waitForTimeout(400);
 
 // It reads its own policy off its own response, so a wrong one is named rather
 // than silently turning every answer below into a refusal by us.
 const csp = (await page.textContent('#policy')).trim();
-if (!/img-src[^;]*https:/.test(csp) || !/connect-src[^;]*https:/.test(csp)) {
+if (ROUTE.name.startsWith('standalone')) {
+  // From disk it cannot read its own headers, and there are none to read. What
+  // matters is only that nothing refuses the requests below.
+  passes.push(`running ${ROUTE.name}, where no Content-Security-Policy applies at all`);
+} else if (!/img-src[^;]*https:/.test(csp) || !/connect-src[^;]*https:/.test(csp)) {
   failures.push(`the page was served the app's policy rather than its own: ${csp.slice(0, 90)}`);
 } else {
   passes.push('the page is running under its own widened policy, and says so from its own response headers');
@@ -134,4 +146,4 @@ if (failures.length) {
   console.error(`\nprobe walk: ${failures.length} failure(s).`);
   process.exit(1);
 }
-console.log('\nprobe walk: pass — the three answers are told apart, against real cross-origin hosts.');
+console.log(`\nprobe walk (${ROUTE.name}): pass — the three answers are told apart, against real cross-origin hosts.`);

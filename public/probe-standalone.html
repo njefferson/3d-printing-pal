@@ -1,0 +1,576 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>print-tracker — probe (standalone, runs from your disk)</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#1a1a1a" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#c4bcab" media="(prefers-color-scheme: light)">
+<style>
+/* print-tracker — the CORS probe
+ *
+ * Built on status.css's tokens rather than the app's stylesheet, for the same
+ * reason and with the same liability: these two pages are not the app, and
+ * loading the app's whole stylesheet for them would tie their layout to it. The
+ * palette gate reads palettes/3d-printing-pal.json rather than any stylesheet,
+ * so neither file is the source; if the palette moves, both move with it.
+ *
+ * tools/pages-check.mjs measures the colours here, because nothing else does.
+ */
+
+:root {
+  color-scheme: dark light;
+
+  --page: #1a1a1a;
+  --page-alt: #232323;
+  --surface: #3a3a3a;
+  --surface-raised: #414141;
+  --rail: rgba(255, 255, 255, 0.62);
+  --hairline: rgba(255, 255, 255, 0.17);
+
+  --text: #eaeaea;
+  --text-2: #d2d2d2;
+  --text-3: #c1c1c1;
+
+  --primary: #9fc2f5;
+  --wanted: #f0c674;
+  --fun: #8fd6a4;
+  --danger: #f2aecd;
+
+  --radius: 10px;
+  --tap: 44px;
+  --gap: 10px;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --page: #c4bcab;
+    --page-alt: #ccc4b3;
+    --surface: #eee6d6;
+    --surface-raised: #f4ecdd;
+    --rail: rgba(39, 33, 25, 0.68);
+    --hairline: rgba(39, 33, 25, 0.22);
+
+    --text: #272119;
+    --text-2: #363026;
+    --text-3: #4a4436;
+
+    --primary: #17458f;
+    --wanted: #63400a;
+    --fun: #14532d;
+    --danger: #7a1548;
+  }
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+
+body {
+  background: linear-gradient(180deg, var(--page-alt), var(--page));
+  color: var(--text);
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 1rem;
+  line-height: 1.55;
+  -webkit-text-size-adjust: 100%;
+  padding: 24px 16px 64px;
+}
+
+.page, main { display: flex; flex-direction: column; gap: 32px; }
+.page { max-width: 62rem; margin: 0 auto; }
+
+h1, h2, h3 { margin: 0; text-wrap: balance; }
+h1 { font-size: 1.75rem; font-weight: 700; letter-spacing: -0.02em; }
+h2 { font-size: 1.125rem; font-weight: 640; }
+h3 { font-size: 0.9375rem; font-weight: 640; }
+p { margin: 0; }
+a { color: var(--primary); }
+
+.eyebrow {
+  font-size: 0.75rem;
+  font-weight: 680;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+.lede { color: var(--text-2); }
+header { display: flex; flex-direction: column; gap: 6px; }
+section { display: flex; flex-direction: column; gap: 12px; }
+.note { color: var(--text-3); font-size: 0.875rem; }
+
+.card {
+  background: var(--surface-raised);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* An address is long, unbroken, and the thing you check first, so it wraps
+   anywhere rather than pushing the page sideways. */
+.mono, .result-url {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.8125rem;
+  overflow-wrap: anywhere;
+  color: var(--text-2);
+}
+.result-url { color: var(--text); }
+
+/* --------------------------------------------------------------- the field */
+.field { display: flex; flex-direction: column; gap: 6px; }
+label { font-weight: 620; font-size: 0.9375rem; }
+
+textarea {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.8125rem;
+  /* px, not rem: a text box is a target, and this one is also a viewport onto
+     what was typed. Type inside it still follows the reader's setting. */
+  min-height: 120px;
+  padding: 10px;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--rail);
+  border-radius: var(--radius);
+  resize: vertical;
+}
+
+.actions { display: flex; flex-wrap: wrap; gap: var(--gap); }
+
+.btn {
+  /* px for the floor, as everywhere: a finger does not get bigger when text
+     does, and a 44px floor written in rem doubles at 200% text. */
+  min-height: var(--tap);
+  min-width: var(--tap);
+  padding: 10px 16px;
+  font: inherit;
+  font-weight: 620;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--rail);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+.btn-primary { color: var(--primary); border-color: var(--primary); }
+.btn[disabled] { color: var(--text-3); cursor: default; }
+
+:focus-visible { outline: 3px solid var(--primary); outline-offset: 2px; border-radius: 4px; }
+
+/* -------------------------------------------------------------- the results */
+#results { display: flex; flex-direction: column; gap: 12px; }
+
+.line { font-size: 0.9375rem; color: var(--text-2); overflow-wrap: anywhere; }
+/* THE WORD CARRIES IT, NOT THE COLOUR. Every line already begins "yes" or "no";
+   the colour is a second signal for people who read colour and no signal at all
+   for people who do not, which is the only safe way round. */
+.line.is-yes b { color: var(--fun); }
+.line.is-no b { color: var(--wanted); }
+
+.verdict {
+  font-size: 0.9375rem;
+  font-weight: 620;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  background: var(--surface);
+  border-left: 4px solid var(--rail);
+}
+.verdict:empty { display: none; }
+.verdict.is-yes { border-left-color: var(--fun); }
+.verdict.is-no { border-left-color: var(--wanted); }
+.verdict.is-warn { border-left-color: var(--danger); }
+
+ul.list { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 12px; }
+ul.list li { display: flex; gap: 10px; }
+ul.list li::before {
+  content: "";
+  flex: 0 0 auto;
+  width: 14px;
+  height: 5px;
+  margin-top: 9px;
+  border-radius: 2px;
+  background: var(--text-3);
+}
+ul.list li span { color: var(--text-2); }
+ul.list li b { font-weight: 650; color: var(--text); }
+
+footer {
+  border-top: 1px solid var(--hairline);
+  padding-top: 16px;
+  color: var(--text-3);
+  font-size: 0.875rem;
+}
+
+/* The standalone offer. Always present, because a control that only appears on
+   failure is a control nobody has seen working — emphasised when the hosted page
+   has been served the wrong policy and the download is the only route left. */
+#fallback {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border-radius: var(--radius);
+  background: var(--surface);
+  border-left: 4px solid var(--rail);
+}
+#fallback.is-urgent { border-left-color: var(--danger); }
+#fallback a { display: inline-flex; align-items: center; text-decoration: none; }
+
+</style>
+</head>
+<body>
+
+<!--
+  GENERATED — DO NOT EDIT. Written by tools/render-probe.mjs from probe.html,
+  probe.css and probe.js. Edit those and run `npm run render:probe`; `npm run
+  probe` fails if this file has drifted from them.
+
+  This is the copy that runs from your DISK. Opening a file:// page applies no
+  Content-Security-Policy, so the measurement below never depends on a response
+  header being right — which is the one thing the hosted copy does depend on.
+-->
+
+<!--
+  A MEASUREMENT, NOT A FEATURE. It ships with the app and is not the app: nothing
+  links to it, the service worker keeps no copy of it, and it never touches the
+  app's database.
+
+  IT EXISTS BECAUSE THE ANSWER CANNOT BE REASONED OUT. Whether a picture's bytes
+  can be read from another site is a fact about that site's CORS headers, and it
+  differs per host, per CDN, and sometimes per bucket. Every previous answer here
+  was somebody's expectation, and one of them — that dragging a picture into the
+  app could not work — was confidently wrong and cost a feature that already
+  existed.
+-->
+
+<div class="page">
+
+  <header>
+    <p class="eyebrow">print-tracker · probe</p>
+    <h1>Can a picture's address be read?</h1>
+    <p class="lede">Paste picture addresses below and this reports, for each one, whether the
+      browser can DISPLAY it and whether it can READ ITS BYTES. Those are different questions and
+      only the second one decides whether the app could ever store a picture from a link.</p>
+    <p class="lede"><b>Running this contacts those sites from your machine</b> — that is the whole
+      point of it, and it is the same request the app would have to make. Nothing is stored,
+      nothing is sent anywhere else, and closing the page ends it.</p>
+  </header>
+
+  <main>
+
+  <section aria-labelledby="h-policy">
+    <h2 id="h-policy">The policy this page is running under</h2>
+    <p class="note">Read from this page's own response, not from what it expects to have been
+      sent. If this is the app's policy rather than the probe's, every result below would be a
+      refusal by <em>us</em> and would say nothing about the other site.</p>
+    <div class="card">
+      <p id="policy" class="mono">Reading…</p>
+      <p id="policy-verdict" class="verdict"></p>
+      <!-- THE ROUTE THAT CANNOT FAIL. The hosted page needs a per-path header to
+           override the app's policy, and the first attempt at that was written on
+           an assumption about how Cloudflare resolves two matching rules — it was
+           wrong, and the deployed page could measure nothing. A file:// page has
+           no policy at all, so this copy depends on no header being right.
+           `download` rather than a plain link, and _headers serves it as an
+           attachment too, because OPENING it here would put it back under the
+           policy it exists to escape. -->
+    </div>
+  </section>
+
+  <section aria-labelledby="h-input">
+    <h2 id="h-input">Addresses to try</h2>
+    <div class="card">
+      <div class="field">
+        <label for="urls">One address per line</label>
+        <textarea id="urls" rows="5" spellcheck="false" autocomplete="off"
+          aria-describedby="urls-hint"></textarea>
+        <p class="note" id="urls-hint">Use the address of the PICTURE itself, not the page it sits
+          on — right-click or long-press the image and copy its address.</p>
+      </div>
+      <div class="actions">
+        <button type="button" id="run" class="btn btn-primary">Test these addresses</button>
+        <button type="button" id="clear" class="btn">Clear results</button>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-results">
+    <h2 id="h-results">What happened</h2>
+    <p class="note" id="results-empty">Nothing tried yet.</p>
+    <!-- Announced, because the results arrive after a press and a sighted reader
+         sees them appear while a screen reader would otherwise hear nothing. -->
+    <div id="results" role="status" aria-live="polite"></div>
+  </section>
+
+  <section aria-labelledby="h-reading">
+    <h2 id="h-reading">How to read a result</h2>
+    <div class="card">
+      <ul class="list">
+        <li><span><b>Displays: yes — Bytes: yes.</b> That host permits a cross-origin read. The app
+          COULD fetch and store pictures from it, if that trade is made deliberately.</span></li>
+        <li><span><b>Displays: yes — Bytes: no.</b> The usual answer. The picture can be shown by
+          pointing at their server, which is hotlinking: it tells them every time your board is
+          drawn, breaks when their CDN moves, and shows nothing offline. It cannot be copied in,
+          so there is nothing to store.</span></li>
+        <li><span><b>Displays: no.</b> Wrong address, a host that refuses hotlinking outright, or
+          not an image. Check the address before concluding anything about CORS.</span></li>
+        <li><span><b>Refused by this page's own policy.</b> Named separately wherever it happens,
+          because it is the one failure that is about this app rather than about them.</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-cost">
+    <h2 id="h-cost">What a yes would cost, before anyone builds it</h2>
+    <div class="card">
+      <ul class="list">
+        <li><span><b>"Nothing is fetched, nothing is sent" stops being true.</b> That sentence is
+          in the app's own About screen and it is the thing the app is. Narrowing it is a product
+          decision, not a technical one.</span></li>
+        <li><span><b>That host learns your address, and when.</b> Every catalogued model becomes a
+          request from your machine to their server, which is a record of what you are printing
+          and when you looked.</span></li>
+        <li><span><b>It would be off unless switched on</b>, said plainly at the switch, with a way
+          to remove pictures already fetched. None of that is built.</span></li>
+        <li><span><b>It buys the picture and nothing else.</b> The name, the designer and the
+          description live on the PAGE, which a browser may not read cross-origin at all. A link
+          would still fill the title from the address, exactly as it does now.</span></li>
+      </ul>
+    </div>
+  </section>
+
+  </main>
+
+  <footer>
+    <p>A diagnostic. Not linked from the app, not indexed, and not cached by it. Its results are
+      about the sites you type in, on the machine you type them on.</p>
+  </footer>
+
+</div>
+
+<script>
+// The probe.
+//
+// THREE SEPARATE QUESTIONS PER ADDRESS, and keeping them apart is the whole value
+// of this. A single "did it work" answer is what leaves everyone guessing which
+// layer said no:
+//
+//   1. Does it DISPLAY?  A plain <img>. Needs only that the address is reachable
+//      and is an image. This is what hotlinking would use, and it is not enough.
+//   2. Can `fetch` READ it? Needs that host to send Access-Control-Allow-Origin.
+//   3. Can a CANVAS read it? An <img crossorigin="anonymous"> drawn to a canvas
+//      and read back. Needs the same header, and fails DIFFERENTLY — the canvas is
+//      tainted and the read throws, rather than the request being refused. Both
+//      are here because a host can satisfy one path and not the other, and being
+//      told only about `fetch` would close the question early.
+//
+// AND ONE ABOUT US: every Content-Security-Policy refusal is recorded and
+// attributed, because a refusal by our own policy looks exactly like the other
+// site saying no, and would be read as an answer about them.
+
+const $ = (sel) => document.querySelector(sel);
+
+const EXAMPLE = 'https://makerworld.bblmw.com/makerworld/model/USb4cd954e75f587/design/3ad2d89093fc967b.jpg?x-oss-process=image/resize,w_1000/format,webp';
+
+// Filled by the listener below and read when a result is built. A violation
+// arrives asynchronously and does not always name the element that caused it, so
+// this is matched on the blocked address rather than assumed.
+const violations = [];
+document.addEventListener('securitypolicyviolation', (event) => {
+  violations.push({
+    uri: String(event.blockedURI || ''),
+    directive: String(event.effectiveDirective || event.violatedDirective || ''),
+  });
+});
+
+function violationFor(url, directives) {
+  return violations.find((v) => {
+    if (!directives.some((d) => v.directive.startsWith(d))) return false;
+    // A blocked URI is often truncated to the origin, so both directions.
+    return url.startsWith(v.uri) || v.uri.startsWith(url) || url.includes(v.uri);
+  });
+}
+
+/** Bytes, in words a person reads rather than a raw count. */
+function size(bytes) {
+  if (bytes < 1024) return `${bytes} bytes`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+/** Question 1: does the browser display it at all? */
+function canDisplay(url) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    const done = (ok, note) => resolve({ ok, note, width: img.naturalWidth, height: img.naturalHeight });
+    img.onload = () => done(true, `${img.naturalWidth}×${img.naturalHeight}`);
+    img.onerror = () => done(false, 'the browser would not load it');
+    img.src = url;
+    // Nothing here is worth waiting on forever; a host that never answers is a
+    // "no" for this purpose and saying so beats a spinner that never stops.
+    setTimeout(() => done(false, 'no answer within 15 seconds'), 15000);
+  });
+}
+
+/** Question 2: can `fetch` read the bytes? */
+async function canFetch(url) {
+  try {
+    const response = await fetch(url, { mode: 'cors', credentials: 'omit' });
+    if (!response.ok) return { ok: false, note: `the server answered ${response.status}` };
+    const blob = await response.blob();
+    return { ok: true, note: `${size(blob.size)}, ${blob.type || 'type not stated'}` };
+  } catch (error) {
+    return { ok: false, note: String(error && error.message ? error.message : error) };
+  }
+}
+
+/** Question 3: can a canvas read it back? */
+function canCanvas(url) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    let settled = false;
+    const done = (result) => { if (!settled) { settled = true; resolve(result); } };
+
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        canvas.getContext('2d').drawImage(img, 0, 0);
+        canvas.toBlob((blob) => {
+          if (!blob) return done({ ok: false, note: 'the canvas produced nothing' });
+          done({ ok: true, note: `${size(blob.size)}, re-encoded as ${blob.type}` });
+        }, 'image/webp');
+      } catch (error) {
+        // The canvas is tainted: the picture drew, and reading it back is refused.
+        done({ ok: false, note: `drawn but not readable — ${error && error.name ? error.name : 'blocked'}` });
+      }
+    };
+    // With crossOrigin set, a host that sends no CORS header fails to LOAD at all,
+    // which is a different message from the plain <img> above succeeding. Saying
+    // both is what tells you it is CORS rather than the address.
+    img.onerror = () => done({ ok: false, note: 'refused the cross-origin request' });
+    img.src = url;
+    setTimeout(() => done({ ok: false, note: 'no answer within 15 seconds' }), 15000);
+  });
+}
+
+function row(label, result, blocked) {
+  const line = document.createElement('p');
+  line.className = `line ${result.ok ? 'is-yes' : 'is-no'}`;
+  const strong = document.createElement('b');
+  strong.textContent = `${label}: ${result.ok ? 'yes' : 'no'}`;
+  line.append(strong);
+  const rest = document.createElement('span');
+  rest.textContent = blocked
+    ? ` — refused by THIS PAGE'S policy (${blocked.directive}), so this says nothing about that site`
+    : (result.note ? ` — ${result.note}` : '');
+  line.append(rest);
+  return line;
+}
+
+async function test(url) {
+  const card = document.createElement('div');
+  card.className = 'card result';
+
+  const heading = document.createElement('h3');
+  heading.className = 'result-url';
+  heading.textContent = url;
+  card.append(heading);
+
+  const pending = document.createElement('p');
+  pending.className = 'note';
+  pending.textContent = 'Trying…';
+  card.append(pending);
+  $('#results').append(card);
+
+  const display = await canDisplay(url);
+  const fetched = await canFetch(url);
+  const canvas = await canCanvas(url);
+  pending.remove();
+
+  const imgBlocked = violationFor(url, ['img-src']);
+  const connBlocked = violationFor(url, ['connect-src']);
+
+  card.append(row('Displays', display, imgBlocked));
+  card.append(row('Bytes, by fetch', fetched, connBlocked));
+  card.append(row('Bytes, by canvas', canvas, imgBlocked));
+
+  const readable = fetched.ok || canvas.ok;
+  const verdict = document.createElement('p');
+  verdict.className = `verdict ${readable ? 'is-yes' : 'is-no'}`;
+  if (imgBlocked || connBlocked) {
+    verdict.textContent = "This page's own policy refused the request, so nothing here is an answer about that site. The header block for /probe.html did not apply.";
+    verdict.className = 'verdict is-warn';
+  } else if (readable) {
+    verdict.textContent = 'THE BYTES CAN BE READ. This host permits a cross-origin read, so the app could copy a picture in from an address like this — if that trade is made on purpose.';
+  } else if (display.ok) {
+    verdict.textContent = 'DISPLAY ONLY. The picture can be pointed at but not copied in, so there is nothing the app could store. Pointing at it is hotlinking, which this app refuses.';
+  } else {
+    verdict.textContent = 'NOTHING CAME BACK. Check the address is the picture itself and not the page it sits on, before concluding anything about that host.';
+  }
+  card.append(verdict);
+}
+
+async function run() {
+  const button = $('#run');
+  const urls = $('#urls').value.split('\n').map((s) => s.trim()).filter(Boolean);
+  if (!urls.length) return;
+
+  $('#results-empty').hidden = true;
+  button.disabled = true;
+  button.textContent = 'Trying…';
+  violations.length = 0;
+  // One at a time. In parallel the security-policy violations arrive interleaved
+  // and cannot be matched back to the address that caused them, which is the one
+  // thing this must not get wrong.
+  for (const url of urls) await test(url);
+  button.disabled = false;
+  button.textContent = 'Test these addresses';
+}
+
+async function showPolicy() {
+  const box = $('#policy');
+  const verdict = $('#policy-verdict');
+  try {
+    // Same-origin, so allowed under either policy. Reading the header off this
+    // page's own response is the only way to know which one was served.
+    const response = await fetch(location.href, { cache: 'no-store' });
+    const csp = response.headers.get('content-security-policy') || '';
+    box.textContent = csp || 'No Content-Security-Policy was sent at all.';
+
+    const imgOpen = /img-src[^;]*https:/.test(csp);
+    const connectOpen = /connect-src[^;]*https:/.test(csp);
+    if (imgOpen && connectOpen) {
+      verdict.className = 'verdict is-yes';
+      verdict.textContent = 'This is the probe\'s own policy: pictures and requests to other sites are permitted here, so a refusal below is theirs rather than ours.';
+    } else if (!csp) {
+      verdict.className = 'verdict is-warn';
+      verdict.textContent = 'No policy at all, which is not what production sends. Results from here do not represent the deployed app.';
+    } else {
+      verdict.className = 'verdict is-no';
+      verdict.textContent = "THIS IS THE APP'S POLICY, NOT THE PROBE'S. Every result below would be a refusal by this page and would say nothing about the sites being tested. Use the standalone copy below instead — it runs from your disk, where no policy applies at all.";
+      // Only ever emphasised, never introduced: a route that appears when things
+      // go wrong is a route nobody has seen working.
+      document.getElementById('fallback')?.classList.add('is-urgent');
+    }
+  } catch (error) {
+    box.textContent = `Could not read this page's own headers: ${error.message}`;
+    verdict.className = 'verdict is-warn';
+    verdict.textContent = 'Unknown policy. Treat every result below as unexplained.';
+  }
+}
+
+$('#urls').value = EXAMPLE;
+$('#run').addEventListener('click', run);
+$('#clear').addEventListener('click', () => {
+  $('#results').replaceChildren();
+  $('#results-empty').hidden = false;
+  violations.length = 0;
+});
+showPolicy();
+
+</script>
+</body>
+</html>

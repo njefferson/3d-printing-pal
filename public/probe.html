@@ -48,6 +48,20 @@
     <div class="card">
       <p id="policy" class="mono">Reading…</p>
       <p id="policy-verdict" class="verdict"></p>
+      <!-- THE ROUTE THAT CANNOT FAIL. The hosted page needs a per-path header to
+           override the app's policy, and the first attempt at that was written on
+           an assumption about how Cloudflare resolves two matching rules — it was
+           wrong, and the deployed page could measure nothing. A file:// page has
+           no policy at all, so this copy depends on no header being right.
+           `download` rather than a plain link, and _headers serves it as an
+           attachment too, because OPENING it here would put it back under the
+           policy it exists to escape. -->
+      <div id="fallback">
+        <p class="note">Runs from your disk instead, where no policy applies. Save it, then open
+          the saved file — this is the copy to use if the verdict above is red.</p>
+        <p><a class="btn" id="fallback-link" href="./probe-standalone.html"
+              download="print-tracker-probe.html">Download the standalone probe</a></p>
+      </div>
     </div>
   </section>
 

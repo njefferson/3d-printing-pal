@@ -64,7 +64,7 @@ const PAGES = [
     file: 'probe.html',
     label: 'probe',
     script: true,
-    files: ['/probe.html', '/probe.css', '/probe.js'],
+    files: ['/probe.html', '/probe.css', '/probe.js', '/probe-standalone.html'],
     ownPolicy: true,
   },
 ];
@@ -124,16 +124,39 @@ function sourceChecks() {
         pass(`${page.label}: its policy is scoped to /${page.file} exactly`);
       }
 
-      const global = headers.slice(headers.indexOf('/*'), headers.indexOf(`/${page.file}`));
-      if (/img-src[^;\n]*https:/.test(global) || /connect-src[^;\n]*https:/.test(global)) {
-        fail("the APP's own policy now permits requests to other hosts — \"nothing is fetched\" is the thing this app is");
+      // The app's own block, read as its own lines rather than by slicing between
+      // two markers. The slice was written when this block sat below `/*`, and
+      // once the order changed it would have measured an empty string and passed.
+      const lines = headers.split('\n');
+      const appAt = lines.findIndex((l) => l.trim() === '/*');
+      const appCsp = appAt === -1 ? '' : (lines.slice(appAt + 1).find((l) => l.trim().startsWith('Content-Security-Policy')) || '');
+      if (!appCsp) {
+        fail("could not find the app's own Content-Security-Policy under /*, so nothing was checked about it");
+      } else if (/img-src[^;]*https:/.test(appCsp) || /connect-src[^;]*https:/.test(appCsp)) {
+        fail('the APP\'s own policy now permits requests to other hosts — "nothing is fetched" is the thing this app is');
       } else {
         pass("the app's own policy still permits no request to any other host");
       }
 
-      // Below `/*`, because both match and the later one is the one that wins.
-      if (headers.indexOf(`/${page.file}`) < headers.indexOf('/*')) {
-        fail(`the /${page.file} block is written ABOVE /*, so the global policy overrides it`);
+      // ABOVE `/*`, and that is a correction rather than a preference. It was
+      // written below on the reasoning that a later, more specific rule wins; the
+      // deployed page was then served the APP's policy and could measure nothing.
+      // The observed behaviour is that the first match wins, and tools/serve.mjs
+      // was changed to match rather than to keep flattering the assumption.
+      const ownAt = lines.findIndex((l) => l.trim() === `/${page.file}`);
+      if (ownAt === -1 || appAt === -1) {
+        fail(`_headers is missing either /${page.file} or /*, so their order cannot be checked`);
+      } else if (ownAt > appAt) {
+        fail(`the /${page.file} block is written BELOW /*, and on the deployed site the global block won — the page would be served the app's policy and could measure nothing`);
+      } else {
+        pass(`${page.label}: its block is above /*, where the deployed site was observed to take it`);
+      }
+
+      // And the route that depends on none of that.
+      if (!headers.includes('/probe-standalone.html') || !/Content-Disposition:\s*attachment/.test(headers)) {
+        fail("probe-standalone.html has no `Content-Disposition: attachment` rule, so navigating to it would serve it under the app's policy as a broken page that still looks like the probe");
+      } else {
+        pass('the standalone copy is served as an attachment, so the only way to run it is from disk');
       }
     }
   }
