@@ -36,7 +36,30 @@ permissions:
 
 jobs:
   deploy:
+    name: Deploy
     runs-on: ubuntu-latest
+
+    # NAMED ENVIRONMENTS, so the production token can stop being reachable from
+    # every trigger this workflow has. zizmor `secrets-outside-env`, twice.
+    #
+    # WHAT THIS LINE DOES ON ITS OWN: almost nothing. It labels the job and lets
+    # GitHub scope secrets and rules to `production` — but while the Cloudflare
+    # secrets are REPO secrets they resolve here regardless, so the narrowing only
+    # exists once they are moved into the environment. That half is a GitHub
+    # settings step the session token cannot perform (Doctrine §10), so this is
+    # written and waiting rather than done.
+    #
+    # The expression is what keeps the two apart: a push to `staging` runs in the
+    # `staging` environment and can never reach a secret held by `production`.
+    # Once the move happens, a compromise that gets a commit onto `staging` still
+    # cannot deploy to the live site.
+    #
+    # A protection rule on `production` will PAUSE this job until it is approved.
+    # That is a real behaviour change and is the owner's choice, not a default to
+    # inherit — a branch restriction alone gives most of the benefit with no
+    # waiting.
+    environment: ${{ github.ref_name == 'main' && 'production' || 'staging' }}
+
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

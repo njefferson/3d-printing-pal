@@ -28,6 +28,8 @@
     "quotes": "node ../noahjefferson/quote-check.mjs --repo .",
     "guard": "node ../noahjefferson/branch-guard.mjs --repo . --artefact",
     "pins": "node ../noahjefferson/pin-check.mjs --repo .",
+    "//audit": "CI only, and declared in tools/gates-parity.mjs CI_ONLY. Needs the network and npm's advisory database; every gate in the check chain runs offline. It also goes red with no commit, which is exactly what it is for and exactly wrong for a pre-push chain.",
+    "audit": "npm audit",
     "pwa": "node ../noahjefferson/pwa-check.mjs --repo .",
     "palette": "node ../noahjefferson/palette-check.mjs palettes/3d-printing-pal.json",
     "handoff": "node ../noahjefferson/handoff-check.mjs --repo .",

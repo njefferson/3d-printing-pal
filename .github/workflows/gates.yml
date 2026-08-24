@@ -28,6 +28,7 @@ permissions:
 
 jobs:
   gates:
+    name: Gates
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -105,6 +106,24 @@ jobs:
 
       - name: npm hygiene
         run: node .hub/pin-check.mjs --repo .
+
+      # SECURITY.md Part 1 has listed `npm audit` as a check that runs
+      # automatically since it was written, and in this repo it ran nowhere at
+      # all — found by going to verify the claim rather than by anything failing.
+      #
+      # IT MATTERS MORE HERE THAN THE DEPENDENCY COUNT SUGGESTS. The app ships
+      # zero runtime dependencies; every package in this tree is a dev tool. That
+      # is not a reason to care less — those tools execute on a runner beside a
+      # live Cloudflare token, which is threat #2 in the hub's threat model, and
+      # the deploy job is one workflow away.
+      #
+      # CI only, and declared in tools/gates-parity.mjs CI_ONLY: it needs the
+      # network and npm's advisory database, while every gate in the local chain
+      # runs offline. It can also go red with no commit, which is the point of it
+      # and the wrong behaviour for a pre-push chain.
+      - name: Dependencies — nothing known-vulnerable in the tree
+        if: ${{ !cancelled() }}
+        run: npm run --silent audit
 
       - name: PWA — a new version waits and the reader is told
         run: node .hub/pwa-check.mjs --repo .
@@ -189,6 +208,7 @@ jobs:
   # own, so every app is audited by the same build and one Dependabot bump moves
   # all of them.
   security:
+    name: Workflow security
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

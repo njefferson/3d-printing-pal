@@ -30,10 +30,12 @@ const LOCAL_ONLY = {
 };
 
 // Gates that run in CI as an npm script and are NOT in the chain, same rule.
-// Empty on purpose: `guard` looks like it belongs here and does not, because CI
-// invokes it as `node .hub/branch-guard.mjs --artefact` rather than through npm,
-// and the chain does not run it at all.
-const CI_ONLY = {};
+// `guard` looks like it belongs here and does not, because CI invokes it as
+// `node .hub/branch-guard.mjs --artefact` rather than through npm, and the chain
+// does not run it at all.
+const CI_ONLY = {
+  audit: 'needs the network and npm\'s advisory database, and every other gate in the chain runs OFFLINE — `npm run check` on a train must not fail because a registry is unreachable. It also goes red without any commit, which is the point of it and is wrong for a pre-push chain.',
+};
 
 const pkg = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8'));
 const workflow = readFileSync(join(ROOT, WORKFLOW), 'utf8');
