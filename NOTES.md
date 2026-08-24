@@ -1151,15 +1151,30 @@ promotes. The order is:
 - wait ONCE, then read both `main` deploys.
 
 **WHAT THE SECOND PUSH CAN DO TO THE FIRST, and it must be reported rather than
-absorbed.** The deploy workflow uses `concurrency` with `cancel-in-progress`, so a
-record commit pushed while the release's production deploy is still running can
-CANCEL it. That is not a failure — the record commit's tree contains the release,
-so what reaches production is the same app either way — but it changes what the
-evidence is. A cancelled run measures nothing and is not red either, which is one
-of the four ways a run lies (below). So when the release SHA's deploy is
-cancelled, **say so, and read the record SHA's deploy instead**, naming which SHA
-the log belongs to and that the release commit is its ancestor. Never quote a
-cancelled run's URL as though the release deployed.
+absorbed.** BOTH workflows use `concurrency` with `cancel-in-progress`, so a
+record commit pushed while the release's runs are still going can cancel EITHER
+of them — and the two consequences are not the same size. This paragraph was
+written naming only the deploy, and the first real instance was the other one, on
+the very next release: Gates for `350a3ab` on `main` came back `cancelled` while
+all three production deploys completed. **A hazard note that names one of two
+workflows will be read as covering the case it does not.**
+
+- **A cancelled GATES run on `main` costs nothing, and the reason has to be
+  stated or it reads as a shrug.** That exact commit was already measured in full
+  on `staging` — the same tree, the same 28 gate steps and 5 security steps, read
+  one at a time before the promote. The `main` run is a re-measurement of a tree
+  that has already passed. Say which staging run carries the evidence.
+- **A cancelled DEPLOY is different, and is the one to actually check.** If the
+  release's production deploy is cancelled, nothing has reached production for
+  that SHA. The record commit's deploy usually covers it — its tree contains the
+  release — so read THAT deploy and say plainly which SHA the log belongs to and
+  that the release is its ancestor. If the record's deploy was also cancelled,
+  **production is stale and the release has not shipped**: push again, or re-run,
+  and read it.
+
+A cancelled run measures nothing and is not red either, which is one of the four
+ways a run lies (below). Never quote a cancelled run's URL as though it were
+evidence of anything.
 
 The staging wait stays. The saving is one wait per release, not two.
 
