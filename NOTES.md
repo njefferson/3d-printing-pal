@@ -1108,7 +1108,9 @@ these.
 - **What it cannot do now**, above — the entries that say *cannot* are the
   load-bearing ones, because *cannot* is what stops the next session building the
   thing. It still said the Move button could not reorder within a column.
-- **The staged candidate** and **Shipped to production**, below.
+- **The staged candidate** and **Shipped to production**, below. Both are part of
+  the record commit, which is pushed straight after the promote rather than after
+  a wait — see **Promoting: two waits, not three**.
 - **`public/probe.html`** — the CORS probe. Hand-maintained and deployed with the
   app. If fetching is ever built or ruled out for good, this page's own "what a yes
   would cost" list is a claim about a decision that has since been made.
@@ -1122,6 +1124,44 @@ these.
 Both stale entries were found by a later feature happening to touch the same file.
 Nothing looked for them and nothing would have, and the next thing that would have
 used them is a plan. Hub LESSONS §122, and §120 for what that plan costs.
+
+---
+
+## Promoting: two waits, not three
+
+**A release costs a session real waiting, and the waiting is worth counting.**
+There is no signal from Cloudflare that reaches a session, so every deploy is
+sleep-then-read. Three deploys per release at roughly one hundred seconds each is
+five minutes of a session sitting still, which is time the owner is paying for and
+watching.
+
+**The record commit is pushed IMMEDIATELY after the promote, and both are read in
+one pass.** It cannot be folded into the release commit — `branch-state-check`
+compares the tree against `origin/main`, so a tree claiming "1.2.0 is live" fails
+the guard until 1.2.0 actually is. But nothing requires a wait *between* the two
+promotes. The order is:
+
+- push the release to `staging`, wait once, read the gates and the staging deploy
+  by step. **This wait is load-bearing** — the owner tests on staging, and
+  promoting an unverified candidate is the thing the branch model exists to stop.
+- promote to `main`. Do not wait.
+- write the record commit — `public/status.html` and this file's staged-candidate
+  paragraph — push it to `staging`, promote it to `main`. It passes its guard
+  because `origin/main` now carries the release.
+- wait ONCE, then read both `main` deploys.
+
+**WHAT THE SECOND PUSH CAN DO TO THE FIRST, and it must be reported rather than
+absorbed.** The deploy workflow uses `concurrency` with `cancel-in-progress`, so a
+record commit pushed while the release's production deploy is still running can
+CANCEL it. That is not a failure — the record commit's tree contains the release,
+so what reaches production is the same app either way — but it changes what the
+evidence is. A cancelled run measures nothing and is not red either, which is one
+of the four ways a run lies (below). So when the release SHA's deploy is
+cancelled, **say so, and read the record SHA's deploy instead**, naming which SHA
+the log belongs to and that the release commit is its ancestor. Never quote a
+cancelled run's URL as though the release deployed.
+
+The staging wait stays. The saving is one wait per release, not two.
 
 ---
 
