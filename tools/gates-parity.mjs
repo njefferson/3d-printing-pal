@@ -52,6 +52,28 @@ if (!chain.length) {
 const ciScripts = new Set([...workflow.matchAll(/npm run --silent ([\w:.-]+)/g)].map((m) => m[1]));
 const ciDirect = new Set([...workflow.matchAll(/node \.hub\/([\w./-]+\.mjs)/g)].map((m) => m[1]));
 
+// AND THE ONES CI NO LONGER SPELLS OUT. The hub's gates used to be a dozen
+// `node .hub/x.mjs` steps in this file; they are now one `uses:` of the hub's
+// reusable workflow, so scanning for the old spelling would report every hub
+// gate as "in the chain and not in CI" — a parity check going blind in exactly
+// the way its own header says is worse than being absent.
+//
+// The unconditional gates come with the call. The rest are conditional on an
+// input, so each is credited only when this repo actually passes the flag —
+// which keeps this file honest about `pwa: false` somewhere meaning pwa-check
+// is genuinely not running.
+const hubCall = /uses:\s*njefferson\/noahjefferson\/\.github\/workflows\/hub-gates\.yml@[0-9a-f]{40}([\s\S]*?)(?=\n  \w|\n\S|$)/.exec(workflow);
+if (hubCall) {
+  for (const f of ['privacy-check.mjs', 'quote-check.mjs', 'docs-check.mjs',
+                   'pin-check.mjs', 'branch-guard.mjs']) ciDirect.add(f);
+  const w = hubCall[1];
+  if (/\bthird-person:\s*false\b/.test(w) === false) ciDirect.add('third-person-check.mjs');
+  if (/\bpwa:\s*true\b/.test(w)) ciDirect.add('pwa-check.mjs');
+  if (/\bmirror:\s*true\b/.test(w)) ciDirect.add('privacy-mirror-check.mjs');
+  if (/\bpalette-path:\s*\S/.test(w)) ciDirect.add('palette-check.mjs');
+  if (/\btextsize-paths:\s*\S/.test(w)) ciDirect.add('scripts/check-textsize.mjs');
+}
+
 /** The hub file a chain entry invokes, if it invokes one. */
 function hubFile(name) {
   const body = pkg.scripts[name] || '';

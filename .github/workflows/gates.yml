@@ -27,31 +27,34 @@ permissions:
   contents: read
 
 jobs:
+  # EVERY HUB GATE, CALLED RATHER THAN COPIED.
+  #
+  # This repo is the reason the shared wiring exists. It carried TWO hub pins at
+  # TWO DIFFERENT COMMITS — one for the gates job, one for the workflow-security
+  # job — and nothing anywhere said why, or which of them was right. Both are
+  # gone. The pin below is the only one, and the hub runs its gates from the ref
+  # it reads off that line, so the gates and the wiring cannot be two versions.
+  #
+  # The comment that used to sit here is worth keeping in a sentence: a step
+  # running a hub gate had to move the pin IN THE SAME COMMIT, or it was checked
+  # out at a commit from before that gate existed and could only say
+  # `Cannot find module` — which is how the third-person step came to run
+  # nowhere while every gate after it was skipped. Calling instead of copying is
+  # what makes that impossible rather than merely written down.
+  hub-gates:
+    uses: njefferson/noahjefferson/.github/workflows/hub-gates.yml@1de7828224ca881480deb5980e362bfb949eb682
+    with:
+      pwa: true
+      zizmor: true
+      palette-path: palettes/3d-printing-pal.json
+      textsize-paths: public/styles.css public/index.html
+
   gates:
     name: Gates
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          persist-credentials: false
-
-      # The doctrine's canonical gates. Pinned to a commit that exists on the
-      # hub's default branch: a cross-repo gate depends on the OTHER repo's
-      # published history, not on anybody's working copy.
-      #
-      # ADDING A STEP THAT RUNS A HUB GATE MEANS MOVING THIS PIN IN THE SAME
-      # COMMIT. The third-person step was added against a pin from before that
-      # gate existed, so it could only ever say `Cannot find module` — and it
-      # failed having been watched passing locally, where the hub clone is at its
-      # own HEAD, which is the one place it proves nothing about CI. Every step
-      # after it was SKIPPED, and Deploy is a separate workflow, so the candidate
-      # deployed measured by three gates out of eighteen.
-      - name: Check out the hub (canonical gates)
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          repository: njefferson/noahjefferson
-          ref: 61a3f9a3408e7aa679a7400fc5daf662b41869f9
-          path: .hub
           persist-credentials: false
 
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
@@ -72,67 +75,14 @@ jobs:
       - name: Install the browser the browser-driven gates need
         run: npx --no-install playwright-core install --with-deps chromium
 
-      # ---------------------------------------------------------------- hub gates
-      - name: Privacy — nothing personal about the owner lands in any repo
-        run: node .hub/privacy-check.mjs --repo .
-
-      # THE SECOND HALF OF THE SAME RULE. privacy-check.mjs anchors every pattern
-      # on the owner's name or role, so a verbatim sentence of somebody's speech
-      # carries neither and passes it. This holds the other half: every set-apart
-      # quotation is declared, and a quotation of the owner is never declarable.
-      - name: Every set-apart quotation says whose words it is
-        if: ${{ !cancelled() }}
-        run: node .hub/quote-check.mjs --repo .
-
-      # THE SAME RULE'S THIRD HALF. privacy-check anchors on the owner's name and
-      # quote-check finds set-apart quotations; neither can see ordinary prose that
-      # refers to the owner in the third person. This repo had nine such lines with
-      # both of those green.
-      - name: Prose about the owner is written in the third person
-        if: ${{ !cancelled() }}
-        run: node .hub/third-person-check.mjs --repo .
-
-      # --artefact, NEVER the plain check: that also asserts .git/hooks/pre-commit
-      # is installed and current, which is a fact about ONE CLONE, and
-      # actions/checkout leaves .git/hooks empty by definition. The plain spelling
-      # can never hold on a runner. What CI can check is the tracked artefact
-      # against what .branch-guard declares.
-      - name: The commit guard is the one that was declared
-        if: ${{ !cancelled() }}
-        run: node .hub/branch-guard.mjs --repo . --artefact
-
-      - name: Docs — no tables or grids anywhere the owner reads
-        run: node .hub/docs-check.mjs .
-
-      - name: npm hygiene
-        run: node .hub/pin-check.mjs --repo .
-
-      # SECURITY.md Part 1 has listed `npm audit` as a check that runs
-      # automatically since it was written, and in this repo it ran nowhere at
-      # all — found by going to verify the claim rather than by anything failing.
-      #
-      # IT MATTERS MORE HERE THAN THE DEPENDENCY COUNT SUGGESTS. The app ships
-      # zero runtime dependencies; every package in this tree is a dev tool. That
-      # is not a reason to care less — those tools execute on a runner beside a
-      # live Cloudflare token, which is threat #2 in the hub's threat model, and
-      # the deploy job is one workflow away.
-      #
-      # CI only, and declared in tools/gates-parity.mjs CI_ONLY: it needs the
-      # network and npm's advisory database, while every gate in the local chain
-      # runs offline. It can also go red with no commit, which is the point of it
-      # and the wrong behaviour for a pre-push chain.
+      # NOT A HUB GATE, so it stayed behind when the rest of this block became a
+      # call. It needs the network and npm's advisory database, while every gate
+      # in the local chain runs offline, and it can go red with no commit at all
+      # — which is the point of it and the wrong behaviour for a pre-push chain.
+      # Declared in tools/gates-parity.mjs CI_ONLY for exactly that reason.
       - name: Dependencies — nothing known-vulnerable in the tree
         if: ${{ !cancelled() }}
         run: npm run --silent audit
-
-      - name: PWA — a new version waits and the reader is told
-        run: node .hub/pwa-check.mjs --repo .
-
-      - name: Palette — the colour floors
-        run: node .hub/palette-check.mjs palettes/3d-printing-pal.json
-
-      - name: Text size — type follows the reader's setting
-        run: node .hub/scripts/check-textsize.mjs public/styles.css public/index.html
 
       # ------------------------------------------------------------ this repo's
       # FIRST, because it is the one that says whether the rest of this list is
@@ -202,36 +152,3 @@ jobs:
       # mocked registration proves the mock works and nothing else.
       - name: Stale app and offline
         run: npm run --silent update
-
-  # Workflow security is a maintained tool's job, not a bespoke gate's. zizmor is
-  # installed from the HUB's canonical requirements file rather than a pin of our
-  # own, so every app is audited by the same build and one Dependabot bump moves
-  # all of them.
-  security:
-    name: Workflow security
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      - name: Check out the hub (canonical zizmor pin)
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          repository: njefferson/noahjefferson
-          ref: 61a3f9a3408e7aa679a7400fc5daf662b41869f9
-          path: .hub
-          persist-credentials: false
-
-      - name: Install zizmor, pinned by version and hash
-        run: |
-          python3 -m venv "$RUNNER_TEMP/zizmor"
-          "$RUNNER_TEMP/zizmor/bin/pip" install --quiet --only-binary=:all: \
-            --require-hashes -r .hub/.github/requirements-ci.txt
-
-      # --strict-collection is not the default and is load-bearing: without it a
-      # workflow with a YAML error is logged at WARN, SKIPPED, and the run still
-      # exits 0 printing "No findings to report. Good job!" — so the file most
-      # likely to be wrong is the one excused.
-      - name: Audit the workflows
-        run: "$RUNNER_TEMP/zizmor/bin/zizmor --offline --strict-collection .github/workflows/"
