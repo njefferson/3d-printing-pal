@@ -46,23 +46,13 @@ jobs:
     with:
       pwa: true
       zizmor: true
-      # palette-path IS DELIBERATELY ABSENT AND IT IS A DEBT, NOT A SETTING.
-      #
-      # This repo's palette passed the hub's colour floors at the OLD pin and
-      # fails them at this one. The hub's floors tightened — PALETTES.md §1 and
-      # §7b both moved, which is drift `doctrine-sync` has been reporting for
-      # this repo and nobody has reconciled. Four hard-floor failures, all the
-      # same shape, text on an accent-tinted surface:
-      #
-      #   night  text-3 on accent-tinted surface2   4.22
-      #   night  text-2 on accent-tinted surface3   4.58
-      #   night  text-3 on accent-tinted surface3   3.84
-      #   day    text-3 on accent-tinted page       4.34
-      #
-      # Clearing them is a change to the colours a reader sees, which is the
-      # owner's taste and not a wiring commit's to make. Recorded in the hub's
-      # REPOS.md as owed. `npm run palette` reproduces it from a session with
-      # the hub checked out beside this repo.
+      # BACK ON as of 2026-08-30. It was off because this palette failed four of
+      # the hub's colour floors — which turned out not to be this app's doing at
+      # all: the file was Instrument verbatim, and the FAMILY had been failing
+      # since the accent-tint check widened on 2026-08-25. Fixed in the hub,
+      # tracked here, and the CSS brought back into line with the file that
+      # actually gets measured.
+      palette-path: palettes/3d-printing-pal.json
       textsize-paths: public/styles.css public/index.html
 
   gates:

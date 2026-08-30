@@ -13,8 +13,8 @@
     "hairline": "rgba(255,255,255,.17)",
     "text": [
       "#eaeaea",
-      "#d2d2d2",
-      "#c1c1c1"
+      "#d9d9d9",
+      "#c9c9c9"
     ],
     "accents": {
       "primary": "#9fc2f5",
@@ -23,7 +23,7 @@
       "danger": "#f2aecd",
       "ordered": "#7fd8e0"
     },
-    "accentSoftAlpha": 0.15
+    "accentSoftAlpha": 0.08
   },
   "day": {
     "kind": "app",
@@ -39,7 +39,7 @@
     "text": [
       "#272119",
       "#363026",
-      "#4a4436"
+      "#464032"
     ],
     "accents": {
       "primary": "#17458f",
@@ -48,6 +48,6 @@
       "danger": "#7a1548",
       "ordered": "#063036"
     },
-    "accentSoftAlpha": 0.12
+    "accentSoftAlpha": 0.1
   }
 }

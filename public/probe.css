@@ -20,8 +20,8 @@
   --hairline: rgba(255, 255, 255, 0.17);
 
   --text: #eaeaea;
-  --text-2: #d2d2d2;
-  --text-3: #c1c1c1;
+  --text-2: #d9d9d9;
+  --text-3: #c9c9c9;
 
   --primary: #9fc2f5;
   --wanted: #f0c674;
@@ -44,7 +44,7 @@
 
     --text: #272119;
     --text-2: #363026;
-    --text-3: #4a4436;
+    --text-3: #464032;
 
     --primary: #17458f;
     --wanted: #63400a;

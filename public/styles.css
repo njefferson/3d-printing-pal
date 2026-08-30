@@ -35,8 +35,8 @@
   --hairline: rgba(255, 255, 255, 0.17);
 
   --text: #eaeaea;
-  --text-2: #d2d2d2;
-  --text-3: #c1c1c1;
+  --text-2: #d9d9d9;
+  --text-3: #c9c9c9;
 
   /* The ink on a LIT chip — the page's own ground, so a filled accent reads as a
    * lamp rather than as a second surface. Not an accent itself: it is the one
@@ -67,7 +67,7 @@
 
     --text: #272119;
     --text-2: #363026;
-    --text-3: #4a4436;
+    --text-3: #464032;
 
     --chip-ink: #faf3e5;
 

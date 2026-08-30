@@ -27,14 +27,6 @@ const WORKFLOW = '.github/workflows/gates.yml';
 // A list rather than a pattern, so adding one is a decision somebody wrote down.
 const LOCAL_ONLY = {
   sync: 'blocks the session, not the push — a sibling going red because the hub moved trains everyone to ignore red (hub CLAUDE.md)',
-  // A DEBT WITH A DATE ON IT, not a permanent exemption, and it is here rather
-  // than silent because that is the difference. The palette clears the hub's
-  // colour floors at the pin CI used until 2026-08-29 and fails four of them at
-  // the current one — text on accent-tinted surfaces, 3.84 to 4.58 — because the
-  // floors tightened and this repo has not reconciled the PALETTES drift.
-  // Clearing them changes colours a reader sees, which is the owner's call.
-  // gates.yml names the four figures. Delete this line when the palette passes.
-  palette: 'the hub floors tightened and four are not cleared yet; clearing them is a colour decision, not a wiring one — see gates.yml',
 };
 
 // Gates that run in CI as an npm script and are NOT in the chain, same rule.
