@@ -10,3 +10,11 @@ escape=PAL_PROMOTE
 # on a runner after a promote origin/main is already the merge — so a CI step
 # would be red by construction for a window on every release. Hub LESSONS 128.
 also=tools/branch-state-check.mjs
+#
+# And the hub commit is written in two files here — the marker this repo has
+# reconciled with, and the pin CI checks the hub out at to run the shared
+# gates. They are the same fact and they drift silently, and when they do the
+# shared gates go green while running rules this repo has already adopted and
+# they have never heard of. It is repo-local ON PURPOSE, because a gate
+# validating the pin cannot itself be fetched at that pin. (Hub LESSONS §117.)
+also=tools/hub-pin-check.mjs
