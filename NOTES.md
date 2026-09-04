@@ -1206,15 +1206,26 @@ the log and check whether the steps ran or were skipped.
 
 ### The staged candidate
 
-**1.2.1 is the staged candidate**, at https://staging.3d-printing-pal.pages.dev —
-the dimmed text is lighter in both themes, and the change now carries a version so
-an installed app actually receives it.
+**There is no staged candidate.** Staging and production carry the same build;
+nothing is waiting to be passed.
 
 **This paragraph is reset on every promotion, and a gate now checks that it was.**
 Leaving a promoted candidate recorded here is how the next session concludes
 something is waiting when nothing is — so `tools/branch-state-check.mjs` reads
 this section's OPENING paragraph against `public/sw.js` in the tree and at
 `origin/main`, on every commit.
+
+**1.2.1 reached production on 2026-09-04**, as a clean fast-forward of NINE
+commits at `d367da2` — the lighter dimmed text, the palette and hub-pin work that
+had been sitting on staging since 2 September, and Dependabot's group brought
+through staging rather than merged straight to `main`. axe-core moved 4.10.2 to
+4.13.0, which upstream call one of their biggest rule changes in years, and the
+254 assertions held; playwright-core moved 1.56.0 to 1.62.1, checked first with a
+single fast browser gate under a timeout because this repo's own notes warn that
+a revision mismatch HANGS five gates rather than failing them. Ancestry checked
+before the push and the remote read back after; `origin/main:public/sw.js` carries
+the 1.2.1 triplet. Every gate step passed on that exact commit and the production
+deploy's six steps ran.
 
 **1.2.0 reached production on 2026-08-23.** A model card lists the jobs that print
 it and each one opens on the board, and the three job-card controls that all read

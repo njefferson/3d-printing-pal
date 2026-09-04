@@ -30,7 +30,7 @@
     <h1>Where it stands</h1>
     <p class="lede">One page that stays current, at one address. Everything here was read from a
       run log or a git remote, not inferred from a command exiting quietly.</p>
-    <p class="lede"><b>1.2.0 is live. 1.2.1 is on staging, waiting for you to pass it.</b></p>
+    <p class="lede"><b>1.2.1 is live, and there is nothing waiting on staging.</b></p>
   </header>
 
   <main>
@@ -39,22 +39,22 @@
     <div class="now">
       <div class="now-row">
         <span class="now-label">In production</span>
-        <span class="now-value">1.2.0 — <a href="https://3d-printing-pal.pages.dev">3d-printing-pal.pages.dev</a></span>
-        <span class="now-sub">Promoted 2026-08-23 at <code>350a3ab</code> as a clean fast-forward,
-          carrying the route from a model to its jobs and the renamed card controls. Ancestry
-          checked before the push and the remote read back after. All 28 gate steps and 5 security
-          steps ran and passed on that exact commit, read one at a time rather than taken from the
-          run's conclusion; the production deploy's six steps ran rather than skipped, and its log
-          named the deployment it made.</span>
+        <span class="now-value">1.2.1 — <a href="https://3d-printing-pal.pages.dev">3d-printing-pal.pages.dev</a></span>
+        <span class="now-sub">Promoted 2026-09-04 at <code>d367da2</code> as a clean fast-forward of
+          nine commits — the lighter dimmed text, the palette and hub-pin work that had been waiting
+          since 2 September, and a dependency group brought through staging rather than merged
+          straight to production. Ancestry checked before the push and the remote read back after.
+          Every gate step ran and passed on that exact commit, read one at a time; the production
+          deploy's six steps ran rather than skipped.</span>
       </div>
       <div class="now-row">
         <span class="now-label">On staging</span>
-        <span class="now-value">1.2.1 — <a href="https://staging.3d-printing-pal.pages.dev">staging.3d-printing-pal.pages.dev</a></span>
-        <span class="now-sub">The dimmed text is lighter in both themes. It is a small change with
-          a large finding behind it: the colour fix had been sitting on staging for days with no
-          version bump, so the service worker was byte-identical and promoting it would have
-          reached nobody who already had the app installed. A new commit guard now refuses a change
-          to any file the app serves unless the version moves with it.</span>
+        <span class="now-value">Nothing — <a href="https://staging.3d-printing-pal.pages.dev">staging.3d-printing-pal.pages.dev</a> is the same build as production</span>
+        <span class="now-sub">Nothing is waiting to be passed. A new commit guard now refuses a
+          change to any file the app serves unless the version moves with it — written because the
+          contrast fix in this release had sat here for days with no version bump, so the service
+          worker was byte-identical and promoting it would have reached nobody who already had the
+          app installed.</span>
       </div>
       <div class="now-row">
         <span class="now-label">How a run is read</span>
@@ -76,6 +76,9 @@
     <p class="note">None of it is blocked on more work.</p>
     <div class="card attention">
       <ul class="list-yours">
+        <li><span><b>The dimmed text is lighter, in both themes.</b> Hints, counts and the line
+          under a card. Worth a glance in daylight — and if the version at the bottom still reads
+          1.2.0, close the installed app fully and open it again.</span></li>
         <li><span><b>A model leads to its jobs now.</b> Open Models and press a job listed under
           one — it takes you to that job on the board. And a job card's buttons read Move, Edit,
           Model, On Printables, rather than three things that all said open.</span></li>
