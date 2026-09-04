@@ -30,7 +30,7 @@
     <h1>Where it stands</h1>
     <p class="lede">One page that stays current, at one address. Everything here was read from a
       run log or a git remote, not inferred from a command exiting quietly.</p>
-    <p class="lede"><b>1.2.0 is live, and there is nothing waiting on staging.</b></p>
+    <p class="lede"><b>1.2.0 is live. 1.2.1 is on staging, waiting for you to pass it.</b></p>
   </header>
 
   <main>
@@ -49,11 +49,12 @@
       </div>
       <div class="now-row">
         <span class="now-label">On staging</span>
-        <span class="now-value">Nothing — <a href="https://staging.3d-printing-pal.pages.dev">staging.3d-printing-pal.pages.dev</a> is the same build as production</span>
-        <span class="now-sub">Nothing is waiting to be passed. These two lines are held to the
-          release triplet by a commit guard — including this state, where a candidate that has just
-          been promoted is the easiest thing in the file to leave behind and reads as one still
-          waiting.</span>
+        <span class="now-value">1.2.1 — <a href="https://staging.3d-printing-pal.pages.dev">staging.3d-printing-pal.pages.dev</a></span>
+        <span class="now-sub">The dimmed text is lighter in both themes. It is a small change with
+          a large finding behind it: the colour fix had been sitting on staging for days with no
+          version bump, so the service worker was byte-identical and promoting it would have
+          reached nobody who already had the app installed. A new commit guard now refuses a change
+          to any file the app serves unless the version moves with it.</span>
       </div>
       <div class="now-row">
         <span class="now-label">How a run is read</span>

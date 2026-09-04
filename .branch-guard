@@ -18,3 +18,12 @@ also=tools/branch-state-check.mjs
 # they have never heard of. It is repo-local ON PURPOSE, because a gate
 # validating the pin cannot itself be fetched at that pin. (Hub LESSONS §117.)
 also=tools/hub-pin-check.mjs
+#
+# And a change to what the app SERVES has to carry a version, or the service
+# worker stays byte-identical and no installed app ever fetches it. Four
+# stylesheets had their dimmed-text colours corrected on staging with no bump:
+# green on every gate, correct in the repo, and it would have reached nobody who
+# already had the app. Same shape and same placement as branch-state-check — it
+# compares the tree against origin/main at the moment of the commit, and after a
+# promote the two are one commit, so it passes trivially.
+also=tools/shipped-version-check.mjs

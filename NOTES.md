@@ -24,6 +24,22 @@ spool**, and the whole data model is arranged around never storing it.
 
 ## Settled decisions
 
+**A change to what the app SERVES has to carry a version, or it reaches nobody.**
+Four stylesheets had their dimmed-text colours corrected on staging with no bump,
+so `public/sw.js` stayed byte-identical and kept the cache name production
+already ran. An installed app only goes looking for a new copy when the worker
+differs; an unchanged worker IS "no update". The fix was correct in the repo,
+live at the address, and would have been invisible on every device that already
+had the app — which is the population it was for. **Nothing caught it, and every
+relevant gate was green**: `pwa-check` asserts the cache name carries a release,
+which it did, and `changelog.mjs --check` holds the version, CHANGELOG and the
+in-app notes to each other, which all agreed — on the old number. Those are
+checks of internal consistency, and **a release that forgets to happen is
+perfectly self-consistent.** `tools/shipped-version-check.mjs` reads the SHELL
+list out of `sw.js` rather than keeping a second copy of it, and refuses a commit
+where a precached file differs from `origin/main` and the version does not.
+Planted red against the exact state staging was in.
+
 **Every link between records goes both ways, and a count is not a route.**
 A job card said which model it printed and opened it. A model card said "3 jobs
 use this model." and stopped — it named something the reader could now see existed
@@ -1190,8 +1206,9 @@ the log and check whether the steps ran or were skipped.
 
 ### The staged candidate
 
-**There is no staged candidate.** Staging and production carry the same build;
-nothing is waiting to be passed.
+**1.2.1 is the staged candidate**, at https://staging.3d-printing-pal.pages.dev —
+the dimmed text is lighter in both themes, and the change now carries a version so
+an installed app actually receives it.
 
 **This paragraph is reset on every promotion, and a gate now checks that it was.**
 Leaving a promoted candidate recorded here is how the next session concludes

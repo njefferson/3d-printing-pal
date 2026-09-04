@@ -7,6 +7,21 @@
 
 export const RELEASES = [
   {
+    "version": "1.2.1",
+    "kind": "ITERATION",
+    "date": "2026-09-04",
+    "summary": "The greyer text is a little lighter, in both themes.",
+    "added": [],
+    "fixed": [
+      "The dimmed text — hints, counts, the line under a card — is easier to read. It was already above the floor and is further above it now, in the light theme and the dark one.",
+      "A colour fix made in the last few days would never have reached you. The app only fetches a new copy of itself when its version changes, and that change had not bumped one — so an installed app would have kept serving the old colours indefinitely. Now it carries a version, so it arrives."
+    ],
+    "broken": [
+      "Two devices still cannot both write. Importing replaces everything, so passing one file back and forth loses whatever the other device added.",
+      "A card still does not say how long something has been waiting, what it is worth, or whether there is filament for it."
+    ]
+  },
+  {
     "version": "1.2.0",
     "kind": "CAPABILITY",
     "date": "2026-08-23",
