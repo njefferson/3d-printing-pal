@@ -1,0 +1,22 @@
+# Every seeded example on a surface in this repo — the grey text in an empty
+# field, and any element marked `data-example` — and where it came from. Held by
+# the hub's `example-check.mjs`, which says why this is a declared list rather
+# than a rule about content: an invented scenario and a real one are the same
+# sentence, so the only checkable fact is whether anybody ever stated which.
+#
+# An example taken from somebody's actual work is not declarable and never
+# becomes declarable. Invent the scenario.
+#
+# Everything below is a HINT ABOUT THE FIELD rather than a sample value, which is
+# this app's habit and worth keeping: a spool placeholder reading "eSUN PLA+
+# Cold White" would be somebody's shelf, and a model placeholder would be
+# somebody's print. None of these name a filament, a printer, a maker or a
+# model, and none of them can be traced to a real object.
+#
+#   file | invented | product-copy | public-data | the example's opening words
+
+public/index.html | invented | Paste the address they sent
+public/index.html | invented | What is being printed
+public/index.html | invented | Whatever you call it
+public/index.html | invented | Paste the address of the model
+public/index.html | invented | Separated by commas

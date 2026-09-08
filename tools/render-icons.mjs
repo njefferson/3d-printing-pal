@@ -2,7 +2,7 @@
 // Renders the icon set from icon.svg, and holds the served copy to it.
 //
 // `icon.svg` AT THE ROOT IS THE ONE SOURCE. This script writes `public/icon.svg`
-// from it alongside the four PNGs, so the served copy is generated rather than
+// from it alongside the five PNGs, so the served copy is generated rather than
 // hand-maintained. They were byte-identical for two releases with nothing holding
 // them together, which is the same shape as any other pair that must never
 // disagree: it disagrees the first time one is edited alone.
@@ -19,7 +19,7 @@
 //              CI, on every push.
 //
 // WHAT --check DOES NOT PROVE, said plainly rather than left to be assumed: it
-// does not verify the four PNGs were re-rendered. That needs a browser the runner
+// does not verify the five PNGs were re-rendered. That needs a browser the runner
 // does not have. But one command writes the SVG copy AND the PNGs, so a stale
 // `public/icon.svg` is the signature of a render that was never run — which is
 // the realistic failure, and the one this catches.
@@ -39,12 +39,26 @@ const CHECK = process.argv.includes('--check');
 const SOURCE = join(ROOT, 'icon.svg');
 const SERVED = join(ROOT, 'public/icon.svg');
 
-const SIZES = {
-  'public/apple-touch-icon.png': 180,
-  'public/icon-192.png': 192,
-  'public/icon-512.png': 512,
-  'public/favicon-32.png': 32,
-};
+// THE MASKABLE ONE IS THE SAME DRAWING, NOT A SECOND SOURCE. A platform crops a
+// maskable icon to whatever shape it likes, up to a circle 80% of the width, so
+// the background has to reach the edges and the drawing has to sit inside that
+// circle. `#art` in icon.svg holds everything except the background rect, and
+// `shrink` scales that group alone: the gradient still fills all 512px and the
+// nozzle and layers come in far enough to survive the crop. Rendering it from
+// the same file is the point — a hand-drawn second icon is a second thing to
+// keep in step, and the pair goes out of step the first time either is edited.
+//
+// 0.8 is measured rather than chosen for looking about right. The drawing's
+// furthest corner sits 231px from the centre and the safe circle's radius is
+// 205px, so it needs at most 0.887; 0.8 clears it with room and matches the
+// proportion the platforms document.
+const RENDERS = [
+  { file: 'public/apple-touch-icon.png', size: 180 },
+  { file: 'public/icon-192.png', size: 192 },
+  { file: 'public/icon-512.png', size: 512 },
+  { file: 'public/favicon-32.png', size: 32 },
+  { file: 'public/icon-maskable-512.png', size: 512, shrink: 0.8 },
+];
 
 const svg = readFileSync(SOURCE, 'utf8');
 
@@ -85,15 +99,21 @@ const browser = await chromium.launch({
   args: ['--no-sandbox'],
 });
 
-for (const [file, size] of Object.entries(SIZES)) {
+for (const { file, size, shrink } of RENDERS) {
   const page = await browser.newPage({ viewport: { width: size, height: size }, deviceScaleFactor: 1 });
+  // `transform-box: view-box` is load-bearing: without it a CSS transform on an
+  // SVG group is measured from the origin of its own bounding box rather than
+  // the drawing's coordinate system, and the shrink slides the art off centre.
+  const mask = shrink
+    ? `#art{transform-box:view-box;transform-origin:50% 50%;transform:scale(${shrink})}`
+    : '';
   await page.setContent(
-    `<style>*{margin:0}html,body{width:${size}px;height:${size}px}svg{display:block;width:${size}px;height:${size}px}</style>${svg}`,
+    `<style>*{margin:0}html,body{width:${size}px;height:${size}px}svg{display:block;width:${size}px;height:${size}px}${mask}</style>${svg}`,
     { waitUntil: 'load' },
   );
   await page.screenshot({ path: join(ROOT, file), clip: { x: 0, y: 0, width: size, height: size } });
   await page.close();
-  console.log(`  ${file} (${size}px)`);
+  console.log(`  ${file} (${size}px${shrink ? `, maskable, art at ${shrink}` : ''})`);
 }
 
 await browser.close();

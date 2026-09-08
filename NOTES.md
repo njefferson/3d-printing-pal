@@ -977,12 +977,38 @@ a crisis.
 ## The artwork
 
 **`icon.svg` at the root is the one source.** `tools/render-icons.mjs` writes
-`public/icon.svg` from it alongside the four PNGs, and `--check` fails if the
+`public/icon.svg` from it alongside the five PNGs, and `--check` fails if the
 served copy has drifted. Edit the root file, run the render, commit what it
 writes. The check needs no browser so it runs in CI; it does **not** prove the
 PNGs were re-rendered, because that needs a browser the runner does not have —
 but one command writes both, so a stale served copy is the signature of a render
 that never ran.
+
+**NEVER TWO HYPHENS IN A ROW IN THAT FILE, and the reason is not style.** An SVG
+inlined into a page is read by the HTML parser; an SVG loaded AS AN IMAGE — a
+favicon, a manifest icon, an `<img src>`, a CSS `url()` — is read by an XML
+parser, which refuses the whole file on the first well-formedness error and
+draws nothing. The header comment quoted the renderer's own check flag, spelled
+with its two hyphens, from the commit that created the file. The manifest listed
+that same file with `sizes: "any"` in that commit, so Chromium picked it as the
+largest icon, could not decode it, and reported no acceptable icon at all —
+Chrome and Edge both stopped offering to install the app, and neither fell back
+to `icon-192.png` or `icon-512.png`, which were correct throughout. The SVG
+favicon died the same way and fell back silently to `favicon-32.png`. **Two
+gates were looking straight at it**: the renderer inlines the file, so the PNGs
+came out perfect, and the drift check compares the two copies byte for byte, and
+they matched because both were equally malformed. The hub's `svg-check.mjs` is
+the gate that was missing, and it runs here through `npm run svg`. (Hub
+LESSONS §245.)
+
+**The maskable PNG is the same drawing, not a second source.** A platform crops
+a maskable icon to whatever shape it likes, up to a circle 80% of the width, so
+the background has to reach the edges and the drawing has to sit inside that
+circle. Everything except the background rect lives in `<g id="art">`, and
+`render-icons.mjs` scales that group alone when it renders
+`public/icon-maskable-512.png`. The 0.8 is measured rather than eyeballed: the
+drawing's furthest corner sits 231 from the centre in the icon's own coordinates
+and the safe circle's radius is 205, so it needs at most 0.887.
 
 **The card's art is its own drawing, not a copy of the icon.** The icon is a
 favicon before it is anything else and carries one shape; the card is wide enough
@@ -1206,8 +1232,20 @@ the log and check whether the steps ran or were skipped.
 
 ### The staged candidate
 
-**There is no staged candidate.** Staging and production carry the same build;
-nothing is waiting to be passed.
+**1.3.0 is on staging and has not been passed.** It repairs `icon.svg`, which was
+not well-formed XML and had therefore made the app uninstallable on every
+Chromium browser since 22 August; it adds a maskable icon; and it builds §7h.6,
+a control in the About panel that answers whether there is a new version, either
+way.
+
+What the device pass is for here, because two of the three cannot be seen from a
+gate. In Edge or Chrome on a desktop, the install control in the address bar
+should offer this app again — that is the whole point of the release, and it is a
+browser decision no test in this repo can make. On a phone or tablet, adding it
+to a home screen should give an icon that is not cut into at the edges. And under
+*If something is wrong* in the About panel, "Check for a new version" should
+answer in words while staging and production are the same build — the boring
+answer is the one the control exists for.
 
 **This paragraph is reset on every promotion, and a gate now checks that it was.**
 Leaving a promoted candidate recorded here is how the next session concludes

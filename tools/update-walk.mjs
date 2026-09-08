@@ -21,6 +21,12 @@
 //   PRESSING THE BUTTON ACTUALLY SWAPS IT. The cache name afterwards is the new
 //   one, read from the browser rather than assumed.
 //
+//   AND THE READER CAN ASK (§7h.6). Everything above is the app speaking when the
+//   browser happens to notice, which an installed app opened rarely may not do
+//   for weeks. The control is driven in BOTH states, because the boring answer is
+//   the load-bearing one: a check that only speaks when there is news leaves the
+//   reader unable to tell it from a check that did nothing.
+//
 // AND ONE ASSERTION FROM THE FAILURE SIDE. An installed app on iPadOS will not
 // reliably let a waiting worker take over while the app is open — a platform
 // behaviour headless Chromium does not have and cannot be made to have. Proving
@@ -147,6 +153,27 @@ function sourceChecks() {
   }
 }
 
+/**
+ * Press "Check for a new version" and read the answer back.
+ *
+ * It goes through the panel the way a reader does — the control is inside the
+ * information dialog, behind a menu item — rather than calling the module
+ * directly, because a control nobody can reach answers nothing.
+ */
+async function askAndRead(page) {
+  await page.evaluate(() => { for (const d of document.querySelectorAll('dialog[open]')) d.close(); });
+  await page.click('#info-open');
+  await page.click('#info-menu [data-info-section="info-sec-wrong"]');
+  await page.click('#info-checkupd');
+  await page.waitForFunction(() => {
+    const el = document.getElementById('info-checkupd-answer');
+    return el && !/^Checking/.test(el.textContent.trim());
+  }, null, { timeout: 20000 });
+  const answer = (await page.textContent('#info-checkupd-answer')).trim();
+  await page.evaluate(() => { for (const d of document.querySelectorAll('dialog[open]')) d.close(); });
+  return answer;
+}
+
 // ------------------------------------------------------------------- main
 
 async function main() {
@@ -173,9 +200,37 @@ async function main() {
   }
 
   // A genuinely newer worker arrives DURING that first visit. Nothing may be said.
+  //
+  // WAIT FOR THE STATE, NOT FOR A DURATION. This was a flat 1500ms, and it is a
+  // race: with no client controlled there is nothing for a new worker to wait
+  // behind, so walk-a activates — usually inside 1500ms, and sometimes not. When
+  // it did not, step 2 reloaded into a page controlled by the RELEASE worker with
+  // walk-a waiting behind it, the app correctly offered the update, and the check
+  // that nothing is shown "with nothing waiting" failed on a run where something
+  // genuinely was. A gate that is right about a state the walk did not intend to
+  // create is the most expensive kind of red.
   overrides['/sw.js'] = { body: swAtTag(WALK_TAGS[0]), type: 'text/javascript; charset=utf-8' };
   await page.evaluate(async () => { (await navigator.serviceWorker.getRegistration())?.update(); });
-  await page.waitForTimeout(1500);
+  //
+  // POLLED FROM HERE, NOT WITH page.waitForFunction. The first spelling of this
+  // passed an async predicate to waitForFunction, which does not await what the
+  // predicate returns — a pending Promise is truthy, so it "succeeded" on the
+  // first poll and asserted nothing at all. It printed a state that disproved
+  // its own condition, which is the only reason it was caught.
+  const settledOnFirstVisit = await (async () => {
+    const deadline = Date.now() + 20000;
+    for (;;) {
+      const state = await swState(page);
+      const only = state.caches.length === 1 && state.caches[0] === `print-tracker-${WALK_TAGS[0]}`;
+      if (only && !state.waiting) return true;
+      if (Date.now() > deadline) return false;
+      await page.waitForTimeout(200);
+    }
+  })();
+  if (!settledOnFirstVisit) {
+    fail('the newer worker never took over on a first-ever visit. With no client controlled there is nothing for it to wait behind, so everything after this would be measuring a state this walk did not intend to create');
+    return finish(browser, server);
+  }
 
   const toldOnFirstVisit = await stripVisible(page);
   if (toldOnFirstVisit) {
@@ -200,6 +255,28 @@ async function main() {
   const quietWhenCurrent = await stripVisible(page);
   if (quietWhenCurrent) fail(`the update strip is showing with nothing waiting: "${quietWhenCurrent.text}"`);
   else pass('nothing is shown while the running copy is the current one');
+
+  // §7h.6, the boring half. Nothing is waiting, and the reader who asks must
+  // still be TOLD that — with the version this device is running, so the answer
+  // is checkable by the person reading it rather than taken on trust.
+  const whenCurrent = await askAndRead(page);
+  const stamped = (await page.textContent('#version-stamp')).trim();
+  if (/new(er)? version (is )?(ready|available)/i.test(whenCurrent)) {
+    fail(`asked with nothing waiting, the app answered "${whenCurrent}"`);
+  } else if (!/newest|up to date/i.test(whenCurrent)) {
+    fail(`asked with nothing waiting, the app did not say so in words: "${whenCurrent}"`);
+  } else if (!whenCurrent.includes(stamped)) {
+    fail(`the answer does not name the running version (${stamped}): "${whenCurrent}"`);
+  } else {
+    pass(`asked with nothing waiting, the app says so and names the version: "${whenCurrent}"`);
+  }
+
+  const panelVersion = (await page.textContent('#info-version')).trim();
+  if (panelVersion !== stamped) {
+    fail(`the information panel says version ${panelVersion} and the app's chrome says ${stamped}`);
+  } else {
+    pass(`the running version is on a screen as well as in the diagnostic (${stamped})`);
+  }
 
   // ---- 2b. the status page is LIVE, not cached ----------------------------
   //
@@ -270,6 +347,15 @@ async function main() {
   });
   if (isModal) fail('the update indicator is positioned over the app rather than sitting in the flow');
   else pass('the indicator is a standing strip in the flow, not a modal or a toast');
+
+  // §7h.6, the other half: a reader who asks while one IS waiting is told so,
+  // and pointed at the control that takes it.
+  const whenWaiting = await askAndRead(page);
+  if (!/new version is ready/i.test(whenWaiting)) {
+    fail(`asked with a version waiting, the app answered "${whenWaiting}"`);
+  } else {
+    pass(`asked with a version waiting, the app says so: "${whenWaiting}"`);
+  }
 
   // ---- 4. "Not now" -------------------------------------------------------
   await page.click('#update-later');

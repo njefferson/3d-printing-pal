@@ -424,6 +424,24 @@
       <p>A new version never takes over while you are using it — it waits, and a strip appears at
         the top of the screen offering it. On an installed app on iPadOS, closing it fully and
         opening it again is what lets a waiting version through.</p>
+
+      <!--
+        THE READER MAY ASK (§7h.6). Everything above is the app speaking when the
+        browser happens to notice, and an installed app opened rarely may not
+        check at all. This is the other direction, and the boring answer is the
+        one it exists for: being told you are already on the newest version is
+        what somebody actually needs to hear, and a control that speaks only when
+        there is news leaves them unsure it did anything.
+      -->
+      <p class="note">This copy is version <span id="info-version">—</span>.</p>
+      <p><button type="button" id="info-checkupd" class="btn">Check for a new version</button></p>
+      <!--
+        THE ANSWER IS ITS OWN LINE, and the version above is NOT inside it. It was,
+        for one run: the answer is written by replacing this element's text, which
+        deleted the version span the first time anybody pressed the button. A live
+        region and a standing fact cannot share a node.
+      -->
+      <p class="note" id="info-checkupd-answer" role="status"></p>
     </div>
 
     <div class="info-section" id="info-sec-legal" data-info-title="Accessibility and licence" hidden>

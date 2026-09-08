@@ -1,8 +1,30 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="A print nozzle over three stacked layers">
   <!--
     THE ONE SOURCE. tools/render-icons.mjs writes public/icon.svg from this file
-    alongside the four PNGs, and `--check` fails if the served copy has drifted.
-    Edit here, never there.
+    alongside the five PNGs, and its check mode fails if the served copy has
+    drifted. Edit here, never there.
+
+    NEVER TWO HYPHENS IN A ROW ANYWHERE IN THIS FILE, AND THAT IS NOT A STYLE
+    NOTE. XML forbids that sequence inside a comment, and a browser loading an
+    SVG AS AN IMAGE parses it as XML rather than as markup: one occurrence and
+    the whole file is refused, with no fallback to the PNGs beside it and no
+    error anywhere a reader would look.
+
+    This comment carried the renderer's own check flag, spelled with the two
+    hyphens it is typed with, from the first commit. What that cost was the
+    install offer. The manifest lists this file with sizes "any", so Chromium
+    picks it as the largest icon available, tries to decode it for the
+    installability check, fails, and concludes the app has no acceptable icon at
+    all: Edge and Chrome both stop offering to install print-tracker, and never
+    fall back to icon-192.png or icon-512.png, which were correct all along. The
+    SVG favicon died the same way and fell back silently to favicon-32.png, so
+    there was no symptom on any screen.
+
+    Every gate was green for the whole of it. The PNGs are rendered by inlining
+    this file into an HTML page, where the HTML parser tolerates what the XML
+    parser refuses, so they came out perfect; the drift check compares the two
+    copies byte for byte, and both were equally malformed. Nothing in the family
+    parsed an SVG as XML until svg-check.mjs in the hub.
 
     IT IS AN ICON AT FAVICON SIZE BEFORE IT IS ANYTHING ELSE, which is why it
     carries one shape and no frame. The machine drawn on the social card is a
@@ -26,14 +48,25 @@
 
   <rect width="512" height="512" fill="url(#bg)"/>
 
-  <!-- The nozzle: body and tapered tip, in the palette's `wanted` amber. -->
-  <rect x="188" y="60" width="136" height="112" rx="18" fill="#f0c674"/>
-  <path d="M206 172 L306 172 L280 250 L232 250 Z" fill="#f0c674"/>
+  <!--
+    EVERYTHING THAT IS NOT THE BACKGROUND LIVES IN THIS GROUP, so the maskable
+    render can shrink the drawing into the safe zone without shrinking the
+    background with it. A maskable icon is cropped to whatever shape the platform
+    likes, up to a circle 80% of the width; the background must reach the edges
+    and the drawing must not. tools/render-icons.mjs scales this group and
+    nothing else, which is why the group exists and why it carries no transform
+    here: at 1:1 it changes nothing about the icon as drawn.
+  -->
+  <g id="art">
+    <!-- The nozzle: body and tapered tip, in the palette's `wanted` amber. -->
+    <rect x="188" y="60" width="136" height="112" rx="18" fill="#f0c674"/>
+    <path d="M206 172 L306 172 L280 250 L232 250 Z" fill="#f0c674"/>
 
-  <!-- Three laid layers, widening downward, in the palette's `fun` green. The
-       gap between tip and top layer is the print in progress; closing it would
-       make the whole thing one solid mass at small sizes. -->
-  <rect x="140" y="284" width="232" height="34" rx="10" fill="#8fd6a4"/>
-  <rect x="112" y="330" width="288" height="34" rx="10" fill="#8fd6a4"/>
-  <rect x="84"  y="376" width="344" height="34" rx="10" fill="#8fd6a4"/>
+    <!-- Three laid layers, widening downward, in the palette's `fun` green. The
+         gap between tip and top layer is the print in progress; closing it would
+         make the whole thing one solid mass at small sizes. -->
+    <rect x="140" y="284" width="232" height="34" rx="10" fill="#8fd6a4"/>
+    <rect x="112" y="330" width="288" height="34" rx="10" fill="#8fd6a4"/>
+    <rect x="84"  y="376" width="344" height="34" rx="10" fill="#8fd6a4"/>
+  </g>
 </svg>

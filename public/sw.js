@@ -23,7 +23,7 @@
 // which is how a brand-new visitor gets told a new version is ready thirty
 // seconds into their first visit.
 
-const CACHE = 'print-tracker-1.2.1';
+const CACHE = 'print-tracker-1.3.0';
 
 // Files that ship with the app and must never be cached by it. They are not in
 // SHELL either — being absent from the precache is not enough on its own, because
@@ -43,6 +43,7 @@ const SHELL = [
   './apple-touch-icon.png',
   './icon-192.png',
   './icon-512.png',
+  './icon-maskable-512.png',
   './app/main.js',
   './app/version.js',
   './app/db.js',

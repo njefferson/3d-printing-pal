@@ -65,7 +65,7 @@ const ciDirect = new Set([...workflow.matchAll(/node \.hub\/([\w./-]+\.mjs)/g)].
 const hubCall = /uses:\s*njefferson\/noahjefferson\/\.github\/workflows\/hub-gates\.yml@[0-9a-f]{40}([\s\S]*?)(?=\n  \w|\n\S|$)/.exec(workflow);
 if (hubCall) {
   for (const f of ['privacy-check.mjs', 'quote-check.mjs', 'docs-check.mjs',
-                   'pin-check.mjs', 'branch-guard.mjs']) ciDirect.add(f);
+                   'pin-check.mjs', 'branch-guard.mjs', 'svg-check.mjs']) ciDirect.add(f);
   const w = hubCall[1];
   if (/\bthird-person:\s*false\b/.test(w) === false) ciDirect.add('third-person-check.mjs');
   if (/\bpwa:\s*true\b/.test(w)) ciDirect.add('pwa-check.mjs');

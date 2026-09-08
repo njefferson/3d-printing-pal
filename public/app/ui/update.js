@@ -27,6 +27,7 @@
 
 import { $ } from '../dom.js';
 import { say } from './panels.js';
+import { VERSION } from '../version.js';
 
 const STUCK_AFTER_MS = 6000;
 
@@ -37,6 +38,14 @@ let stuckTimer = null;
 
 export function initUpdates() {
   const strip = $('#update-strip');
+
+  // §7h.6, and it is wired BEFORE the guard below rather than after it. The
+  // version this device is running and the answer "this browser cannot check"
+  // are both true when there is no service worker at all, and a control that
+  // silently does nothing in that case is the worst of the three answers.
+  $('#info-version').textContent = VERSION;
+  $('#info-checkupd').addEventListener('click', checkNow);
+
   if (!strip || !('serviceWorker' in navigator)) return;
 
   // Captured once, before anything can change it.
@@ -90,6 +99,84 @@ export function initUpdates() {
     // offline. The diagnostic reports it; the reader is not interrupted over it.
     console.error('Service worker registration failed:', error.message);
   });
+}
+
+// -------------------------------------------------------- the reader asks
+//
+// §7h.6. Everything else in this file is the app speaking when the browser
+// happens to notice; an installed app opened rarely, or left open for days, may
+// not notice at all. So there is a control, and it answers in all three cases.
+//
+// THE BORING ANSWER IS THE LOAD-BEARING ONE. "You are on the newest version" is
+// what somebody actually needs to hear, and it is the answer a control that only
+// speaks when there is news never gives — leaving the reader unsure whether it
+// did anything. The failure answer is the same shape: a check that cannot reach
+// the network has learned nothing about the version, which is not the same as
+// learning there is nothing new, and it must not be reported as if it were.
+
+const ANSWER_WAIT_MS = 10000;
+
+/** Resolve once an installing worker settles, or after ANSWER_WAIT_MS. */
+function settled(worker) {
+  return new Promise((resolve) => {
+    const done = () => {
+      if (worker.state === 'installed' || worker.state === 'activated' || worker.state === 'redundant') {
+        worker.removeEventListener('statechange', done);
+        resolve();
+      }
+    };
+    worker.addEventListener('statechange', done);
+    window.setTimeout(resolve, ANSWER_WAIT_MS);
+    done();
+  });
+}
+
+function answer(text) {
+  $('#info-checkupd-answer').textContent = text;
+}
+
+async function checkNow() {
+  const button = $('#info-checkupd');
+  button.disabled = true;
+  answer('Checking…');
+
+  try {
+    if (!('serviceWorker' in navigator)) {
+      answer(`This copy is version ${VERSION}. This browser cannot keep an offline copy, so there is nothing to check — reloading the page always gets the newest one.`);
+      return;
+    }
+
+    const reg = await navigator.serviceWorker.getRegistration();
+    if (!reg) {
+      answer(`This copy is version ${VERSION}. The app has no offline copy on this device yet, so reloading the page gets the newest one.`);
+      return;
+    }
+
+    await reg.update();
+    if (reg.installing) await settled(reg.installing);
+
+    if (reg.waiting) {
+      // ASKING UNDOES AN EARLIER "Not now". Without this line the answer below
+      // sends a reader who dismissed the strip to a strip that is no longer
+      // there — the sentence would be false for exactly the person most likely
+      // to come looking. Pressing "Not now" is an answer to being interrupted,
+      // not a standing instruction to be refused later.
+      dismissed = false;
+      // Told twice on purpose: the strip is where the button to take it lives,
+      // and the reader is looking at this panel rather than at the strip.
+      if (hadControllerAtLoad) offer();
+      answer('A new version is ready. Close this panel — the strip at the top of the screen has the button that takes it.');
+      return;
+    }
+
+    answer(`You are on the newest version (${VERSION}).`);
+  } catch {
+    // A check that could not reach the network has learned NOTHING about the
+    // version, which is not the same as learning there is nothing new.
+    answer(`Could not check just now — there was no answer from the network. This copy is version ${VERSION}, and the app carries on working offline either way.`);
+  } finally {
+    button.disabled = false;
+  }
 }
 
 function offer() {

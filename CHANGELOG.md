@@ -9,6 +9,40 @@ triplet is `version.capability.iteration`. Releases do not have names.
 
 ---
 
+## 1.3.0 — CAPABILITY — 2026-09-08
+
+The app can be installed as an app again, and it will say whether there is a new
+version when asked.
+
+### New
+
+- **A "Check for a new version" button**, under *If something is wrong* in the
+  About panel, with the version this copy is running written beside it. It
+  answers either way: that this is the newest version, that a new one is ready
+  and waiting, or that the check could not reach the network and so learned
+  nothing. Until now the app only spoke when the browser happened to notice, and
+  an installed app that is opened rarely may not notice for a long time.
+
+### Fixed
+
+- **A browser will offer to install this as an app again.** Chrome and Edge pick
+  the largest icon an app offers when deciding whether it can be installed. The
+  one they picked here could not be drawn at all, so both concluded the app had
+  no usable icon and quietly stopped offering — while the other icons beside it
+  were correct the whole time. The drawing is repaired and the offer is back.
+- **The icon on a home screen is no longer cropped into.** A phone or tablet
+  crops an app icon to whatever shape it likes. The app now also supplies a
+  version drawn with room around the edges, so nothing is cut off.
+
+### Still not right
+
+- **Two devices still cannot both write.** Importing replaces everything, so
+  passing one file back and forth loses whatever the other device added.
+- **A card still does not say how long something has been waiting**, what it is
+  worth, or whether there is filament for it.
+
+---
+
 ## 1.2.1 — ITERATION — 2026-09-04
 
 The greyer text is a little lighter, in both themes.
