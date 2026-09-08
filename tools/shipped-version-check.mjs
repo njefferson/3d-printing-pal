@@ -87,7 +87,23 @@ try {
 const watched = [...new Set([...shellPaths(swHere), 'public/sw.js'])];
 let changed = [];
 try {
-  const out = git('diff', '--name-only', 'origin/main', 'HEAD', '--', ...watched);
+  // AGAINST THE WORKING TREE, NOT AGAINST `HEAD`, and that is the whole gate.
+  //
+  // This ran as `origin/main..HEAD` for its whole life, inside a PRE-COMMIT hook
+  // — where HEAD is the commit BEFORE the one being made. On the first commit of
+  // a release branch, HEAD and origin/main are the same commit, so the diff was
+  // empty and the gate printed "nothing the app serves differs from production"
+  // over a commit rewriting the service worker, the markup, the manifest and
+  // five icons. It was watched saying exactly that, on the release that added
+  // this comment.
+  //
+  // The two halves were reading different things: the version came from the file
+  // on disk and the file list came from a commit that does not exist yet. Naming
+  // no second ref compares origin/main to the working tree, which is what the
+  // version was already read from — and in a hook the working tree is the commit
+  // being made. Partial staging makes it a superset, which over-reports, and for
+  // this gate that is the safe direction.
+  const out = git('diff', '--name-only', 'origin/main', '--', ...watched);
   changed = out.split('\n').map((s) => s.trim()).filter(Boolean);
 } catch {
   console.error('shipped-version: FAIL — could not diff this tree against origin/main.');
