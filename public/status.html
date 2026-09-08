@@ -30,7 +30,7 @@
     <h1>Where it stands</h1>
     <p class="lede">One page that stays current, at one address. Everything here was read from a
       run log or a git remote, not inferred from a command exiting quietly.</p>
-    <p class="lede"><b>1.2.1 is live, and 1.3.0 is waiting on staging.</b></p>
+    <p class="lede"><b>1.3.0 is live, and there is nothing waiting on staging.</b></p>
   </header>
 
   <main>
@@ -39,24 +39,24 @@
     <div class="now">
       <div class="now-row">
         <span class="now-label">In production</span>
-        <span class="now-value">1.2.1 — <a href="https://3d-printing-pal.pages.dev">3d-printing-pal.pages.dev</a></span>
-        <span class="now-sub">Promoted 2026-09-04 at <code>d367da2</code> as a clean fast-forward of
-          nine commits — the lighter dimmed text, the palette and hub-pin work that had been waiting
-          since 2 September, and a dependency group brought through staging rather than merged
-          straight to production. Ancestry checked before the push and the remote read back after.
-          Every gate step ran and passed on that exact commit, read one at a time; the production
+        <span class="now-value">1.3.0 — <a href="https://3d-printing-pal.pages.dev">3d-printing-pal.pages.dev</a></span>
+        <span class="now-sub">Promoted 2026-09-08 at <code>5f4395c</code> as a clean fast-forward of
+          two commits. The app icon was not well-formed XML, so every browser that loads an icon as
+          an image refused it — and because the manifest offered that file as the largest icon,
+          Chrome and Edge both stopped offering to install the app rather than falling back to the
+          two correct icons beside it. Repaired, with a maskable icon added and a control in the
+          About panel that says whether there is a new version. Ancestry checked before the push and
+          the remote read back after; the deployed service worker at the address carries the 1.3.0
+          triplet. Gates read one at a time on the staging run for this exact commit; the production
           deploy's six steps ran rather than skipped.</span>
       </div>
       <div class="now-row">
         <span class="now-label">On staging</span>
-        <span class="now-value">1.3.0 — <a href="https://staging.3d-printing-pal.pages.dev">staging.3d-printing-pal.pages.dev</a></span>
-        <span class="now-sub">Waiting to be passed on a device. It repairs the app icon, which was
-          not well-formed XML and had therefore been refused by every browser that loads an icon as
-          an image — so Chrome and Edge both stopped offering to install the app, while the two
-          correct icons beside it were never tried. It also adds a maskable icon, and a control in
-          the About panel that says whether there is a new version. The install offer and the
-          home-screen crop are browser decisions no gate here can make, so both are read on the
-          device before this is promoted.</span>
+        <span class="now-value">Nothing — <a href="https://staging.3d-printing-pal.pages.dev">staging.3d-printing-pal.pages.dev</a> is the same build as production</span>
+        <span class="now-sub">Nothing is waiting to be passed. The gate that would have caught the
+          icon lives in the hub now and runs here on every push: every tracked SVG has to parse as
+          XML, because the parser that draws an icon is not the forgiving one that renders it
+          inline.</span>
       </div>
       <div class="now-row">
         <span class="now-label">How a run is read</span>

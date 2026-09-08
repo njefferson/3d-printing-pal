@@ -1232,26 +1232,53 @@ the log and check whether the steps ran or were skipped.
 
 ### The staged candidate
 
-**1.3.0 is on staging and has not been passed.** It repairs `icon.svg`, which was
-not well-formed XML and had therefore made the app uninstallable on every
-Chromium browser since 22 August; it adds a maskable icon; and it builds §7h.6,
-a control in the About panel that answers whether there is a new version, either
-way.
-
-What the device pass is for here, because two of the three cannot be seen from a
-gate. In Edge or Chrome on a desktop, the install control in the address bar
-should offer this app again — that is the whole point of the release, and it is a
-browser decision no test in this repo can make. On a phone or tablet, adding it
-to a home screen should give an icon that is not cut into at the edges. And under
-*If something is wrong* in the About panel, "Check for a new version" should
-answer in words while staging and production are the same build — the boring
-answer is the one the control exists for.
+**There is no staged candidate.** Staging and production carry the same build;
+nothing is waiting to be passed.
 
 **This paragraph is reset on every promotion, and a gate now checks that it was.**
 Leaving a promoted candidate recorded here is how the next session concludes
 something is waiting when nothing is — so `tools/branch-state-check.mjs` reads
 this section's OPENING paragraph against `public/sw.js` in the tree and at
 `origin/main`, on every commit.
+
+**1.3.0 reached production on 2026-09-08**, at https://3d-printing-pal.pages.dev
+
+The app can be installed again. `icon.svg` was not well-formed XML — its header
+comment quoted the renderer's check flag with the two hyphens it is typed with,
+and XML forbids that sequence inside a comment — so every browser that loads an
+SVG AS AN IMAGE refused the whole file. The manifest listed it with `sizes: "any"`
+in the same commit that created it, so Chromium picked it as the largest icon,
+could not decode it, and reported no acceptable icon at all: Chrome and Edge both
+stopped offering to install the app, and neither fell back to `icon-192.png` or
+`icon-512.png`, which were correct throughout. The SVG favicon died the same way
+and fell back silently to `favicon-32.png`, so there was no symptom on any screen.
+Never once installable with that icon, across three releases and seventeen days.
+
+Measured rather than argued. Chromium's own installability verdict, taken over the
+real `_headers`, went from `no-acceptable-icon` to an empty list when the comment
+was reworded and nothing else changed; adding width and height made no difference,
+and removing the SVG entry from the manifest also cleared it, which is what
+identified the icon rather than the manifest.
+
+Also in it: a maskable icon rendered from the same drawing rather than a second
+source, and Doctrine §7h.6 — the About panel names the version this device runs,
+and a control beside it answers whether there is a new one, in all three cases.
+
+Promoted at `5f4395c` as a clean fast-forward of two commits, ancestry checked
+with `git merge-base --is-ancestor` BEFORE the push and the remote read back
+after; `origin/main:public/sw.js` carries the 1.3.0 triplet, and the deployed
+`sw.js` at the address does too. The production deploy's six steps ran rather
+than skipped. The gates were read by step on the staging run for this exact
+commit — 20 steps in this repo's own job and 19 in the hub-gates call with one
+DECLARED skip, the offline pattern mirror this repo does not pass an input for.
+
+**Two gates in this repo were looking straight at that file and neither could
+see it**, which is the part worth carrying forward: `render-icons.mjs` inlines the
+SVG into an HTML page, where the HTML parser forgives what XML refuses, so the
+PNGs came out perfect; and the drift check compares the source and the served copy
+byte for byte, and they matched because both were equally malformed. The hub's
+`svg-check.mjs` is the gate that was missing, and it ran green on a runner here
+for the first time in this release. Hub LESSONS §245.
 
 **1.2.1 reached production on 2026-09-04**, as a clean fast-forward of NINE
 commits at `d367da2` — the lighter dimmed text, the palette and hub-pin work that
